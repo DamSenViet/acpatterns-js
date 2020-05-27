@@ -1,21 +1,26 @@
 {
   "name": "acpatterns",
   "version": "0.0.0",
-  "description": "",
-  "main": "build/cjs/index..js",
+  "description": "A JavaScript library for interacting with Animal Crossing pattern data structures and files.",
+  "main": "build/cjs/index.js",
   "module": "build/esm/index.js",
   "browser": "build/umd/build.js",
   "scripts": {
+    "clean": "node scripts/clean.js",
     "watch": "node scripts/watch.js",
     "watch:esm": "tsc -w",
-    "clean": "node scripts/clean.js",
     "build": "node scripts/build.js",
     "build:esm": "tsc",
-    "test": "npx jest --passWithNoTests"
+    "test": "jest --passWithNoTests"
   },
   "repository": {
-    "type": "git"
+    "type": "git",
+    "url": "git+https://github.com/DamSenViet/acpatterns-js.git"
   },
+  "bugs": {
+    "url": "https://github.com/DamSenViet/acpatterns-js/issues"
+  },
+  "homepage": "https://github.com/DamSenViet/acpattern-js#readme",
   "author": "DamSenViet",
   "license": "MIT",
   "dependencies": {},

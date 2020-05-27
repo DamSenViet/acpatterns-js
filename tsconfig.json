@@ -24,8 +24,7 @@
       "ES6",
       "DOM",
     ],
-    "moduleResolution": "node"
-
+    "moduleResolution": "node",
     // ### STRICT CHECKS
     // "alwaysStrict": true,
     // "noImplicitAny": true,
