@@ -377,17 +377,31 @@ class Acnl {
   private _createPaletteApi(): Palette {
     const { _palette } = this;
     // fixed array is fine b/c no change in length, no key removal/additions
-    const api = new Proxy(_palette, {
-      get: (target, property, receiver) => {
-        Reflect.get(target, property, receiver);
-      },
-      set: (target, property, value, receiver) => {
-        const mutations = <Palette>new Array(15);
-        mutations[property] = value;
-        this.palette = mutations;
-        return true;
-      }
-    }); // 15 color is transparent, always
+    // const api = new Proxy(_palette, {
+    //   get: (target, property, receiver) => {
+    //     Reflect.get(target, property, receiver);
+    //   },
+    //   set: (target, property, value, receiver) => {
+    //     const mutations = <Palette>new Array(15);
+    //     mutations[property] = value;
+    //     this.palette = mutations;
+    //     return true;
+    //   }
+    // }); // 15 color is transparent, always
+
+    const api = new Array(_palette.length);
+    for (let i = 0; i < _palette.length; ++i) {
+      Object.defineProperty(api, i, {
+        enumerable: true,
+        configurable: true,
+        get: () => _palette[i],
+        set: (color: color) => {
+          const mutations = _palette.slice();
+          mutations[i] = color;
+          this.palette = <Palette>mutations;
+        }
+      })
+    }
     return <Palette>api;
   }
 
@@ -396,9 +410,9 @@ class Acnl {
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
     const api = new Array(_pixels.length);
-    for (let y; y < _pixels.length; ++y) {
+    for (let y = 0; y < _pixels.length; ++y) {
       const rowApi = new Array(64);
-      for (let x; x < _pixels[y].length; ++x) {
+      for (let x = 0; x < _pixels[y].length; ++x) {
         Object.defineProperty(rowApi, x, {
           enumerable: true,
           configurable: false,
@@ -414,6 +428,8 @@ class Acnl {
         });
       }
       Object.defineProperty(api, y, {
+        enumerable: true,
+        configurable: false,
         get: () => rowApi,
         set: (row) => {
           for (let x = 0; x < rowApi.length; ++x) {

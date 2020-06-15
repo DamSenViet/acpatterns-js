@@ -10,6 +10,7 @@ class Hook {
   public untap(callback: Function) {
     for (let i = 0; i < this.callbacks.length; ++i) {
       if (callback === this.callbacks[i]) this.callbacks.splice(i, 1);
+      break;
     }
   }
 
