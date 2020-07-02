@@ -1,6 +1,37 @@
+import Hook from "./Hook";
+import HookableArray from "./HookableArray";
+
 export type byte = number;
 export type color = string;
 export type pixel = number;
+
+export type mapping = Array<Array<[pixel, pixel]>>;
+export interface PatternType {
+  name: string;
+  size: number; // how many rows there are, default is 32x by 128y
+  sections: {
+    texture: mapping;
+    [key: string]: mapping;
+  };
+  // 32 bit numbers only
+  mask?: number[];
+};
+
+export interface HookSystem {
+  type: Hook<[PatternType]>;
+  palette: Hook<[number, color]>;
+};
+
+export interface Drawable {
+  type: PatternType;
+  palette: color[];
+  hooks: HookSystem;
+  pixels: HookableArray<Array<pixel>, [number, number, pixel]>;
+  sections: {
+    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
+    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+  }
+};
 
 // assume bytes were stored little endian
 export const Uint16ToBytes = (number: number): [byte, byte] => {

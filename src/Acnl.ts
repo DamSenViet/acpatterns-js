@@ -2,14 +2,13 @@ import Enum from "./Enum";
 import Hook from "./Hook";
 import HookableArray from "./HookableArray";
 import {
-  mapping,
-  PatternType,
-  Drawable,
-} from "./interfaces";
-import {
   color,
   pixel,
   byte,
+  mapping,
+  PatternType,
+  HookSystem,
+  Drawable,
   Uint16ToBytes,
   bytesToUint16,
   stringToBytes,
@@ -64,10 +63,25 @@ import {
 const defaultMapping: mapping = (() => {
   const width = 32;
   const height = 128;
-  const mapping = new Array(height).fill(null).map(i => new Array(width).fill(null));
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
       mapping[y][x] = [y, x];
+    }
+  }
+  return mapping;
+})();
+
+const standeeMapping: mapping = (() => {
+  const width = 52;
+  const height = 64;
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
+      else mapping[y][x] = [y, x];
     }
   }
   return mapping;
@@ -77,7 +91,8 @@ const defaultMapping: mapping = (() => {
 const clothingTextureMapping: mapping = (() => {
   const width = 64;
   const height = 64;
-  const mapping = new Array(height).fill(null).map(i => new Array(width).fill(null));
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
       if (x < 32 && y < 32) mapping[y][x] = [y - 0 + 32, x]; // front
@@ -153,7 +168,7 @@ class AcnlTypes extends Enum {
     name: "Standee",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: standeeMapping
     }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
@@ -337,10 +352,15 @@ class Acnl implements Drawable {
 
   // type size determines what to truncate down when converting to binary.
   // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
-  private _pixels: pixel[][] = new Array(128).fill(15).map(() => {
-    return new Array(32).fill(15);
+  private _pixels: pixel[][] = new Array(128).fill(0).map(() => {
+    return new Array(32).fill(0);
   }); // start with entire transparent
-  private _pixelsApi: HookableArray<Array<pixel>> = null;
+  private _pixelsApi: HookableArray<Array<pixel>, [number, number, pixel]> = null;
+  private _sectionsApi: {
+    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
+    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+  } = null;
+  private _hooks: HookSystem = null;
 
   // stuff no one should touch
   private _language: number = 0;
@@ -352,10 +372,12 @@ class Acnl implements Drawable {
   public constructor() {
     // proxies and apis here
     // setup on all apis
+    this._hooks = this._createHooksApi();
     this._designerApi = this._createDesignerApi();
     this._townApi = this._createTownApi();
     this._paletteApi = this._createPaletteApi();
-    this._pixelsApi = this._createPixelsApi();
+    this._refreshPixelsApi();
+    this._refreshSectionsApi();
   };
 
   private _createTownApi(): Town {
@@ -372,7 +394,7 @@ class Acnl implements Drawable {
         return true;
       },
     });
-    return <Town>api;
+    return api;
   }
 
   private _createDesignerApi(): Designer {
@@ -390,12 +412,22 @@ class Acnl implements Drawable {
         return true;
       },
     });
-    return <Designer>api;
+    return api;
+  }
+
+  // partially dependent on sectionsApi to create its hooks as well
+  private _createHooksApi(): HookSystem {
+    const { _hooks } = this;
+    return {
+      type: new Hook<[PatternType]>(),
+      palette: new Hook<[number, color]>(),
+      // y first, then x, then color
+    };
   }
 
 
   private _createPaletteApi(): Palette {
-    const { _palette } = this;
+    const { _palette, _hooks } = this;
     const api = new Array(_palette.length);
     for (let i = 0; i < _palette.length; ++i) {
       Object.defineProperty(api, i, {
@@ -411,12 +443,13 @@ class Acnl implements Drawable {
     return <Palette>api;
   }
 
-  private _createPixelsApi(): HookableArray<Array<pixel>> {
-    const { _pixels } = this;
+  private _refreshPixelsApi(): void {
+    const { _pixels, _pixelsApi } = this;
+    if (_pixelsApi != null) _pixelsApi.hook.clear();
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
-    const api = new HookableArray<Array<pixel>>(_pixels.length);
-    const { hook } = api;
+    const api: HookableArray<Array<pixel>, [number, number, pixel]>
+      = new HookableArray<Array<pixel>, [number, number, pixel]>(_pixels.length);
     for (let y = 0; y < _pixels.length; ++y) {
       const rowApi = new Array(_pixels[y].length);
       for (let x = 0; x < _pixels[y].length; ++x) {
@@ -428,7 +461,7 @@ class Acnl implements Drawable {
               throw new RangeError();
             // assignment hook
             // @ts-ignore no more spread
-            hook.trigger(y, x);
+            api.hook.trigger(y, x, pixel);
             _pixels[y][x] = pixel;
           }
         });
@@ -443,7 +476,63 @@ class Acnl implements Drawable {
         }
       });
     }
-    return <HookableArray<Array<pixel>>>api;
+    this._pixelsApi = api;
+  }
+
+  private _refreshSectionsApi(): void {
+    const { pixels, _type, _sectionsApi } = this;
+    // cleanup to prevent memory leak
+    // pixel api needs to be reloaded as well on type change (to clear all callback wrapping)
+    for (const section in _sectionsApi) {
+      _sectionsApi[section].hook.clear();
+      delete _sectionsApi[section];
+    }
+    // // setup empty hooks
+    const api = <{
+      texture: HookableArray<Array<pixel>, [number, number, pixel]>;
+      [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+    }>new Object();
+    for (const section in _type.sections) {
+      const mapping = _type.sections[section];
+      const sectionApi: HookableArray<Array<pixel>, [number, number, pixel]> =
+        new HookableArray<Array<pixel>, [number, number, pixel]>();
+      for (let y: number = 0; y < mapping.length; ++y) {
+        const rowApi = new Array<pixel>(mapping[y].length);
+        for (let x: number = 0; x < mapping[y].length; ++x) {
+          const targetY = mapping[y][x][0];
+          const targetX = mapping[y][x][1];
+          // wrapping existing setter
+          const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
+          Object.defineProperty(pixels[targetY], targetX, {
+            ...propertyConfig,
+            get: get,
+            set: (pixel) => {
+              // run the existing function, but now with hook call after it finishes
+              set(pixel);
+              // console.log(`modifying at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
+              sectionApi.hook.trigger(y, x, pixel);
+            }
+          });
+          // trigger setter at target
+          Object.defineProperty(rowApi, x, {
+            ...propertyConfig,
+            get: (): pixel => pixels[targetY][targetX],
+            set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
+          });
+        }
+        Object.defineProperty(sectionApi, y, {
+          ...propertyConfig,
+          get: () => rowApi,
+          set: (row) => {
+            for (let x = 0; x < rowApi.length; ++x) {
+              rowApi[x] = row[x];
+            }
+          }
+        });
+      }
+      api[section] = sectionApi;
+    }
+    this._sectionsApi = api;
   }
 
   // PUBLIC INTERFACE
@@ -507,10 +596,15 @@ class Acnl implements Drawable {
 
 
   public set type(type: PatternType) {
+    const { _hooks, _type } = this;
     // must match from enum, no excuses
     for (let acnlType of AcnlTypes) {
-      if (type === acnlType) {
+      if (type === acnlType && type !== _type) {
         this._type = type;
+        // reset and clean up apis
+        this._refreshPixelsApi();
+        this._refreshSectionsApi();
+        _hooks.type.trigger(type);
         return;
       }
     }
@@ -521,16 +615,17 @@ class Acnl implements Drawable {
   }
 
   set palette(palette: Palette) {
-    // palette arg can be binary colors or css colors
-    const { _palette } = this;
+    const { _palette, _hooks } = this;
     if (typeof palette !== "object" || !(palette instanceof Array)) return;
     for (let color of palette)
       if (!Acnl.colorToByte.has(color))
         throw new TypeError();
     for (let i = 0; i < _palette.length; ++i) {
       let color: color = palette[i];
-      if (Acnl.colorToByte.has(color)) continue;
+      // block all non-unique changes
+      if (_palette[i] === color) continue;
       _palette[i] = color;
+      _hooks.palette.trigger(i, color);
     }
   }
 
@@ -538,10 +633,8 @@ class Acnl implements Drawable {
     return this._paletteApi;
   }
 
-  public set pixels(pixels: HookableArray<Array<pixel>>) {
-  }
 
-  public get pixels(): HookableArray<Array<pixel>> {
+  public get pixels(): HookableArray<Array<pixel>, [number, number, pixel]> {
     return this._pixelsApi;
   }
 
@@ -556,49 +649,15 @@ class Acnl implements Drawable {
   }
 
   // COMPUTED properties
-  public get sections(): { [key: string]: HookableArray<Array<pixel>> } {
-    const { pixels } = this;
-    const mapping = this.type.sections.texture;
-    const api = new HookableArray<Array<pixel>>();
-    const { hook } = api;
-    for(let y: number =  0; y < mapping.length; ++y) {
-      const rowApi = new Array(mapping[y].length);
-      for (let x: number = 0; x < mapping[y].length; ++x) {
-        const targetY = mapping[y][x][0];
-        const targetX = mapping[y][x][1];
-        // wrapping existing setter
-        const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
-        Object.defineProperty(pixels[targetY], targetX, {
-          ...propertyConfig,
-          get: get,
-          set: (pixel) => {
-            // run the existing function, but now with hook call after
-            set(pixel);
-            console.log(`modifying default at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
-            hook.trigger(y, x);
-          }
-        });
-        // trigger setter at target
-        Object.defineProperty(rowApi, x, {
-          ...propertyConfig,
-          get: (): pixel => pixels[targetY][targetX],
-          set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
-        });
-        // now wrap default to trigger the hook
-      }
-      Object.defineProperty(api, y, {
-        ...propertyConfig,
-        get: () => rowApi,
-        set: (row) => {
-          for (let x = 0; x < rowApi.length; ++x) {
-            rowApi[x] = row[x];
-          }
-        }
-      });
-    }
-    return {
-      texture: api,
-    };
+  public get sections(): {
+    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
+    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+  } {
+    return this._sectionsApi;
+  }
+
+  public get hooks(): HookSystem {
+    return this._hooks;
   }
 
 
@@ -660,12 +719,12 @@ class Acnl implements Drawable {
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
     this._region = bytes.splice(0, 1)[0];
-    bytes.splice(0, 15).forEach((byte, i) => {
-      this._palette[i] = Acnl.byteToColor.get(byte);
+    this.palette = <Palette>bytes.splice(0, 15).map(byte => {
+      return Acnl.byteToColor.get(byte);
     });
     this._color = bytes.splice(0, 1)[0];
     this._looks = bytes.splice(0, 1)[0];
-    this._type = byteToType.get(bytes.splice(0, 1)[0]);
+    this.type = byteToType.get(bytes.splice(0, 1)[0]);
     bytes.splice(0, 2); // zero padding
     // load pixels
     const pixelsFlattened: pixel[] = bytes
@@ -677,8 +736,8 @@ class Acnl implements Drawable {
         return accum;
       }, []);
     for (let y = 0; y < this._type.size; ++y) {
-      for (let x = 0; x < this._pixels[y].length; ++x) {
-        this._pixels[y][x] = pixelsFlattened[x + y * 32];
+      for (let x = 0; x < this.pixels[y].length; ++x) {
+        this.pixels[y][x] = pixelsFlattened[x + y * 32];
       }
     }
     return this;
@@ -689,7 +748,7 @@ class Acnl implements Drawable {
     return acnl.fromBinaryString(binaryString);
   }
 
-  public toBinaryString(): any {
+  public toBinaryString(): string {
     // encode everything into hex numbers
     const {
       _title,
@@ -737,7 +796,7 @@ class Acnl implements Drawable {
     return bytesToBinaryString(bytes);
   }
 
-  public static toBinaryString(acnl: Acnl): any {
+  public static toBinaryString(acnl: Acnl): string {
     return acnl.toBinaryString();
   }
 }
