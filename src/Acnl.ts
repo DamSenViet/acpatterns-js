@@ -1,6 +1,14 @@
 import Enum from "./Enum";
 import Hook from "./Hook";
+import HookableArray from "./HookableArray";
 import {
+  mapping,
+  PatternType,
+  Drawable,
+} from "./interfaces";
+import {
+  color,
+  pixel,
   byte,
   Uint16ToBytes,
   bytesToUint16,
@@ -8,6 +16,7 @@ import {
   bytesToString,
   binaryStringToBytes,
   bytesToBinaryString,
+  propertyConfig,
 } from "./utils";
 
 // ACNL binary data layout.
@@ -52,92 +61,113 @@ import {
 // 0x0A = unknown (non-pro)
 // 0x0B = unknown (non-pro)
 
-type AcnlType = {
-  name: string;
-  size: number; // how many rows there are, pixels are 32x x 128y
-  // no need for sections since we use masks
-  sections?: number[];
-  // 32 bit numbers only
-  mask?: number[];
-  transform: (x: number, y: number) => number;
-};
+const defaultMapping: mapping = (() => {
+  const width = 32;
+  const height = 128;
+  const mapping = new Array(height).fill(null).map(i => new Array(width).fill(null));
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      mapping[y][x] = [y, x];
+    }
+  }
+  return mapping;
+})();
 
-const standardTransform = (x: number, y: number): number => {
-  return x + y * 32;
-}
-
-const sectionedTransform = (x: number, y: number): number => {
-  //top left to top right
-  if (y < 32) return x + (y + 64) * 32;
-  //bottom left to top left
-  if (y < 64) return x + (y - 32) * 32;
-  //top right upper to bottom left lower
-  if (y < 80) return x + (y - 16) * 32;
-  //top right lower to bottom right lower
-  if (y < 96) return x + (y + 32) * 32;
-  //bottom right upper does not move
-  if (y < 112) return x + (y) * 32;
-  //bottom right lower to bottom-left upper
-  return x + (y - 80) * 32;
-}
+// now from desired x/y to default coordinates
+const clothingTextureMapping: mapping = (() => {
+  const width = 64;
+  const height = 64;
+  const mapping = new Array(height).fill(null).map(i => new Array(width).fill(null));
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      if (x < 32 && y < 32) mapping[y][x] = [y - 0 + 32, x]; // front
+      else if (x < 64 && y < 32) mapping[y][x] = [y - 0, x - 32]; // back
+      else if (x < 32 && y < 48) mapping[y][x] = [y - 32 + (16 * 7), x]; // back skirt
+      else if (x < 32 && y < 64) mapping[y][x] = [y - 48 + (16 * 4), x]; // left arm
+      else if (x < 64 && y < 48) mapping[y][x] = [y - 32 + (16 * 6), x - 32]; // front skirt
+      else if (x < 64 && y < 64) mapping[y][x] = [y - 48 + (16 * 5), x - 32];
+    }
+  }
+  return mapping;
+})();
 
 class AcnlTypes extends Enum {
-  public static LongSleevedDress: AcnlType = {
+  public static LongSleevedDress: PatternType = Object.freeze({
     name: "Long Sleeved Dress",
     size: 128,
-    transform: sectionedTransform,
-  };
-  public static ShortSleevedDress: AcnlType = {
+    sections: {
+      texture: clothingTextureMapping
+    }
+  });
+  public static ShortSleevedDress: PatternType = Object.freeze({
     name: "Short Sleeved Dress",
     size: 128,
-    transform: sectionedTransform,
-  };
-  public static NoSleevedDress: AcnlType = Object.freeze({
+    sections: {
+      texture: clothingTextureMapping
+    }
+  });
+  public static NoSleevedDress: PatternType = Object.freeze({
     name: "Sleeveless Dress",
     size: 128,
-    transform: sectionedTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
-  public static LongSleevedShirt: AcnlType = Object.freeze({
+  public static LongSleevedShirt: PatternType = Object.freeze({
     name: "Long Sleeved Shirt",
     size: 128,
-    transform: sectionedTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
-  public static ShortSleevedShirt: AcnlType = Object.freeze({
+  public static ShortSleevedShirt: PatternType = Object.freeze({
     name: "Short Sleeved Shirt",
     size: 128,
-    transform: sectionedTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
-  public static NoSleevedShirt: AcnlType = Object.freeze({
+  public static NoSleevedShirt: PatternType = Object.freeze({
     name: "Sleeveless Shirt",
     size: 128,
-    transform: sectionedTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
-  public static HornedHat: AcnlType = Object.freeze({
+  public static HornedHat: PatternType = Object.freeze({
     name: "Horned Hat",
     size: 32,
-    transform: standardTransform
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
   // no one uses this
-  public static KnittedHat: AcnlType = Object.freeze({
+  public static KnittedHat: PatternType = Object.freeze({
     name: "Knitted Hat",
     size: 32,
-    transform: standardTransform
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
-  public static Standee: AcnlType = Object.freeze({
+  public static Standee: PatternType = Object.freeze({
     name: "Standee",
     size: 128,
-    transform: standardTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
   // is pro === is not standard
-  public static Standard: AcnlType = Object.freeze({
+  public static Standard: PatternType = Object.freeze({
     name: "Standard",
     size: 32,
-    transform: standardTransform,
+    sections: {
+      texture: clothingTextureMapping
+    }
   });
 }
 
-const byteToType: Map<number, AcnlType> = new Map(
+const byteToType: Map<number, PatternType> = new Map(
   [...[
     AcnlTypes.LongSleevedDress,
     AcnlTypes.ShortSleevedDress,
@@ -152,7 +182,7 @@ const byteToType: Map<number, AcnlType> = new Map(
   ].entries()]
 );
 
-const typeToByte: Map<AcnlType, number> = new Map(
+const typeToByte: Map<PatternType, number> = new Map(
   [...byteToType.entries()].map(([i, type]) => [type, i])
 );
 
@@ -163,15 +193,13 @@ type Designer = {
   id?: number;
   name?: string;
   isFemale?: boolean;
-}
+};
 
 type Town = {
   id?: number;
   name?: string;
 };
 
-type color = string;
-type pixel = 0 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15;
 // avoid having to set up
 type Palette = [
   color,
@@ -265,13 +293,13 @@ const colorToByte: Map<color, byte> = new Map(
   [...byteToColor.entries()].map(([i, color]) => [color, i])
 );
 
-class Acnl {
+class Acnl implements Drawable {
   public static types = AcnlTypes;
   // 2 way mapping for conversions between numbers and strings
   public static colorToByte = colorToByte;
   public static byteToColor = byteToColor;
   // standard pattern with defaults
-  private _title: string = "Joel's shirt";
+  private _title: string = "Empty";
   public _designer: Designer = {
     id: 0,
     name: "Unknown",
@@ -284,14 +312,7 @@ class Acnl {
   };
   private _townApi: Town = null;
 
-  private _type: AcnlType = Acnl.types.Standard;
-
-
-  private _hooks = {
-    paletteChange: new Hook(),
-    pixelChange: new Hook(),
-  };
-  private _hooksApi: { paletteChange: Hook, pixelChange: Hook } = null;
+  private _type: PatternType = Acnl.types.Standard;
 
   // lookup table for rendering colors
   // palette size is 15, 16th is always transparent but not included
@@ -319,7 +340,7 @@ class Acnl {
   private _pixels: pixel[][] = new Array(128).fill(15).map(() => {
     return new Array(32).fill(15);
   }); // start with entire transparent
-  private _pixelsApi: pixel[][] = null;
+  private _pixelsApi: HookableArray<Array<pixel>> = null;
 
   // stuff no one should touch
   private _language: number = 0;
@@ -327,7 +348,6 @@ class Acnl {
   private _region: number = 0;
   private _color: number = 0;
   private _looks: number = 0;
-
 
   public constructor() {
     // proxies and apis here
@@ -376,24 +396,10 @@ class Acnl {
 
   private _createPaletteApi(): Palette {
     const { _palette } = this;
-    // fixed array is fine b/c no change in length, no key removal/additions
-    // const api = new Proxy(_palette, {
-    //   get: (target, property, receiver) => {
-    //     Reflect.get(target, property, receiver);
-    //   },
-    //   set: (target, property, value, receiver) => {
-    //     const mutations = <Palette>new Array(15);
-    //     mutations[property] = value;
-    //     this.palette = mutations;
-    //     return true;
-    //   }
-    // }); // 15 color is transparent, always
-
     const api = new Array(_palette.length);
     for (let i = 0; i < _palette.length; ++i) {
       Object.defineProperty(api, i, {
-        enumerable: true,
-        configurable: true,
+        ...propertyConfig,
         get: () => _palette[i],
         set: (color: color) => {
           const mutations = _palette.slice();
@@ -405,31 +411,30 @@ class Acnl {
     return <Palette>api;
   }
 
-  private _createPixelsApi(): pixel[][] {
-    const { _pixels, _hooks } = this;
+  private _createPixelsApi(): HookableArray<Array<pixel>> {
+    const { _pixels } = this;
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
-    const api = new Array(_pixels.length);
+    const api = new HookableArray<Array<pixel>>(_pixels.length);
+    const { hook } = api;
     for (let y = 0; y < _pixels.length; ++y) {
-      const rowApi = new Array(64);
+      const rowApi = new Array(_pixels[y].length);
       for (let x = 0; x < _pixels[y].length; ++x) {
         Object.defineProperty(rowApi, x, {
-          enumerable: true,
-          configurable: false,
+          ...propertyConfig,
           get: (): pixel => _pixels[y][x],
           set: (pixel: pixel) => {
-            if (pixel >= 0 && pixel <= 15)
+            if (pixel < 0 && pixel > 15)
               throw new RangeError();
             // assignment hook
             // @ts-ignore no more spread
-            _hooks.pixelChange.trigger(x, y);
+            hook.trigger(y, x);
             _pixels[y][x] = pixel;
           }
         });
       }
       Object.defineProperty(api, y, {
-        enumerable: true,
-        configurable: false,
+        ...propertyConfig,
         get: () => rowApi,
         set: (row) => {
           for (let x = 0; x < rowApi.length; ++x) {
@@ -438,7 +443,7 @@ class Acnl {
         }
       });
     }
-    return <pixel[][]>api;
+    return <HookableArray<Array<pixel>>>api;
   }
 
   // PUBLIC INTERFACE
@@ -501,7 +506,7 @@ class Acnl {
   }
 
 
-  public set type(type: AcnlType) {
+  public set type(type: PatternType) {
     // must match from enum, no excuses
     for (let acnlType of AcnlTypes) {
       if (type === acnlType) {
@@ -511,7 +516,7 @@ class Acnl {
     }
   }
 
-  public get type(): AcnlType {
+  public get type(): PatternType {
     return this._type;
   }
 
@@ -527,17 +532,16 @@ class Acnl {
       if (Acnl.colorToByte.has(color)) continue;
       _palette[i] = color;
     }
-    this._hooks.paletteChange.trigger();
   }
 
   get palette(): Palette {
     return this._paletteApi;
   }
 
-  public set pixels(pixels: pixel[][]) {
+  public set pixels(pixels: HookableArray<Array<pixel>>) {
   }
 
-  public get pixels(): pixel[][] {
+  public get pixels(): HookableArray<Array<pixel>> {
     return this._pixelsApi;
   }
 
@@ -549,6 +553,52 @@ class Acnl {
     if (language < 128) {
       this._language = language;
     }
+  }
+
+  // COMPUTED properties
+  public get sections(): { [key: string]: HookableArray<Array<pixel>> } {
+    const { pixels } = this;
+    const mapping = this.type.sections.texture;
+    const api = new HookableArray<Array<pixel>>();
+    const { hook } = api;
+    for(let y: number =  0; y < mapping.length; ++y) {
+      const rowApi = new Array(mapping[y].length);
+      for (let x: number = 0; x < mapping[y].length; ++x) {
+        const targetY = mapping[y][x][0];
+        const targetX = mapping[y][x][1];
+        // wrapping existing setter
+        const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
+        Object.defineProperty(pixels[targetY], targetX, {
+          ...propertyConfig,
+          get: get,
+          set: (pixel) => {
+            // run the existing function, but now with hook call after
+            set(pixel);
+            console.log(`modifying default at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
+            hook.trigger(y, x);
+          }
+        });
+        // trigger setter at target
+        Object.defineProperty(rowApi, x, {
+          ...propertyConfig,
+          get: (): pixel => pixels[targetY][targetX],
+          set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
+        });
+        // now wrap default to trigger the hook
+      }
+      Object.defineProperty(api, y, {
+        ...propertyConfig,
+        get: () => rowApi,
+        set: (row) => {
+          for (let x = 0; x < rowApi.length; ++x) {
+            rowApi[x] = row[x];
+          }
+        }
+      });
+    }
+    return {
+      texture: api,
+    };
   }
 
 

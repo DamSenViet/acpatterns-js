@@ -1,4 +1,6 @@
 export type byte = number;
+export type color = string;
+export type pixel = number;
 
 // assume bytes were stored little endian
 export const Uint16ToBytes = (number: number): [byte, byte] => {
@@ -52,11 +54,7 @@ export const binaryStringToBytes = (binaryString: string): byte[] => {
   return bytes;
 };
 
-export default {
-  Uint16ToBytes,
-  bytesToUint16,
-  stringToBytes,
-  bytesToString,
-  binaryStringToBytes,
-  bytesToBinaryString
+export const propertyConfig = {
+  enumerable: true,
+  configurable: true,
 };
