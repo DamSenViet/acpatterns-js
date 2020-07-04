@@ -6,6 +6,7 @@ import {
   pixel,
   byte,
   mapping,
+  PatternPalette,
   PatternType,
   HookSystem,
   Drawable,
@@ -73,19 +74,6 @@ const defaultMapping: mapping = (() => {
   return mapping;
 })();
 
-const standeeMapping: mapping = (() => {
-  const width = 52;
-  const height = 64;
-  const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
-  for (let y: number = 0; y < height; ++y) {
-    for (let x: number = 0; x < width; ++x) {
-      if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
-      else mapping[y][x] = [y, x];
-    }
-  }
-  return mapping;
-})();
 
 // now from desired x/y to default coordinates
 const clothingTextureMapping: mapping = (() => {
@@ -103,6 +91,19 @@ const clothingTextureMapping: mapping = (() => {
       else if (x < 64 && y < 64) mapping[y][x] = [y - 48 + (16 * 5), x - 32];
     }
   }
+  return mapping;
+})();
+
+const standardTextureMapping: mapping = (() => {
+  const width = 32;
+  const height = 32;
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    for (let y: number = 0; y < height; ++y) {
+      for (let x: number = 0; x < width; ++x) {
+        mapping[y][x] = [y, x];
+      }
+    }
   return mapping;
 })();
 
@@ -153,7 +154,7 @@ class AcnlTypes extends Enum {
     name: "Horned Hat",
     size: 32,
     sections: {
-      texture: clothingTextureMapping
+      texture: standardTextureMapping
     }
   });
   // no one uses this
@@ -161,14 +162,26 @@ class AcnlTypes extends Enum {
     name: "Knitted Hat",
     size: 32,
     sections: {
-      texture: clothingTextureMapping
+      texture: standardTextureMapping
     }
   });
   public static Standee: PatternType = Object.freeze({
     name: "Standee",
     size: 128,
     sections: {
-      texture: standeeMapping
+      texture:  (() => {
+        const width = 64;
+        const height = 64;
+        const mapping: Array<Array<[number, number]>> =
+          new Array(height).fill(null).map(i => new Array(width).fill(null));
+        for (let y: number = 0; y < height; ++y) {
+          for (let x: number = 0; x < width; ++x) {
+            if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
+            else mapping[y][x] = [y, x];
+          }
+        }
+        return mapping;
+      })(),
     }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
@@ -177,7 +190,7 @@ class AcnlTypes extends Enum {
     name: "Standard",
     size: 32,
     sections: {
-      texture: clothingTextureMapping
+      texture: standardTextureMapping
     }
   });
 }
@@ -214,25 +227,6 @@ type Town = {
   id?: number;
   name?: string;
 };
-
-// avoid having to set up
-type Palette = [
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-  color,
-];
 
 
 const byteToColor: Map<byte, color> = new Map(
@@ -331,7 +325,7 @@ class Acnl implements Drawable {
 
   // lookup table for rendering colors
   // palette size is 15, 16th is always transparent but not included
-  private _palette: Palette = [
+  private _palette: PatternPalette = [
     "#FFFFFF",
     "#FFFFFF",
     "#FFFFFF",
@@ -348,7 +342,7 @@ class Acnl implements Drawable {
     "#FFFFFF",
     "#FFFFFF",
   ];
-  private _paletteApi: Palette = null;
+  private _paletteApi: PatternPalette = null;
 
   // type size determines what to truncate down when converting to binary.
   // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
@@ -372,15 +366,15 @@ class Acnl implements Drawable {
   public constructor() {
     // proxies and apis here
     // setup on all apis
-    this._hooks = this._createHooksApi();
-    this._designerApi = this._createDesignerApi();
-    this._townApi = this._createTownApi();
-    this._paletteApi = this._createPaletteApi();
+    this._refreshHooksApi();
+    this._refreshDesignerApi();
+    this._refreshTownApi();
+    this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
   };
 
-  private _createTownApi(): Town {
+  private _refreshTownApi(): void {
     const { _town } = this;
     const api = new Proxy(_town, {
       get: (target, property, receiver) => {
@@ -394,10 +388,10 @@ class Acnl implements Drawable {
         return true;
       },
     });
-    return api;
+    this._townApi = api;
   }
 
-  private _createDesignerApi(): Designer {
+  private _refreshDesignerApi(): void {
     const { _designer } = this;
     // divert all sets back to setter
     const api = new Proxy(_designer, {
@@ -412,23 +406,21 @@ class Acnl implements Drawable {
         return true;
       },
     });
-    return api;
+    this._designerApi = api;
   }
 
   // partially dependent on sectionsApi to create its hooks as well
-  private _createHooksApi(): HookSystem {
-    const { _hooks } = this;
-    return {
+  private _refreshHooksApi(): void {
+    this._hooks = {
       type: new Hook<[PatternType]>(),
       palette: new Hook<[number, color]>(),
-      // y first, then x, then color
     };
   }
 
 
-  private _createPaletteApi(): Palette {
-    const { _palette, _hooks } = this;
-    const api = new Array(_palette.length);
+  private _refreshPaletteApi(): void {
+    const { _palette } = this;
+    const api: Array<color> = new Array<color>(_palette.length);
     for (let i = 0; i < _palette.length; ++i) {
       Object.defineProperty(api, i, {
         ...propertyConfig,
@@ -436,11 +428,11 @@ class Acnl implements Drawable {
         set: (color: color) => {
           const mutations = _palette.slice();
           mutations[i] = color;
-          this.palette = <Palette>mutations;
+          this.palette = <PatternPalette>mutations;
         }
       })
     }
-    return <Palette>api;
+    this._paletteApi = <PatternPalette>api;
   }
 
   private _refreshPixelsApi(): void {
@@ -483,17 +475,17 @@ class Acnl implements Drawable {
     const { pixels, _type, _sectionsApi } = this;
     // cleanup to prevent memory leak
     // pixel api needs to be reloaded as well on type change (to clear all callback wrapping)
-    for (const section in _sectionsApi) {
-      _sectionsApi[section].hook.clear();
-      delete _sectionsApi[section];
+    for (const sectionName in _sectionsApi) {
+      _sectionsApi[sectionName].hook.clear();
+      delete _sectionsApi[sectionName];
     }
     // // setup empty hooks
     const api = <{
       texture: HookableArray<Array<pixel>, [number, number, pixel]>;
       [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
     }>new Object();
-    for (const section in _type.sections) {
-      const mapping = _type.sections[section];
+    for (const sectionName in _type.sections) {
+      const mapping = _type.sections[sectionName];
       const sectionApi: HookableArray<Array<pixel>, [number, number, pixel]> =
         new HookableArray<Array<pixel>, [number, number, pixel]>();
       for (let y: number = 0; y < mapping.length; ++y) {
@@ -501,7 +493,7 @@ class Acnl implements Drawable {
         for (let x: number = 0; x < mapping[y].length; ++x) {
           const targetY = mapping[y][x][0];
           const targetX = mapping[y][x][1];
-          // wrapping existing setter
+          // wrapping existing setter at target
           const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
           Object.defineProperty(pixels[targetY], targetX, {
             ...propertyConfig,
@@ -530,10 +522,11 @@ class Acnl implements Drawable {
           }
         });
       }
-      api[section] = sectionApi;
+      api[sectionName] = sectionApi;
     }
     this._sectionsApi = api;
   }
+
 
   // PUBLIC INTERFACE
   public get title(): string {
@@ -614,9 +607,11 @@ class Acnl implements Drawable {
     return this._type;
   }
 
-  set palette(palette: Palette) {
+
+  set palette(palette: PatternPalette) {
     const { _palette, _hooks } = this;
-    if (typeof palette !== "object" || !(palette instanceof Array)) return;
+    if (typeof palette !== "object" || !(palette instanceof Array)) throw new TypeError();
+    if (palette.length > 15) throw new TypeError(); // too many
     for (let color of palette)
       if (!Acnl.colorToByte.has(color))
         throw new TypeError();
@@ -629,7 +624,7 @@ class Acnl implements Drawable {
     }
   }
 
-  get palette(): Palette {
+  get palette(): PatternPalette {
     return this._paletteApi;
   }
 
@@ -638,11 +633,11 @@ class Acnl implements Drawable {
     return this._pixelsApi;
   }
 
-  public get language(): number {
+  private get language(): number {
     return this._language;
   }
 
-  public set language(language: number) {
+  private set language(language: number) {
     if (language < 128) {
       this._language = language;
     }
@@ -719,7 +714,7 @@ class Acnl implements Drawable {
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
     this._region = bytes.splice(0, 1)[0];
-    this.palette = <Palette>bytes.splice(0, 15).map(byte => {
+    this.palette = <PatternPalette>bytes.splice(0, 15).map(byte => {
       return Acnl.byteToColor.get(byte);
     });
     this._color = bytes.splice(0, 1)[0];
