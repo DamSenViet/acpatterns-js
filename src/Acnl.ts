@@ -93,8 +93,8 @@ const clothingTextureMapping: mapping = (() => {
   return mapping;
 })();
 
-const standeeTextureMapping: mapping = (() => {
-  const width = 64;
+const createStandeeMapping = (isTextureMapping: boolean): mapping => {
+  const width = isTextureMapping? 64 :  52;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
     new Array(height).fill(null).map(i => new Array(width).fill(null));
@@ -105,7 +105,10 @@ const standeeTextureMapping: mapping = (() => {
     }
   }
   return mapping;
-})();
+};
+
+const standeeTextureMapping = createStandeeMapping(true);
+const standeeFrontMapping = createStandeeMapping(false);
 
 
 enum ClothLength {
@@ -239,6 +242,7 @@ class AcnlTypes extends Enum {
     size: 128,
     sections: {
       texture: standeeTextureMapping,
+      front: standeeFrontMapping,
     }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
