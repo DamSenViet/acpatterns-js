@@ -61,20 +61,6 @@ import {
 // 0x0A = unknown (non-pro)
 // 0x0B = unknown (non-pro)
 
-const defaultMapping: mapping = (() => {
-  const width = 32;
-  const height = 128;
-  const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
-  for (let y: number = 0; y < height; ++y) {
-    for (let x: number = 0; x < width; ++x) {
-      mapping[y][x] = [y, x];
-    }
-  }
-  return mapping;
-})();
-
-
 // now from desired x/y to default coordinates
 const clothingTextureMapping: mapping = (() => {
   const width = 64;
@@ -97,6 +83,19 @@ const clothingTextureMapping: mapping = (() => {
 const standardTextureMapping: mapping = (() => {
   const width = 32;
   const height = 32;
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    for (let y: number = 0; y < height; ++y) {
+      for (let x: number = 0; x < width; ++x) {
+        mapping[y][x] = [y, x];
+      }
+    }
+  return mapping;
+})();
+
+const dressFrontMapping: mapping = (() => {
+  const width = 32;
+  const height = 48;
   const mapping: Array<Array<[number, number]>> =
     new Array(height).fill(null).map(i => new Array(width).fill(null));
     for (let y: number = 0; y < height; ++y) {

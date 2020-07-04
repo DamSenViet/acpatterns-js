@@ -14,6 +14,31 @@ export interface DrawerOptions {
   pattern: Drawable;
 };
 
+export interface DrawerMeasurements {
+  // source meaasurements
+  sourceHeight: number;
+  sourceHalfHeight: number;
+  sourceWidth: number;
+  sourceHalfWidth: number;
+  // raw canvas measurements
+  size: number;
+  pixelSize: number,
+  yStart: number;
+  yCenter: number;
+  yStop: number;
+  xStart: number;
+  xCenter: number;
+  xStop: number;
+  // canvas pixel measurements
+  pixelGridSize: number;
+  pixelYStart: number;
+  pixelYCenter: number;
+  pixelYStop: number;
+  pixelXStart: number;
+  pixelXCenter: number;
+  pixelXStop: number;
+};
+
 // must be more than 100x100
 const assigned: Set<HTMLCanvasElement> = new Set();
 class Drawer {
@@ -24,16 +49,44 @@ class Drawer {
   private _pattern: Drawable = null;
   private _source: HookableArray<Array<pixel>, [number, number, pixel]> = null;
   // measurements for drawing
-  private _size: number = null;
-  private _pixelSize: number = null;
-  private _offsetPixelY: number = null;
-  private _offsetPixelX: number = null;
-  private _tool: Tool = new Brush({ size: 1 });
-  // private this._windowResizeDelay: number = 100;
+  private _measurements: DrawerMeasurements = {
+    // source meaasurements
+    sourceHeight: null,
+    sourceHalfHeight: null,
+    sourceWidth: null,
+    sourceHalfWidth: null,
+    // raw canvas measurements
+    size: null,
+    pixelSize: null,
+    yStart: null,
+    yCenter: null,
+    yStop: null,
+    xStart: null,
+    xCenter: null,
+    xStop: null,
+    // canvas pixel measurements
+    pixelGridSize: null,
+    pixelYStart: null,
+    pixelYCenter: null,
+    pixelYStop: null,
+    pixelXStart: null,
+    pixelXCenter: null,
+    pixelXStop: null,
+  };
 
-  // optimize previewCanvas
+  private _yStart: number = null;
+  private _yCenter: number = null;
+  private _yStop: number = null;
+  private _xStart: number = null;
+  private _xCenter: number = null;
+  private _xStop: number = null;
+
+  // optimize previewCanvas determines when to redraw/draw
   private _lastSourceY: number = null;
   private _lastSourceX: number = null;
+
+  private _tool: Tool = new Brush({ size: 10 });
+  // private this._windowResizeDelay: number = 100;
 
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
@@ -53,7 +106,7 @@ class Drawer {
     this._drawingCanvas = drawingCanvas;
     assigned.add(this._drawingCanvas);
     // validate canvas after-css size, must be square and 128xy
-    this._source = pattern.sections.texture;
+    this._source = pattern.pixels;
     this._drawingContext = drawingCanvas.getContext("2d");
     this._updateMeasurements();
 
@@ -73,23 +126,59 @@ class Drawer {
       this._drawingCanvas.offsetHeight !== this._drawingCanvas.offsetWidth ||
       this._drawingCanvas.offsetHeight % 128 !== 0
     ) throw new TypeError();
-    this._size = this._drawingCanvas.offsetHeight;
+
+    const size = this._drawingCanvas.offsetHeight;
     // determine pixel size based on source
     // if pattern is <= 64, scale up size is scaled up, double pixel size
-
-    let sourceHeight: number = this._source.length;
-    let sourceWidth: number = this._source[0].length;
+    const sourceHeight: number = this._source.length;
+    const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
+    const sourceWidth: number = this._source[0].length;
+    const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
     let pixelGridSize: number = 1;
     while (pixelGridSize < sourceHeight || pixelGridSize < sourceWidth)
       pixelGridSize = pixelGridSize * 2;
-    this._pixelSize = this._drawingCanvas.offsetHeight / pixelGridSize;
+    const pixelSize = this._drawingCanvas.offsetHeight / pixelGridSize;
 
     const top: number = Math.floor(pixelGridSize / 2);
     const left: number = Math.floor(pixelGridSize / 2);
-    const translateY: number = -(Math.floor(this._source.length / 2));
-    const translateX: number = -(Math.floor(this._source[0].length / 2));
-    this._offsetPixelY = top + translateY;
-    this._offsetPixelX = left + translateX;
+    const translateY: number = -sourceHalfHeight;
+    const translateX: number = -sourceHalfWidth;
+
+    const pixelYStart = top + translateY;
+    const pixelYCenter = pixelYStart + sourceHalfHeight;
+    const pixelYStop = pixelYStart + sourceHeight;
+    const pixelXStart = left + translateX;
+    const pixelXCenter = pixelXStart + sourceHalfWidth;
+    const pixelXStop = pixelXStart + sourceWidth;
+
+    const yStart = pixelYStart * pixelSize;
+    const yCenter = pixelYCenter * pixelSize;
+    const yStop = pixelYStop * pixelSize;
+    const xStart = pixelXStart * pixelSize;
+    const xCenter = pixelXCenter * pixelSize;
+    const xStop = pixelXStop * pixelSize;
+
+    this._measurements = Object.freeze<DrawerMeasurements>({
+      sourceHeight,
+      sourceHalfHeight,
+      sourceWidth,
+      sourceHalfWidth,
+      size,
+      pixelSize,
+      yStart,
+      yCenter,
+      yStop,
+      xStart,
+      xCenter,
+      xStop,
+      pixelGridSize,
+      pixelYStart,
+      pixelYCenter,
+      pixelYStop,
+      pixelXStart,
+      pixelXCenter,
+      pixelXStop,
+    });
   }
 
   private _onWindowResize = debounce(() => {
@@ -99,13 +188,20 @@ class Drawer {
 
   private _onMouse = (event: MouseEvent) => {
     // need - 1 to use zero indexed values
-    const pixelY = Math.floor(event.clientY / this._pixelSize) - 1;
-    const pixelX = Math.floor(event.clientX / this._pixelSize) - 1;
-    if (pixelY < this._offsetPixelY) return;
-    if (pixelX < this._offsetPixelX) return;
-    // console.log(pixelX, pixelY);
-    const sourceY = pixelY - this._offsetPixelY;
-    const sourceX = pixelX - this._offsetPixelX;
+    const pixelY = Math.floor(event.clientY / this._measurements.pixelSize) - 1;
+    const pixelX = Math.floor(event.clientX / this._measurements.pixelSize) - 1;
+
+    if (
+      pixelY < this._measurements.pixelYStart ||
+      pixelY > this._measurements.pixelYStop - 1
+    ) return;
+    if (
+      pixelX < this._measurements.pixelXStart ||
+      pixelX > this._measurements.pixelXStop - 1
+    ) return;
+
+    const sourceY = pixelY - this._measurements.pixelYStart;
+    const sourceX = pixelX - this._measurements.pixelXStart;
     // draw on main canvas
     if (event.buttons === 1) {
       this._tool.draw(
@@ -123,7 +219,12 @@ class Drawer {
     this._lastSourceX = sourceX;
     if (this.previewCanvas != null) {
       // redraw preview
-      this._previewContext.clearRect(0, 0, this._size, this._size);
+      this._previewContext.clearRect(
+        0,
+        0,
+        this._measurements.size,
+        this._measurements.size
+      );
       this._redrawGrid();
 
       // draw preview of tool
@@ -132,12 +233,9 @@ class Drawer {
         sourceY,
         sourceX,
         this._previewContext,
-        this._pixelSize,
-        this._offsetPixelY,
-        this._offsetPixelX,
+        this._measurements,
       );
     }
-
   }
 
 
@@ -148,10 +246,10 @@ class Drawer {
         if (this._source[sourceY][sourceX] !== i) continue;
         this._drawingContext.fillStyle = color;
         this._drawingContext.fillRect(
-          (this._offsetPixelX + sourceX) * this._pixelSize,
-          (this._offsetPixelY + sourceY) * this._pixelSize,
-          this._pixelSize,
-          this._pixelSize,
+          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+          this._measurements.pixelSize,
+          this._measurements.pixelSize,
         );
       }
     }
@@ -160,42 +258,82 @@ class Drawer {
   private _onTypeUpdate = (type: PatternType) => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
+    this._updateMeasurements();
+    this._redrawGrid();
     this.refresh();
     this._source.hook.tap(this._onPixelUpdate);
   }
 
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel) => {
     this._drawingContext.clearRect(
-      (this._offsetPixelX + sourceX) * this._pixelSize,
-      (this._offsetPixelY + sourceY) * this._pixelSize,
-      this._pixelSize,
-      this._pixelSize,
+      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+      this._measurements.pixelSize,
+      this._measurements.pixelSize,
     );
     if (pixel === 15) return;
     this._drawingContext.fillStyle = this._pattern.palette[pixel];
     this._drawingContext.fillRect(
-      (this._offsetPixelX + sourceX) * this._pixelSize,
-      (this._offsetPixelY + sourceY) * this._pixelSize,
-      this._pixelSize,
-      this._pixelSize,
+      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+      this._measurements.pixelSize,
+      this._measurements.pixelSize,
     );
   }
 
   private _redrawGrid() {
     if (this._previewCanvas == null) return;
-    this._previewContext.strokeStyle = "#cbc8c8";
+    this._previewContext.strokeStyle = "#E2E2E2";
     this._previewContext.lineWidth = 1;
-    for (let i = this._pixelSize; i < this._size; i += this._pixelSize) {
-      this._previewContext.beginPath();
-      this._previewContext.moveTo(i, 0);
-      this._previewContext.lineTo(i, this._size);
-      this._previewContext.stroke();
 
+
+    // vertical pixel grid lines
+    for (
+      let x = this._measurements.xStart;
+      x < this._measurements.xStop;
+      x += this._measurements.pixelSize
+    ) {
       this._previewContext.beginPath();
-      this._previewContext.moveTo(0, i);
-      this._previewContext.lineTo(this._size, i);
+      this._previewContext.moveTo(x, this._measurements.yStart);
+      this._previewContext.lineTo(x, this._measurements.yStop);
       this._previewContext.stroke();
     }
+    // horizontal pixel grid lines
+    for (
+      let y = this._measurements.yStart;
+      y < this._measurements.yStop;
+      y += this._measurements.pixelSize
+    ) {
+      this._previewContext.beginPath();
+      this._previewContext.moveTo(this._measurements.xStart, y);
+      this._previewContext.lineTo(this._measurements.xStop, y);
+      this._previewContext.stroke();
+    }
+    // guide lines
+    this._previewContext.strokeStyle = "#624C37";
+    this._previewContext.lineWidth = 3;
+    // vertical guide
+    this._previewContext.beginPath();
+    this._previewContext.moveTo(
+      this._measurements.xCenter,
+      this._measurements.yStart,
+    );
+    this._previewContext.lineTo(
+      this._measurements.xCenter,
+      this._measurements.yStop,
+    );
+    this._previewContext.stroke();
+    // horizontal divider
+    this._previewContext.beginPath();
+    this._previewContext.moveTo(
+      this._measurements.xStart,
+      this._measurements.yCenter,
+    );
+    this._previewContext.lineTo(
+      this._measurements.xStop,
+      this._measurements.yCenter,
+    );
+    this._previewContext.stroke();
   }
 
 
@@ -241,6 +379,8 @@ class Drawer {
     // change sources and redraw
     this._source.hook.untap(this._onPixelUpdate);
     this._source = source;
+    this._updateMeasurements();
+    this._redrawGrid();
     this.refresh();
     this._source.hook.tap(this._onPixelUpdate);
   }
@@ -251,16 +391,16 @@ class Drawer {
 
   // public methods
   public refresh() {
-    this._drawingContext.clearRect(0, 0, this._size, this._size);
+    this._drawingContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
     for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
         if (this._source[sourceY][sourceX] === 15) continue;
         this._drawingContext.fillStyle = this._pattern.palette[this._source[sourceY][sourceX]];
         this._drawingContext.fillRect(
-          (this._offsetPixelX + sourceX) * this._pixelSize,
-          (this._offsetPixelY + sourceY) * this._pixelSize,
-          this._pixelSize,
-          this._pixelSize,
+          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+          this._measurements.pixelSize,
+          this._measurements.pixelSize,
         );
       }
     }

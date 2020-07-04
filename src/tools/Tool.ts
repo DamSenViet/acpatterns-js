@@ -1,4 +1,5 @@
 import HookableArray from "../HookableArray";
+import { DrawerMeasurements } from "../Drawer";
 import {
   pixel,
 } from "../utils";
@@ -9,9 +10,7 @@ class Tool {
     sourceY: number,
     sourceX: number,
     previewContext: CanvasRenderingContext2D,
-    pixelSize: number,
-    offsetPixelY: number,
-    offsetPixelX: number,
+    measurements: DrawerMeasurements,
   ): void {}
 
   public draw(
