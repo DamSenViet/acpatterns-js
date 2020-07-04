@@ -9,7 +9,7 @@ class Tool {
     source: HookableArray<Array<pixel>, [number, number, pixel]>,
     sourceY: number,
     sourceX: number,
-    previewContext: CanvasRenderingContext2D,
+    overlayContext: CanvasRenderingContext2D,
     measurements: DrawerMeasurements,
   ): void {}
 

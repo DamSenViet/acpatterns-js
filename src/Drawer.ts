@@ -10,7 +10,7 @@ import {
 
 export interface DrawerOptions {
   drawingCanvas: HTMLCanvasElement,
-  previewCanvas?: HTMLElement,
+  overlayCanvas?: HTMLElement,
   pattern: Drawable;
 };
 
@@ -44,8 +44,8 @@ const assigned: Set<HTMLCanvasElement> = new Set();
 class Drawer {
   private _drawingCanvas: HTMLCanvasElement = null;
   private _drawingContext: CanvasRenderingContext2D = null;
-  private _previewCanvas: HTMLCanvasElement = null;
-  private _previewContext: CanvasRenderingContext2D = null;
+  private _overlayCanvas: HTMLCanvasElement = null;
+  private _overlayContext: CanvasRenderingContext2D = null;
   private _pattern: Drawable = null;
   private _source: HookableArray<Array<pixel>, [number, number, pixel]> = null;
   // measurements for drawing
@@ -81,7 +81,7 @@ class Drawer {
   private _xCenter: number = null;
   private _xStop: number = null;
 
-  // optimize previewCanvas determines when to redraw/draw
+  // optimize overlayCanvas determines when to redraw/draw
   private _lastSourceY: number = null;
   private _lastSourceX: number = null;
 
@@ -90,17 +90,17 @@ class Drawer {
 
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
-  public constructor({ drawingCanvas, previewCanvas, pattern }: DrawerOptions) {
+  public constructor({ drawingCanvas, overlayCanvas, pattern }: DrawerOptions) {
     if (pattern == null) throw new Error();
     if (
       drawingCanvas == null ||
       !(drawingCanvas instanceof HTMLCanvasElement)
     ) throw new TypeError();
-    if (previewCanvas != null) {
-      if (!(previewCanvas instanceof HTMLCanvasElement)) throw new TypeError();
-      this._previewCanvas = previewCanvas;
-      this._previewContext = previewCanvas.getContext("2d");
-      assigned.add(this._previewCanvas);
+    if (overlayCanvas != null) {
+      if (!(overlayCanvas instanceof HTMLCanvasElement)) throw new TypeError();
+      this._overlayCanvas = overlayCanvas;
+      this._overlayContext = overlayCanvas.getContext("2d");
+      assigned.add(this._overlayCanvas);
     }
     this._pattern = pattern;
     this._drawingCanvas = drawingCanvas;
@@ -110,8 +110,8 @@ class Drawer {
     this._drawingContext = drawingCanvas.getContext("2d");
     this._updateMeasurements();
 
-    this._redrawGrid();
-    this.refresh(); // draw first round
+    this.refreshOverlay();
+    this.refreshDrawing(); // draw first round
     // initialize all hooks
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -183,7 +183,7 @@ class Drawer {
 
   private _onWindowResize = debounce(() => {
     this._updateMeasurements();
-    this.refresh();
+    this.refreshDrawing();
   }, 200);
 
   private _onMouse = (event: MouseEvent) => {
@@ -210,29 +210,23 @@ class Drawer {
         sourceX,
       );
     }
-    // draw on preview
+    // draw on overlay
     if (
       this._lastSourceY === sourceY &&
       this._lastSourceX === sourceX
     ) return;
     this._lastSourceY = sourceY;
     this._lastSourceX = sourceX;
-    if (this.previewCanvas != null) {
+    if (this.overlayCanvas != null) {
       // redraw preview
-      this._previewContext.clearRect(
-        0,
-        0,
-        this._measurements.size,
-        this._measurements.size
-      );
-      this._redrawGrid();
+      this.refreshOverlay();
 
       // draw preview of tool
       this._tool.preview(
         this._source,
         sourceY,
         sourceX,
-        this._previewContext,
+        this._overlayContext,
         this._measurements,
       );
     }
@@ -259,8 +253,8 @@ class Drawer {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
     this._updateMeasurements();
-    this._redrawGrid();
-    this.refresh();
+    this.refreshOverlay();
+    this.refreshDrawing();
     this._source.hook.tap(this._onPixelUpdate);
   }
 
@@ -281,10 +275,17 @@ class Drawer {
     );
   }
 
-  private _redrawGrid() {
-    if (this._previewCanvas == null) return;
-    this._previewContext.strokeStyle = "#E2E2E2";
-    this._previewContext.lineWidth = 1;
+  public refreshOverlay(): void {
+    if (this._overlayCanvas == null) return;
+    this._overlayContext.clearRect(
+      0,
+      0,
+      this._measurements.size,
+      this._measurements.size
+    );
+
+    this._overlayContext.strokeStyle = "#E2E2E2";
+    this._overlayContext.lineWidth = 1;
 
 
     // vertical pixel grid lines
@@ -293,10 +294,10 @@ class Drawer {
       x < this._measurements.xStop;
       x += this._measurements.pixelSize
     ) {
-      this._previewContext.beginPath();
-      this._previewContext.moveTo(x, this._measurements.yStart);
-      this._previewContext.lineTo(x, this._measurements.yStop);
-      this._previewContext.stroke();
+      this._overlayContext.beginPath();
+      this._overlayContext.moveTo(x, this._measurements.yStart);
+      this._overlayContext.lineTo(x, this._measurements.yStop);
+      this._overlayContext.stroke();
     }
     // horizontal pixel grid lines
     for (
@@ -304,40 +305,43 @@ class Drawer {
       y < this._measurements.yStop;
       y += this._measurements.pixelSize
     ) {
-      this._previewContext.beginPath();
-      this._previewContext.moveTo(this._measurements.xStart, y);
-      this._previewContext.lineTo(this._measurements.xStop, y);
-      this._previewContext.stroke();
+      this._overlayContext.beginPath();
+      this._overlayContext.moveTo(this._measurements.xStart, y);
+      this._overlayContext.lineTo(this._measurements.xStop, y);
+      this._overlayContext.stroke();
     }
     // guide lines
-    this._previewContext.strokeStyle = "#624C37";
-    this._previewContext.lineWidth = 3;
+    this._overlayContext.strokeStyle = "#624C37";
+    this._overlayContext.lineWidth = 3;
     // vertical guide
-    this._previewContext.beginPath();
-    this._previewContext.moveTo(
+    this._overlayContext.beginPath();
+    this._overlayContext.moveTo(
       this._measurements.xCenter,
       this._measurements.yStart,
     );
-    this._previewContext.lineTo(
+    this._overlayContext.lineTo(
       this._measurements.xCenter,
       this._measurements.yStop,
     );
-    this._previewContext.stroke();
+    this._overlayContext.stroke();
     // horizontal divider
-    this._previewContext.beginPath();
-    this._previewContext.moveTo(
+    this._overlayContext.beginPath();
+    this._overlayContext.moveTo(
       this._measurements.xStart,
       this._measurements.yCenter,
     );
-    this._previewContext.lineTo(
+    this._overlayContext.lineTo(
       this._measurements.xStop,
       this._measurements.yCenter,
     );
-    this._previewContext.stroke();
+    this._overlayContext.stroke();
   }
 
-
   // public api
+  public get drawingCanvas(): HTMLCanvasElement {
+    return this._drawingCanvas;
+  }
+
   public set drawingCanvas(drawingCanvas: HTMLCanvasElement) {
     if (!(drawingCanvas instanceof HTMLCanvasElement))
       throw new TypeError();
@@ -346,26 +350,20 @@ class Drawer {
     assigned.add(this._drawingCanvas);
     this._drawingContext = drawingCanvas.getContext("2d");
     this._updateMeasurements();
-    this.refresh();
+    this.refreshDrawing();
   }
 
-  public get drawingCanvas(): HTMLCanvasElement {
-    return this._drawingCanvas;
+  public get overlayCanvas(): HTMLCanvasElement {
+    return this._overlayCanvas;
   }
 
-  public get previewCanvas(): HTMLElement {
-    return this._previewCanvas;
-  }
-
-  public set previewCanvas(previewCanvas: HTMLElement) {
-    if (!(previewCanvas instanceof HTMLCanvasElement))
+  public set overlayCanvas(overlayCanvas: HTMLCanvasElement) {
+    if (!(overlayCanvas instanceof HTMLCanvasElement))
       throw new TypeError();
-    assigned.delete(this._previewCanvas);
-    this._previewCanvas = previewCanvas;
-    assigned.add(this._previewCanvas);
-    this._drawingContext = previewCanvas.getContext("2d");
-    // this._updateMeasurements();
-    // this.refresh();
+    assigned.delete(this._overlayCanvas);
+    this._overlayCanvas = overlayCanvas;
+    assigned.add(this._overlayCanvas);
+    this._overlayContext = overlayCanvas.getContext("2d");
   }
 
   public set source(source: HookableArray<Array<pixel>, [number, number, pixel]>) {
@@ -380,8 +378,8 @@ class Drawer {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = source;
     this._updateMeasurements();
-    this._redrawGrid();
-    this.refresh();
+    this.refreshOverlay();
+    this.refreshDrawing();
     this._source.hook.tap(this._onPixelUpdate);
   }
 
@@ -390,7 +388,7 @@ class Drawer {
   }
 
   // public methods
-  public refresh() {
+  public refreshDrawing(): void {
     this._drawingContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
     for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
@@ -406,7 +404,7 @@ class Drawer {
     }
   }
 
-  public dispose() {
+  public dispose(): void {
     this._source.hook.untap(this._onPixelUpdate);
     assigned.delete(this._drawingCanvas);
   }

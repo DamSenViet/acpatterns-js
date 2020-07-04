@@ -31,11 +31,11 @@ class Brush extends Tool {
     source: HookableArray<Array<pixel>, [number, number, pixel]>,
     sourceY: number,
     sourceX: number,
-    previewContext: CanvasRenderingContext2D,
+    overlayContext: CanvasRenderingContext2D,
     measurements: DrawerMeasurements,
   ): void {
-    previewContext.strokeStyle = "#00d2c2";
-    previewContext.lineWidth = Math.ceil(measurements.pixelSize/4);
+    overlayContext.strokeStyle = "#00d2c2";
+    overlayContext.lineWidth = Math.ceil(measurements.pixelSize/4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -47,33 +47,33 @@ class Brush extends Tool {
       topLeftSourceX = sourceX - Math.floor(this._size / 2);
       topLeftSourceY = sourceY - Math.floor(this._size / 2);
     }
-    previewContext.beginPath();
+    overlayContext.beginPath();
     // top left
-    previewContext.moveTo(
+    overlayContext.moveTo(
       (measurements.pixelXStart + topLeftSourceX) * measurements.pixelSize,
       (measurements.pixelYStart + topLeftSourceY) * measurements.pixelSize,
     );
     // top right
-    previewContext.lineTo(
+    overlayContext.lineTo(
       (measurements.pixelXStart + topLeftSourceX + this._size) * measurements.pixelSize,
       (measurements.pixelYStart + topLeftSourceY) * measurements.pixelSize,
     );
     // bottom right
-    previewContext.lineTo(
+    overlayContext.lineTo(
       (measurements.pixelXStart + topLeftSourceX + this._size) * measurements.pixelSize,
       (measurements.pixelYStart + topLeftSourceY + this._size) * measurements.pixelSize,
     );
     // bottom left
-    previewContext.lineTo(
+    overlayContext.lineTo(
       (measurements.pixelXStart + topLeftSourceX) * measurements.pixelSize,
       (measurements.pixelYStart + topLeftSourceY + this._size) * measurements.pixelSize,
     );
     // back to top left
-    previewContext.lineTo(
+    overlayContext.lineTo(
       (measurements.pixelXStart + topLeftSourceX) * measurements.pixelSize,
       (measurements.pixelYStart + topLeftSourceY) * measurements.pixelSize,
     );
-    previewContext.stroke();
+    overlayContext.stroke();
   }
 
   public draw(

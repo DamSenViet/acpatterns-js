@@ -533,12 +533,16 @@ class Acnl implements Drawable {
   }
 
 
-  public set title(title) {
+  public set title(title: string) {
     if (typeof title !== "string") return;
     if (title.length > 20) return;
     this._title = title;
   }
 
+
+  public get town(): Town {
+    return this._townApi;
+  }
 
   public set town(town: Town) {
     const { _town } = this;
@@ -554,11 +558,6 @@ class Acnl implements Drawable {
     if (typeof name === "string") {
       if (name.length <= 8) _town.name = name;
     }
-  }
-
-
-  public get town(): Town {
-    return this._townApi;
   }
 
 
