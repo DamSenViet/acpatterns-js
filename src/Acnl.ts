@@ -61,6 +61,19 @@ import {
 // 0x0A = unknown (non-pro)
 // 0x0B = unknown (non-pro)
 
+const standardTextureMapping: mapping = (() => {
+  const width = 32;
+  const height = 32;
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      mapping[y][x] = [y, x];
+    }
+  }
+  return mapping;
+})();
+
 // now from desired x/y to default coordinates
 const clothingTextureMapping: mapping = (() => {
   const width = 64;
@@ -80,73 +93,130 @@ const clothingTextureMapping: mapping = (() => {
   return mapping;
 })();
 
-const standardTextureMapping: mapping = (() => {
-  const width = 32;
-  const height = 32;
+const standeeTextureMapping: mapping = (() => {
+  const width = 64;
+  const height = 64;
   const mapping: Array<Array<[number, number]>> =
     new Array(height).fill(null).map(i => new Array(width).fill(null));
-    for (let y: number = 0; y < height; ++y) {
-      for (let x: number = 0; x < width; ++x) {
-        mapping[y][x] = [y, x];
-      }
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
+      else mapping[y][x] = [y, x];
     }
+  }
   return mapping;
 })();
 
-const dressFrontMapping: mapping = (() => {
+
+enum ClothLength {
+  Short,
+  Long,
+};
+
+enum ClothSide {
+  Left,
+  Right,
+  Front,
+  Back,
+};
+
+const createTopMapping = (clothLength: ClothLength, clothSide: ClothSide.Front | ClothSide.Back): mapping => {
   const width = 32;
-  const height = 48;
+  const height = clothLength === ClothLength.Short ? 32 : 48;
   const mapping: Array<Array<[number, number]>> =
     new Array(height).fill(null).map(i => new Array(width).fill(null));
-    for (let y: number = 0; y < height; ++y) {
-      for (let x: number = 0; x < width; ++x) {
-        mapping[y][x] = [y, x];
-      }
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      if (y < 32) mapping[y][x] = [y + (16 * (clothSide === ClothSide.Front? 0: 2)), x];
+      else if (y < 48) mapping[y][x] = [y - 32 + (16 * (clothSide === ClothSide.Front? 6 : 7)), x];
     }
+  }
   return mapping;
-})();
+};
+
+const createArmMapping = (clothLength: ClothLength, clothSide: ClothSide.Left | ClothSide.Right): mapping => {
+  const width = clothLength === ClothLength.Short ? 16 : 32;
+  const height = 16;
+  const mapping: Array<Array<[number, number]>> =
+    new Array(height).fill(null).map(i => new Array(width).fill(null));
+  for (let y: number = 0; y < height; ++y) {
+    for (let x: number = 0; x < width; ++x) {
+      mapping[y][x] = [y - 0 + (16 * (clothSide === ClothSide.Left ? 4 : 5)), x];
+    }
+  }
+  return mapping;
+};
+
+const dressFrontMapping = createTopMapping(ClothLength.Long, ClothSide.Front);
+const dressBackMapping = createTopMapping(ClothLength.Long, ClothSide.Back);
+const shirtFrontMapping = createTopMapping(ClothLength.Short, ClothSide.Front);
+const shirtBackMapping = createTopMapping(ClothLength.Short, ClothSide.Back);
+const longLeftArmMapping = createArmMapping(ClothLength.Long, ClothSide.Left);
+const shortLeftArmMapping = createArmMapping(ClothLength.Short, ClothSide.Left);
+const longRightArmMappng = createArmMapping(ClothLength.Long, ClothSide.Right);
+const shortRightArmMapping = createArmMapping(ClothLength.Short, ClothSide.Right);
 
 class AcnlTypes extends Enum {
   public static LongSleevedDress: PatternType = Object.freeze({
     name: "Long Sleeved Dress",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: dressFrontMapping,
+      back: dressBackMapping,
+      leftArm: longLeftArmMapping,
+      rightArm: longRightArmMappng,
     }
   });
   public static ShortSleevedDress: PatternType = Object.freeze({
     name: "Short Sleeved Dress",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: dressFrontMapping,
+      back: dressBackMapping,
+      leftArm: shortLeftArmMapping,
+      rightArm: shortRightArmMapping,
     }
   });
   public static NoSleevedDress: PatternType = Object.freeze({
     name: "Sleeveless Dress",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: dressFrontMapping,
+      back: dressBackMapping,
     }
   });
   public static LongSleevedShirt: PatternType = Object.freeze({
     name: "Long Sleeved Shirt",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: shirtFrontMapping,
+      back: shirtBackMapping,
+      leftArm: longLeftArmMapping,
+      rightArm: longRightArmMappng,
     }
   });
   public static ShortSleevedShirt: PatternType = Object.freeze({
     name: "Short Sleeved Shirt",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: shirtFrontMapping,
+      back: shirtBackMapping,
+      leftArm: shortLeftArmMapping,
+      rightArm: shortRightArmMapping,
     }
   });
   public static NoSleevedShirt: PatternType = Object.freeze({
     name: "Sleeveless Shirt",
     size: 128,
     sections: {
-      texture: clothingTextureMapping
+      texture: clothingTextureMapping,
+      front: shirtFrontMapping,
+      back: shirtBackMapping,
     }
   });
   public static HornedHat: PatternType = Object.freeze({
@@ -168,19 +238,7 @@ class AcnlTypes extends Enum {
     name: "Standee",
     size: 128,
     sections: {
-      texture:  (() => {
-        const width = 64;
-        const height = 64;
-        const mapping: Array<Array<[number, number]>> =
-          new Array(height).fill(null).map(i => new Array(width).fill(null));
-        for (let y: number = 0; y < height; ++y) {
-          for (let x: number = 0; x < width; ++x) {
-            if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
-            else mapping[y][x] = [y, x];
-          }
-        }
-        return mapping;
-      })(),
+      texture: standeeTextureMapping,
     }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
