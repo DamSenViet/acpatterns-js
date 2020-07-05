@@ -9,14 +9,16 @@ class Tool {
     source: HookableArray<Array<pixel>, [number, number, pixel]>,
     sourceY: number,
     sourceX: number,
-    overlayContext: CanvasRenderingContext2D,
+    previewContext: CanvasRenderingContext2D,
     measurements: DrawerMeasurements,
   ): void {}
 
   public draw(
     source: HookableArray<Array<pixel>, [number, number, pixel]>,
-    sourceX: number,
     sourceY: number,
+    sourceX: number,
+    previewContext: CanvasRenderingContext2D,
+    measurements: DrawerMeasurements,
   ): void {}
 }
 
