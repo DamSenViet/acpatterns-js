@@ -786,8 +786,8 @@ class Acnl implements Drawable {
       .splice(0, bytes.length)
       .reduce((accum, byte) => {
         // each byte contains 2 pixels
-        accum.push((byte >> 4) & 0xf);
         accum.push(byte & 0xf);
+        accum.push((byte >> 4) & 0xf);
         return accum;
       }, []);
     for (let y = 0; y < this._type.size; ++y) {
