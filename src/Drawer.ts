@@ -122,6 +122,7 @@ class Drawer {
     // initialize all hooks
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
     this._canvas.addEventListener("mousemove", this._onMouse);
@@ -211,8 +212,8 @@ class Drawer {
   // refresh individual
   private _refreshPixels(): void {
     this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
-    for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
-      for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
+    for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         if (this._source[sourceY][sourceX] === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[this._source[sourceY][sourceX]];
         this._pixelsContext.fillRect(
@@ -260,7 +261,7 @@ class Drawer {
     }
     // guide lines
     this._gridContext.strokeStyle = "#624C37";
-    this._gridContext.lineWidth = 3;
+    this._gridContext.lineWidth = 2;
     // vertical guide
     this._gridContext.beginPath();
     this._gridContext.moveTo(
@@ -301,8 +302,9 @@ class Drawer {
 
   private _onMouse = (event: MouseEvent) => {
     // need - 1 to use zero indexed values
-    const pixelY = Math.floor(event.clientY / this._measurements.pixelSize);
-    const pixelX = Math.floor(event.clientX / this._measurements.pixelSize);
+    const bdr = this._canvas.getBoundingClientRect();
+    const pixelY = Math.floor((event.clientY - bdr.top) / this._measurements.pixelSize);
+    const pixelX = Math.floor((event.clientX - bdr.left) / this._measurements.pixelSize);
 
     if (
       pixelY < this._measurements.pixelYStart ||
@@ -350,12 +352,12 @@ class Drawer {
     // loop through entire source for i, replace all i values with new color
     for (
       let sourceY: number = 0;
-      sourceY < this._source.length;
+      sourceY < this._measurements.sourceHeight;
       ++sourceY
     ) {
       for (
         let sourceX: number = 0;
-        sourceX < this._source[sourceY].length;
+        sourceX < this._measurements.sourceWidth;
         ++sourceX
       ) {
         if (this._source[sourceY][sourceX] !== i) continue;
@@ -369,14 +371,14 @@ class Drawer {
       }
     }
     this._redraw();
-  }
+  };
 
   private _onTypeUpdate = (type: PatternType) => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
     this.refresh();
     this._source.hook.tap(this._onPixelUpdate);
-  }
+  };
 
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel) => {
     this._pixelsContext.clearRect(
@@ -394,7 +396,11 @@ class Drawer {
       this._measurements.pixelSize,
     );
     this._redraw();
-  }
+  };
+
+  private _onLoad = () => {
+    this.refresh();
+  };
 
   // public api
   public get canvas(): HTMLCanvasElement {

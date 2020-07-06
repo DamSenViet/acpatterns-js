@@ -39,6 +39,7 @@ export type PatternPalette = [
 export interface HookSystem {
   type: Hook<[PatternType]>;
   palette: Hook<[number, color]>;
+  load: Hook<[]>;
 };
 
 export interface Drawable {

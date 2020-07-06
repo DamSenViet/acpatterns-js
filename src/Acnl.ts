@@ -475,6 +475,7 @@ class Acnl implements Drawable {
     this._hooks = {
       type: new Hook<[PatternType]>(),
       palette: new Hook<[number, color]>(),
+      load: new Hook<[]>(),
     };
   }
 
@@ -514,8 +515,8 @@ class Acnl implements Drawable {
               throw new RangeError();
             // assignment hook
             // @ts-ignore no more spread
-            api.hook.trigger(y, x, pixel);
             _pixels[y][x] = pixel;
+            api.hook.trigger(y, x, pixel);
           }
         });
       }
@@ -792,9 +793,10 @@ class Acnl implements Drawable {
       }, []);
     for (let y = 0; y < this._type.size; ++y) {
       for (let x = 0; x < this.pixels[y].length; ++x) {
-        this.pixels[y][x] = pixelsFlattened[x + y * 32];
+        this._pixels[y][x] = pixelsFlattened[x + y * 32];
       }
     }
+    this._hooks.load.trigger();
     return this;
   }
 
