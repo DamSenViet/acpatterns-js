@@ -513,8 +513,8 @@ class Acnl implements Drawable {
           set: (pixel: pixel) => {
             if (pixel < 0 && pixel > 15)
               throw new RangeError();
+            if (_pixels[y][x] === pixel) return pixel;
             // assignment hook
-            // @ts-ignore no more spread
             _pixels[y][x] = pixel;
             api.hook.trigger(y, x, pixel);
           }
@@ -561,6 +561,7 @@ class Acnl implements Drawable {
             ...propertyConfig,
             get: get,
             set: (pixel) => {
+              if (get() === pixel) return pixel;
               // run the existing function, but now with hook call after it finishes
               set(pixel);
               // console.log(`modifying at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
@@ -775,12 +776,12 @@ class Acnl implements Drawable {
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
     this._region = bytes.splice(0, 1)[0];
-    this.palette = <PatternPalette>bytes.splice(0, 15).map(byte => {
-      return Acnl.byteToColor.get(byte);
+    bytes.splice(0, 15).forEach((byte, i) => {
+      this._palette[i] = Acnl.byteToColor.get(byte);
     });
     this._color = bytes.splice(0, 1)[0];
     this._looks = bytes.splice(0, 1)[0];
-    this.type = byteToType.get(bytes.splice(0, 1)[0]);
+    this._type = byteToType.get(bytes.splice(0, 1)[0]);
     bytes.splice(0, 2); // zero padding
     // load pixels
     const pixelsFlattened: pixel[] = bytes
@@ -796,6 +797,8 @@ class Acnl implements Drawable {
         this._pixels[y][x] = pixelsFlattened[x + y * 32];
       }
     }
+    this._refreshPixelsApi();
+    this._refreshSectionsApi();
     this._hooks.load.trigger();
     return this;
   }

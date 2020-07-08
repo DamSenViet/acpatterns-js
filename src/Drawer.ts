@@ -347,6 +347,23 @@ class Drawer {
     this._redraw();
   }
 
+  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
+    this._pixelsContext.clearRect(
+      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+      this._measurements.pixelSize,
+      this._measurements.pixelSize,
+    );
+    if (pixel === 15) return;
+    this._pixelsContext.fillStyle = this._pattern.palette[pixel];
+    this._pixelsContext.fillRect(
+      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+      this._measurements.pixelSize,
+      this._measurements.pixelSize,
+    );
+    this._redraw();
+  };
 
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     // loop through entire source for i, replace all i values with new color
@@ -380,26 +397,9 @@ class Drawer {
     this._source.hook.tap(this._onPixelUpdate);
   };
 
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    this._pixelsContext.clearRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
-    if (pixel === 15) return;
-    this._pixelsContext.fillStyle = this._pattern.palette[pixel];
-    this._pixelsContext.fillRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
-    this._redraw();
-  };
-
+  // assume everything has changed
   private _onLoad = (): void => {
-    this.refresh();
+    this._onTypeUpdate(null);
   };
 
   // public api
@@ -408,8 +408,7 @@ class Drawer {
   }
 
   public set canvas(canvas: HTMLCanvasElement) {
-    if (!(canvas instanceof HTMLCanvasElement))
-      throw new TypeError();
+    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     assigned.delete(this._canvas);
     this._canvas = canvas;
     assigned.add(this._canvas);
@@ -460,6 +459,7 @@ class Drawer {
     this.refresh();
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
     this._canvas.addEventListener("mousemove", this._onMouse);
@@ -469,6 +469,7 @@ class Drawer {
   public pause(): void {
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
+    this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
 
     this._canvas.removeEventListener("mousemove", this._onMouse);

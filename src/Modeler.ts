@@ -1,4 +1,5 @@
 import Acnl from "./Acnl";
+import Hook from "./Hook";
 import HookableArray from "./HookableArray";
 import assets from "./assets";
 import xbrz from "./xbrz";
@@ -17,7 +18,6 @@ import {
   StandardMaterial,
   Color3,
   Color4,
-  Texture,
   Mesh,
   Vector3,
   ArcRotateCamera,
@@ -26,6 +26,9 @@ import {
   PointLight,
   ShadowGenerator,
   AssetContainer,
+  AbstractMesh,
+  BaseTexture,
+  Material,
 } from "babylonjs";
 import "babylonjs-loaders";
 
@@ -35,7 +38,7 @@ export interface ModelData {
   // the name of the material to NOT freeze
   targetMaterialId: string,
   model: string,
-  useClothingStand?: boolean,
+  useClothingStand: boolean,
   maps?: {
     normal?: {
       [key: string]: string;
@@ -98,6 +101,9 @@ class Modeler {
   private _camera: ArcRotateCamera = null;
   private _hemisphericLight: HemisphericLight = null;
   private _directionalLight: DirectionalLight = null;
+  // variable meshes that change w/ type.
+  private _loadedContainer: AssetContainer = null;
+  private _clothingStandContainer: AssetContainer = null;
 
 
   public constructor({
@@ -107,29 +113,24 @@ class Modeler {
     textureCanvas,
   }: ModelerOptions) {
     if (pattern == null) throw new Error();
-    if (
-      canvas == null ||
-      !(canvas instanceof HTMLCanvasElement)
-    ) throw new TypeError();
+    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     this._canvas = canvas;
     this._pattern = pattern;
     this._source = pattern.sections.texture;
 
     this._pixelsCanvas = pixelsCanvas;
     this._pixelsContext = this._pixelsCanvas.getContext("2d");
-    this._pixelsCanvas.height = this._pattern.sections.texture.length;
-    this._pixelsCanvas.width = this._pattern.sections.texture[0].length;
-    this._pixelsContext.imageSmoothingEnabled = false;
-
     this._textureCanvas = textureCanvas;
-    this._textureCanvas.height = this._pattern.sections.texture.length * 4;
-    this._textureCanvas.width = this._pattern.sections.texture[0].length * 4;
     this._textureContext = this._textureCanvas.getContext("2d");
     this._textureContext.imageSmoothingEnabled = false;
 
+    this._updateMeasurements();
     this._refreshPixels();
+    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
+    this._pattern.hooks.type.tap(this._onTypeUpdate);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
+
     this._setupScene();
   }
 
@@ -142,14 +143,14 @@ class Modeler {
     this._camera = new ArcRotateCamera(
       "camera",
       Math.PI / 2, Math.PI / 2, 40,
-      new Vector3(0, 10, 0),
+      new Vector3(0, 8, 0),
       this._scene
     );
     this._camera.upperRadiusLimit = 70;
     this._camera.lowerRadiusLimit = 15;
     this._camera.upperBetaLimit = Math.PI / 2;
     this._camera.lowerBetaLimit = Math.PI / 2;
-    this._camera.attachControl(this._canvas, true);
+    this._camera.attachControl(this._canvas, false);
 
     this._scene.createDefaultEnvironment({
       groundSize: 50,
@@ -175,43 +176,28 @@ class Modeler {
     );
     this._directionalLight.intensity = 2;
 
-    // let modelData: ModelData;
-    // if (this._pattern instanceof Acnl) {
-    //   modelData = acnlTypeToModel.get(this._pattern.type);
-    // }
-
-    // const {
-    //   loadedMeshes,
-    //   loadedMaterials,
-    //   loadedTextures,
-    // } = await new Promise(resolve => {
-    //   SceneLoader.LoadAssetContainer("", modelData.model, this._scene, (assets: AssetContainer) => {
-
-    //   });
-    // });
-
-    const importedMeshes: Array<Mesh> = await new Promise(resolve => {
-      SceneLoader.ImportMesh("", "", assets.acnl.standard.model, this._scene, (meshes: Array<Mesh>) => {
-        resolve(meshes);
+    // assume only ACNL for now
+    let modelData: ModelData = acnlTypeToModel.get(this._pattern.type);
+    const container: AssetContainer = await new Promise<AssetContainer>(resolve => {
+      SceneLoader.LoadAssetContainer("", modelData.model, this._scene, (container: AssetContainer) => {
+        resolve(container);
       }, null, null, ".gltf");
     });
+    container.addAllToScene(); // hold onto it
+    this._loadedContainer = container;
 
-    // creation reset context
+    // creation reset context, don't ever dispose this
     this._texture = new DynamicTexture("texture", this._textureCanvas, this._scene, true, DynamicTexture.NEAREST_SAMPLINGMODE);
     this._textureContext.imageSmoothingEnabled = false;
     this._redraw();
 
     // const other = this._scene.getMeshByID("FtrMydesignEasel__mBody");
-    const mesh = this._scene.getMeshByID("FtrMydesignEasel__mReFabric");
-    (<PBRMaterial>mesh.material).albedoTexture = this._texture;
+    const material: PBRMaterial =
+      <PBRMaterial>this._scene.getMaterialByID(modelData.targetMaterialId);
+    material.albedoTexture = this._texture;
     this._texture.update(false);
-    this._scene.freeActiveMeshes();
-    console.log(this._scene.materials);
-
-    // freeze meshes for lower cpu usage
-    // for (const mesh of importedMeshes) {
-    //   mesh.dispose();
-    // }
+    this._scene.freezeActiveMeshes();
+    // this._scene.debugLayer.show();
 
     // setup world axis for debugging
     // this._showWorldAxis(20);
@@ -300,11 +286,15 @@ class Modeler {
     const sourceWidth = this._source[0].length;
     const textureHeight = sourceHeight * 4;
     const textureWidth = sourceWidth * 4;
+
     // sync canvases to correct sizes
     this._pixelsCanvas.height = sourceHeight;
     this._pixelsCanvas.width = sourceWidth;
+    this._pixelsContext.imageSmoothingEnabled = false;
     this._textureCanvas.height = textureHeight;
     this._textureCanvas.width = textureWidth;
+    // image smoothing resets when sizes changed
+    this._textureContext.imageSmoothingEnabled = false;
 
     this._measurements = Object.freeze<ModelerMeasurements>({
       sourceHeight,
@@ -320,18 +310,77 @@ class Modeler {
     else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
     this._redraw();
-    this._texture.update(false);
   }
 
-  private _onPaletteUpdate = (): void => {
-
+  private _onPaletteUpdate = (i: pixel, color: color): void => {
+    for (
+      let sourceY: number = 0;
+      sourceY < this._measurements.sourceHeight;
+      ++sourceY
+    ) {
+      for (
+        let sourceX: number = 0;
+        sourceX < this._measurements.sourceWidth;
+        ++sourceX
+      ) {
+        if (this._source[sourceY][sourceX] !== i) continue;
+        this._pixelsContext.fillStyle = color;
+        this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
+      }
+    }
+    this._redraw();
   };
 
-  private _onLoad = ((): void => {
+  private _onTypeUpdate = async (type: PatternType): Promise<void> => {
+    this._source.hook.untap(this._onPixelUpdate);
+    this._source = this._pattern.sections.texture;
+    this._updateMeasurements();
     this._refreshPixels();
+    this._source.hook.tap(this._onPixelUpdate);
+
+    // assume only ACNL compatibility for now
+    let modelData = acnlTypeToModel.get(this._pattern.type);
+
+    // exchange resources
+    this._scene.unfreezeActiveMeshes();
+    this._loadedContainer.dispose();
+    this._loadedContainer = await new Promise<AssetContainer>(
+      resolve => {
+        SceneLoader.LoadAssetContainer(
+          "", modelData.model,
+          this._scene,
+          (container: AssetContainer) => { resolve(container); },
+          null, null, ".gltf"
+        );
+      });
+    this._loadedContainer.addAllToScene();
+
+    if (this._clothingStandContainer != null)
+      this._clothingStandContainer.dispose();
+    if (modelData.useClothingStand) {
+      this._clothingStandContainer = await new Promise<AssetContainer>(
+        resolve => {
+          SceneLoader.LoadAssetContainer(
+            "", assets.acnl.clothingStand.model,
+            this._scene,
+            (container: AssetContainer) => { resolve(container); },
+            null, null, ".gltf"
+          );
+        });
+        this._clothingStandContainer.addAllToScene();
+    }
+
+    const material: PBRMaterial =
+      <PBRMaterial>this._scene.getMaterialByID(modelData.targetMaterialId);
+    material.albedoTexture = this._texture;
+    this._scene.freezeActiveMeshes();
     this._redraw();
-    this._texture.update(false);
-  });
+  };
+
+  // assume everything has changed
+  private _onLoad = (): void => {
+    this._onTypeUpdate(null);
+  };
 
   private _refreshPixels(): void {
     this._pixelsContext.clearRect(0, 0, this._source[0].length, this._source.length);
@@ -345,12 +394,6 @@ class Modeler {
   }
 
   private _redraw(): void {
-    // this._textureContext.drawImage(
-    //   this._pixelsCanvas,
-    //   0, 0,
-    //   this._source[0].length * 4,
-    //   this._source.length * 4,
-    // );
     xbrz(
       this._pixelsContext,
       this._source[0].length,
@@ -359,6 +402,13 @@ class Modeler {
       this._source[0].length * 4,
       this._source.length * 4,
     );
+    // this._textureContext.drawImage(
+    //   this._pixelsCanvas,
+    //   0, 0,
+    //   this._measurements.textureWidth,
+    //   this._measurements.textureHeight,
+    // );
+    this._texture.update(false);
   }
 
   public get canvas(): HTMLCanvasElement {
@@ -368,6 +418,18 @@ class Modeler {
   public set canvas(canvas: HTMLCanvasElement) {
   }
 
+
+  public play(): void {
+
+  }
+
+  public pause(): void {
+
+  }
+
+  public stop(): void {
+
+  }
 }
 
 export default Modeler;

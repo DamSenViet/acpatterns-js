@@ -8,3 +8,5 @@ export { default as hornedHat } from "./hornedHat";
 export { default as knittedHat } from "./knittedHat";
 export { default as standee } from "./standee";
 export { default as standard } from "./standard";
+
+export { default as clothingStand } from "./clothingStand";
