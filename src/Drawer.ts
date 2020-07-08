@@ -129,7 +129,7 @@ class Drawer {
     this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
-  private _updateMeasurements() {
+  private _updateMeasurements(): void {
     if (
       this._canvas.offsetHeight !== this._canvas.offsetWidth ||
       this._canvas.offsetHeight % 128 !== 0
@@ -348,7 +348,7 @@ class Drawer {
   }
 
 
-  private _onPaletteUpdate = (i: pixel, color: color) => {
+  private _onPaletteUpdate = (i: pixel, color: color): void => {
     // loop through entire source for i, replace all i values with new color
     for (
       let sourceY: number = 0;
@@ -373,14 +373,14 @@ class Drawer {
     this._redraw();
   };
 
-  private _onTypeUpdate = (type: PatternType) => {
+  private _onTypeUpdate = (type: PatternType): void => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
     this.refresh();
     this._source.hook.tap(this._onPixelUpdate);
   };
 
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel) => {
+  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
     this._pixelsContext.clearRect(
       (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
       (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
@@ -398,7 +398,7 @@ class Drawer {
     this._redraw();
   };
 
-  private _onLoad = () => {
+  private _onLoad = (): void => {
     this.refresh();
   };
 

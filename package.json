@@ -24,7 +24,10 @@
   "homepage": "https://github.com/DamSenViet/acpattern-js#readme",
   "author": "DamSenViet",
   "license": "MIT",
-  "dependencies": {},
+  "peerDependencies": {
+    "babylonjs": "^4.1.0",
+    "babylonjs-loaders": "^4.1.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/plugin-transform-runtime": "^7.9.6",
