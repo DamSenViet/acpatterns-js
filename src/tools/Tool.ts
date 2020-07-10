@@ -1,12 +1,9 @@
-import HookableArray from "../HookableArray";
+import PixelsSource from "../PixelsSource";
 import { DrawerMeasurements } from "../Drawer";
-import {
-  pixel,
-} from "../utils";
 
 class Tool {
   public preview(
-    source: HookableArray<Array<pixel>, [number, number, pixel]>,
+    source: PixelsSource,
     sourceY: number,
     sourceX: number,
     previewContext: CanvasRenderingContext2D,
@@ -14,11 +11,12 @@ class Tool {
   ): void {}
 
   public draw(
-    source: HookableArray<Array<pixel>, [number, number, pixel]>,
+    source: PixelsSource,
     sourceY: number,
     sourceX: number,
     previewContext: CanvasRenderingContext2D,
     measurements: DrawerMeasurements,
+    refresh: () => void,
   ): void {}
 }
 

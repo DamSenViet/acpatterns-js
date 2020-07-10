@@ -9,8 +9,8 @@ class Hook<T extends any[]> {
 
   public untap(callback: Function): void {
     for (let i = 0; i < this.callbacks.length; ++i) {
-      if (callback === this.callbacks[i]) this.callbacks.splice(i, 1);
-      break;
+      if (callback !== this.callbacks[i]) continue;
+      this.callbacks.splice(i, 1);
     }
   }
 

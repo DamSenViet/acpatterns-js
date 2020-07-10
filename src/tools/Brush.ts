@@ -1,10 +1,7 @@
 import Tool from "./Tool";
-import HookableArray from "../HookableArray";
+import PixelsSource from "../PixelsSource";
 import { DrawerMeasurements } from "../Drawer";
 import { pixel } from "../utils";
-
-
-export type colorIndex = number;
 
 export interface BrushOptions {
   size?: number;
@@ -12,7 +9,7 @@ export interface BrushOptions {
 
 class Brush extends Tool {
   private _size: number = 1;
-  private _colorIndex: colorIndex = 0;
+  private _colorIndex: pixel = 0;
 
   public constructor(options?: BrushOptions) {
     super();
@@ -31,7 +28,7 @@ class Brush extends Tool {
   }
 
   public preview(
-    source: HookableArray<Array<pixel>, [number, number, pixel]>,
+    source: PixelsSource,
     sourceY: number,
     sourceX: number,
     previewContext: CanvasRenderingContext2D,
@@ -80,13 +77,20 @@ class Brush extends Tool {
   }
 
   public draw(
-    source: HookableArray<Array<pixel>, [number, number, pixel]>,
+    source: PixelsSource,
     sourceY: number,
     sourceX: number,
     previewContext: CanvasRenderingContext2D,
     measurements: DrawerMeasurements,
+    refresh: () => void,
   ): void {
     // even
+
+    if (this._size === 1) {
+      source[sourceY][sourceX] = this._colorIndex;
+      return;
+    }
+
     let topLeftX: number;
     let topLeftY: number;
     if (this._size % 2 === 0) {
@@ -101,9 +105,10 @@ class Brush extends Tool {
       for (let x = topLeftX; x < topLeftX + this._size; ++x) {
         if (y >= source.length || y < 0) continue;
         if (x >= source[0].length || x < 0) continue;
-        source[y][x] = this._colorIndex;
+        source.unreactive[y][x] = this._colorIndex;
       }
     }
+    refresh();
   }
 }
 

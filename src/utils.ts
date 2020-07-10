@@ -1,5 +1,5 @@
 import Hook from "./Hook";
-import HookableArray from "./HookableArray";
+import PixelsSource from "./PixelsSource";
 
 export type byte = number;
 export type color = string;
@@ -40,16 +40,17 @@ export interface HookSystem {
   type: Hook<[PatternType]>;
   palette: Hook<[number, color]>;
   load: Hook<[]>;
+  refresh: Hook<[]>;
 };
 
 export interface Drawable {
   type: PatternType;
   palette: Array<color>;
   hooks: HookSystem;
-  pixels: HookableArray<Array<pixel>, [number, number, pixel]>;
+  pixels: PixelsSource;
   sections: {
-    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
-    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+    texture: PixelsSource;
+    [key: string]: PixelsSource;
   }
 };
 

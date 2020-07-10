@@ -1,6 +1,6 @@
 import Enum from "./Enum";
 import Hook from "./Hook";
-import HookableArray from "./HookableArray";
+import PixelsSource from "./PixelsSource";
 import {
   color,
   pixel,
@@ -410,10 +410,10 @@ class Acnl implements Drawable {
   private _pixels: pixel[][] = new Array(128).fill(0).map(() => {
     return new Array(32).fill(0);
   }); // start with entire transparent
-  private _pixelsApi: HookableArray<Array<pixel>, [number, number, pixel]> = null;
+  private _pixelsApi: PixelsSource = null;
   private _sectionsApi: {
-    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
-    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+    texture: PixelsSource;
+    [key: string]: PixelsSource;
   } = null;
   private _hooks: HookSystem = null;
 
@@ -476,6 +476,7 @@ class Acnl implements Drawable {
       type: new Hook<[PatternType]>(),
       palette: new Hook<[number, color]>(),
       load: new Hook<[]>(),
+      refresh: new Hook<[]>(),
     };
   }
 
@@ -502,10 +503,12 @@ class Acnl implements Drawable {
     if (_pixelsApi != null) _pixelsApi.hook.clear();
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
-    const api: HookableArray<Array<pixel>, [number, number, pixel]>
-      = new HookableArray<Array<pixel>, [number, number, pixel]>(_pixels.length);
+    const api: PixelsSource = new PixelsSource(_pixels.length);
+    const unreactiveApi: Array<Array<pixel>>
+      = new Array<Array<pixel>>(_pixels.length);
     for (let y = 0; y < _pixels.length; ++y) {
       const rowApi = new Array(_pixels[y].length);
+      const unreactiveRowApi = new Array(_pixels[y].length);
       for (let x = 0; x < _pixels[y].length; ++x) {
         Object.defineProperty(rowApi, x, {
           ...propertyConfig,
@@ -519,22 +522,41 @@ class Acnl implements Drawable {
             api.hook.trigger(y, x, pixel);
           }
         });
+        Object.defineProperty(unreactiveRowApi, x, {
+          ...propertyConfig,
+          get: (): pixel => _pixels[y][x],
+          set: (pixel: pixel) => {
+            if (pixel < 0 && pixel > 15)
+              throw new RangeError();
+            _pixels[y][x] = pixel;
+          }
+        });
       }
       Object.defineProperty(api, y, {
         ...propertyConfig,
-        get: () => rowApi,
-        set: (row) => {
+        get: (): Array<pixel> => rowApi,
+        set: (row: Array<pixel>) => {
           for (let x = 0; x < rowApi.length; ++x) {
             rowApi[x] = row[x];
           }
         }
       });
+      Object.defineProperty(unreactiveApi, y, {
+        ...propertyConfig,
+        get: (): Array<pixel> => unreactiveRowApi,
+        set: (row: Array<pixel>) => {
+          for (let x = 0; x < unreactiveRowApi.length; ++x) {
+            unreactiveRowApi[x] = row[x];
+          }
+        }
+      });
     }
     this._pixelsApi = api;
+    api.unreactive = unreactiveApi;
   }
 
   private _refreshSectionsApi(): void {
-    const { pixels, _type, _sectionsApi } = this;
+    const { _pixels, pixels, _type, _sectionsApi } = this;
     // cleanup to prevent memory leak
     // pixel api needs to be reloaded as well on type change (to clear all callback wrapping)
     for (const sectionName in _sectionsApi) {
@@ -543,15 +565,18 @@ class Acnl implements Drawable {
     }
     // // setup empty hooks
     const api = <{
-      texture: HookableArray<Array<pixel>, [number, number, pixel]>;
-      [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+      texture: PixelsSource;
+      [key: string]: PixelsSource;
     }>new Object();
     for (const sectionName in _type.sections) {
       const mapping = _type.sections[sectionName];
-      const sectionApi: HookableArray<Array<pixel>, [number, number, pixel]> =
-        new HookableArray<Array<pixel>, [number, number, pixel]>();
+      const sectionApi: PixelsSource =
+        new PixelsSource(mapping.length).fill(null);
+      const unreactiveSectionApi: Array<Array<pixel>>
+        = new Array<Array<pixel>>(mapping.length);
       for (let y: number = 0; y < mapping.length; ++y) {
         const rowApi = new Array<pixel>(mapping[y].length);
+        const unreactiveRowApi = new Array<pixel>(mapping[y].length);
         for (let x: number = 0; x < mapping[y].length; ++x) {
           const targetY = mapping[y][x][0];
           const targetX = mapping[y][x][1];
@@ -574,18 +599,37 @@ class Acnl implements Drawable {
             get: (): pixel => pixels[targetY][targetX],
             set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
           });
+          Object.defineProperty(unreactiveRowApi, x, {
+            ...propertyConfig,
+            get: (): pixel => _pixels[targetY][targetX],
+            set: (pixel: pixel) => {
+              if (pixel < 0 && pixel > 15)
+                throw new RangeError();
+              _pixels[targetY][targetX] = pixel;
+            }
+          });
         }
         Object.defineProperty(sectionApi, y, {
           ...propertyConfig,
-          get: () => rowApi,
-          set: (row) => {
+          get: (): Array<pixel> => rowApi,
+          set: (row: Array<pixel>) => {
             for (let x = 0; x < rowApi.length; ++x) {
               rowApi[x] = row[x];
             }
           }
         });
+        Object.defineProperty(unreactiveSectionApi, y, {
+          ...propertyConfig,
+          get: (): Array<pixel> => unreactiveRowApi,
+          set: (row: Array<pixel>) => {
+            for (let x = 0; x < unreactiveRowApi.length; ++x) {
+              unreactiveRowApi[x] = row[x];
+            }
+          }
+        });
       }
       api[sectionName] = sectionApi;
+      sectionApi.unreactive = unreactiveSectionApi;
     }
     this._sectionsApi = api;
   }
@@ -691,7 +735,7 @@ class Acnl implements Drawable {
   }
 
 
-  public get pixels(): HookableArray<Array<pixel>, [number, number, pixel]> {
+  public get pixels(): PixelsSource {
     return this._pixelsApi;
   }
 
@@ -707,8 +751,8 @@ class Acnl implements Drawable {
 
   // COMPUTED properties
   public get sections(): {
-    texture: HookableArray<Array<pixel>, [number, number, pixel]>;
-    [key: string]: HookableArray<Array<pixel>, [number, number, pixel]>;
+    texture: PixelsSource;
+    [key: string]: PixelsSource;
   } {
     return this._sectionsApi;
   }

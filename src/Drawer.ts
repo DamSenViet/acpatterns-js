@@ -1,4 +1,4 @@
-import HookableArray from "./HookableArray";
+import PixelsSource from "./PixelsSource";
 import { Tool, Brush } from "./tools";
 import {
   color,
@@ -39,12 +39,11 @@ export interface DrawerMeasurements {
 };
 
 // must be more than 100x100
-const assigned: Set<HTMLCanvasElement> = new Set();
 class Drawer {
   private _canvas: HTMLCanvasElement = null;
   private _context: CanvasRenderingContext2D = null;
   private _pattern: Drawable = null;
-  private _source: HookableArray<Array<pixel>, [number, number, pixel]> = null;
+  private _source: PixelsSource = null;
 
   // three separate canvases to mux onto the target canvas
   private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
@@ -80,18 +79,14 @@ class Drawer {
     pixelXStop: null,
   };
 
-  private _yStart: number = null;
-  private _yCenter: number = null;
-  private _yStop: number = null;
-  private _xStart: number = null;
-  private _xCenter: number = null;
-  private _xStop: number = null;
-
   // optimize overlayCanvas determines when to redraw/draw
   private _lastSourceY: number = null;
   private _lastSourceX: number = null;
+  private _didDrawOnLastSource: boolean = false;
 
-  private _tool: Tool = new Brush({ size: 1 });
+  private _tool: Tool = new Brush({ size: 10 });
+  // tool uses this callback to force refresh everything
+  private _refresh: () => void = null;
   // private this._windowResizeDelay: number = 100;
 
   // CENTERS NON SQUARE SOURCES INSIDE GRID
@@ -106,8 +101,8 @@ class Drawer {
       !(canvas instanceof HTMLCanvasElement)
     ) throw new TypeError();
     this._pattern = pattern;
+    this._refresh = this._pattern.hooks.refresh.trigger.bind(this._pattern.hooks.refresh);
     this._canvas = canvas;
-    assigned.add(this._canvas);
     // validate canvas after-css size, must be square and 128xy
     this._source = pattern.pixels;
     this._context = canvas.getContext("2d");
@@ -122,6 +117,7 @@ class Drawer {
     // initialize all hooks
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
@@ -139,10 +135,13 @@ class Drawer {
     // sync all sizes together
     this._pixelsCanvas.height = size;
     this._pixelsCanvas.width = size;
+    this._pixelsContext.imageSmoothingEnabled = false;
     this._gridCanvas.height = size;
     this._gridCanvas.width = size;
+    this._gridContext.imageSmoothingEnabled = false;
     this._previewCanvas.height = size;
     this._previewCanvas.width = size;
+    this._previewContext.imageSmoothingEnabled = false;
 
 
     // determine pixel size based on source
@@ -296,9 +295,9 @@ class Drawer {
     );
   }
 
-  private _onWindowResize = debounce(() => {
-    this.refresh();
-  }, 200);
+  // private _onWindowResize = debounce(() => {
+  //   this.refresh();
+  // }, 200);
 
   private _onMouse = (event: MouseEvent) => {
     // need - 1 to use zero indexed values
@@ -318,14 +317,16 @@ class Drawer {
     const sourceY = pixelY - this._measurements.pixelYStart;
     const sourceX = pixelX - this._measurements.pixelXStart;
     // draw on main canvas
-    if (event.buttons === 1) {
+    if (event.buttons === 1 && this._didDrawOnLastSource === false) {
       this._tool.draw(
         this._source,
         sourceY,
         sourceX,
         this._previewContext,
         this._measurements,
+        this._refresh,
       );
+      this._didDrawOnLastSource = true;
     }
     // draw on overlay
     if (
@@ -334,6 +335,7 @@ class Drawer {
     ) return;
     this._lastSourceY = sourceY;
     this._lastSourceX = sourceX;
+    this._didDrawOnLastSource = false;
 
     // redraw preview
     this._refreshPreview();
@@ -397,6 +399,11 @@ class Drawer {
     this._source.hook.tap(this._onPixelUpdate);
   };
 
+  private _onRefresh = (): void => {
+    this._refreshPixels();
+    this._redraw();
+  }
+
   // assume everything has changed
   private _onLoad = (): void => {
     this._onTypeUpdate(null);
@@ -409,15 +416,17 @@ class Drawer {
 
   public set canvas(canvas: HTMLCanvasElement) {
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
-    assigned.delete(this._canvas);
+    this._canvas.removeEventListener("mousemove", this._onMouse);
+    this._canvas.removeEventListener("mousedown", this._onMouse);
     this._canvas = canvas;
-    assigned.add(this._canvas);
     this._context = canvas.getContext("2d");
     this.refresh();
+    this._canvas.addEventListener("mousemove", this._onMouse);
+    this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
-  public set source(source: HookableArray<Array<pixel>, [number, number, pixel]>) {
-    if (!(source instanceof HookableArray)) throw new TypeError();
+  public set source(source: PixelsSource) {
+    if (!(source instanceof PixelsSource)) throw new TypeError();
     let isFromPattern = false;
     for (const sectionName in this._pattern.sections)
       if (source === this._pattern.sections[sectionName])
@@ -431,7 +440,7 @@ class Drawer {
     this._source.hook.tap(this._onPixelUpdate);
   }
 
-  public get source(): HookableArray<Array<pixel>, [number, number, pixel]> {
+  public get source(): PixelsSource {
     return this._source;
   }
 
@@ -456,19 +465,23 @@ class Drawer {
   }
 
   public play(): void {
-    this.refresh();
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
     this._canvas.addEventListener("mousemove", this._onMouse);
     this._canvas.addEventListener("mousedown", this._onMouse);
+
+    // assume everything changed
+    this._onLoad();
   }
 
   public pause(): void {
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
 
@@ -478,7 +491,6 @@ class Drawer {
 
   public stop(): void {
     this.pause();
-    assigned.delete(this._canvas);
   }
 }
 

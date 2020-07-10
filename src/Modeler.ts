@@ -1,6 +1,5 @@
 import Acnl from "./Acnl";
-import Hook from "./Hook";
-import HookableArray from "./HookableArray";
+import PixelsSource from "./PixelsSource";
 import assets from "./assets";
 import xbrz from "./xbrz";
 import {
@@ -23,12 +22,7 @@ import {
   ArcRotateCamera,
   HemisphericLight,
   DirectionalLight,
-  PointLight,
-  ShadowGenerator,
   AssetContainer,
-  AbstractMesh,
-  BaseTexture,
-  Material,
 } from "babylonjs";
 import "babylonjs-loaders";
 
@@ -79,20 +73,19 @@ class Modeler {
   // for actual rendering, for babylon
   private _canvas: HTMLCanvasElement = null;
   private _pattern: Drawable = null;
-  private _source: HookableArray<Array<pixel>, [number, number, pixel]> = null;
+  private _source: PixelsSource = null;
   // just pixels with transparent pixels set to white
-  private _pixelsCanvas: HTMLCanvasElement = null;
-  private _pixelsContext: CanvasRenderingContext2D = null;
+  private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
+  private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
   // always use textures context to apply texture to models
-  private _textureCanvas: HTMLCanvasElement = null;
-  private _textureContext: CanvasRenderingContext2D = null;
+  private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
+  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
   private _measurements: ModelerMeasurements = {
     sourceHeight: null,
     sourceWidth: null,
     textureHeight: null,
     textureWidth: null,
   };
-
 
   // babylon stuff
   private _scene: Scene = null;
@@ -109,8 +102,6 @@ class Modeler {
   public constructor({
     canvas,
     pattern,
-    pixelsCanvas,
-    textureCanvas,
   }: ModelerOptions) {
     if (pattern == null) throw new Error();
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
@@ -118,16 +109,11 @@ class Modeler {
     this._pattern = pattern;
     this._source = pattern.sections.texture;
 
-    this._pixelsCanvas = pixelsCanvas;
-    this._pixelsContext = this._pixelsCanvas.getContext("2d");
-    this._textureCanvas = textureCanvas;
-    this._textureContext = this._textureCanvas.getContext("2d");
-    this._textureContext.imageSmoothingEnabled = false;
-
     this._updateMeasurements();
     this._refreshPixels();
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
@@ -189,14 +175,20 @@ class Modeler {
     // creation reset context, don't ever dispose this
     this._texture = new DynamicTexture("texture", this._textureCanvas, this._scene, true, DynamicTexture.NEAREST_SAMPLINGMODE);
     this._textureContext.imageSmoothingEnabled = false;
-    this._redraw();
 
     // const other = this._scene.getMeshByID("FtrMydesignEasel__mBody");
-    const material: PBRMaterial =
+    const targetMaterial: PBRMaterial =
       <PBRMaterial>this._scene.getMaterialByID(modelData.targetMaterialId);
-    material.albedoTexture = this._texture;
-    this._texture.update(false);
+    targetMaterial.albedoTexture = this._texture;
+    this._redraw();
+
     this._scene.freezeActiveMeshes();
+    for (const mesh of this._loadedContainer.meshes) {
+      mesh.freezeWorldMatrix();
+    }
+    for (const material of this._loadedContainer.materials) {
+      if (material !== targetMaterial) material.freeze();
+    }
     // this._scene.debugLayer.show();
 
     // setup world axis for debugging
@@ -305,7 +297,6 @@ class Modeler {
   }
 
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
     if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
     else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
@@ -343,6 +334,9 @@ class Modeler {
 
     // exchange resources
     this._scene.unfreezeActiveMeshes();
+    for (const mesh of this._loadedContainer.meshes) {
+      mesh.unfreezeWorldMatrix();
+    }
     this._loadedContainer.dispose();
     this._loadedContainer = await new Promise<AssetContainer>(
       resolve => {
@@ -367,20 +361,31 @@ class Modeler {
             null, null, ".gltf"
           );
         });
-        this._clothingStandContainer.addAllToScene();
+      this._clothingStandContainer.addAllToScene();
     }
 
-    const material: PBRMaterial =
+    const targetMaterial: PBRMaterial =
       <PBRMaterial>this._scene.getMaterialByID(modelData.targetMaterialId);
-    material.albedoTexture = this._texture;
+    targetMaterial.albedoTexture = this._texture;
     this._scene.freezeActiveMeshes();
+    for (const material of this._loadedContainer.materials) {
+      if (material !== targetMaterial) material.freeze();
+    }
     this._redraw();
   };
+
+  // refers to refresh hook
+  private _onRefresh = (): void => {
+    this._refreshPixels();
+    this._redraw();
+  }
 
   // assume everything has changed
   private _onLoad = (): void => {
     this._onTypeUpdate(null);
   };
+
+
 
   private _refreshPixels(): void {
     this._pixelsContext.clearRect(0, 0, this._source[0].length, this._source.length);
@@ -396,11 +401,11 @@ class Modeler {
   private _redraw(): void {
     xbrz(
       this._pixelsContext,
-      this._source[0].length,
-      this._source.length,
+      this._measurements.sourceWidth,
+      this._measurements.sourceHeight,
       this._textureContext,
-      this._source[0].length * 4,
-      this._source.length * 4,
+      this._measurements.textureWidth,
+      this._measurements.textureHeight,
     );
     // this._textureContext.drawImage(
     //   this._pixelsCanvas,
@@ -416,19 +421,35 @@ class Modeler {
   }
 
   public set canvas(canvas: HTMLCanvasElement) {
+
   }
 
 
   public play(): void {
+    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
+    this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
+    this._pattern.hooks.load.tap(this._onLoad);
+    this._source.hook.tap(this._onPixelUpdate);
 
+    // assume everything changed
+    this._onLoad();
   }
+
 
   public pause(): void {
-
+    this._pattern.hooks.palette.untap(this._onPaletteUpdate);
+    this._pattern.hooks.type.untap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.untap(this._onRefresh);
+    this._pattern.hooks.load.untap(this._onLoad);
+    this._source.hook.untap(this._onPixelUpdate);
   }
 
-  public stop(): void {
 
+  public stop(): void {
+    this.pause();
+    this._loadedContainer.dispose();
+    this._engine.dispose();
   }
 }
 
