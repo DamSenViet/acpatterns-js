@@ -38,7 +38,6 @@ export interface DrawerMeasurements {
   pixelXStop: number;
 };
 
-// must be more than 100x100
 class Drawer {
   private _canvas: HTMLCanvasElement = null;
   private _context: CanvasRenderingContext2D = null;
@@ -86,7 +85,7 @@ class Drawer {
 
   private _tool: Tool = new Brush({ size: 10 });
   // tool uses this callback to force refresh everything
-  private _refresh: () => void = null;
+  private _forceRefresh: () => void = null;
   // private this._windowResizeDelay: number = 100;
 
   // CENTERS NON SQUARE SOURCES INSIDE GRID
@@ -101,7 +100,7 @@ class Drawer {
       !(canvas instanceof HTMLCanvasElement)
     ) throw new TypeError();
     this._pattern = pattern;
-    this._refresh = this._pattern.hooks.refresh.trigger.bind(this._pattern.hooks.refresh);
+    this._forceRefresh = this._pattern.hooks.refresh.trigger.bind(this._pattern.hooks.refresh);
     this._canvas = canvas;
     // validate canvas after-css size, must be square and 128xy
     this._source = pattern.pixels;
@@ -210,11 +209,12 @@ class Drawer {
 
   // refresh individual
   private _refreshPixels(): void {
-    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
+    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);    
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        if (this._source[sourceY][sourceX] === 15) continue;
-        this._pixelsContext.fillStyle = this._pattern.palette[this._source[sourceY][sourceX]];
+        const paletteIdx = this._source[sourceY][sourceX];
+        if (paletteIdx === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
         this._pixelsContext.fillRect(
           (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
           (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
@@ -324,7 +324,7 @@ class Drawer {
         sourceX,
         this._previewContext,
         this._measurements,
-        this._refresh,
+        this._forceRefresh,
       );
       this._didDrawOnLastSource = true;
     }
