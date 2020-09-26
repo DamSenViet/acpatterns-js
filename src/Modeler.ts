@@ -43,17 +43,17 @@ export interface ModelData {
   }
 };
 
-const acnlTypeToModel = new Map<PatternType, ModelData>();
-acnlTypeToModel.set(Acnl.types.LongSleevedDress, assets.acnl.longSleevedDress);
-acnlTypeToModel.set(Acnl.types.ShortSleevedDress, assets.acnl.shortSleevedDress);
-acnlTypeToModel.set(Acnl.types.NoSleevedDress, assets.acnl.noSleevedDress);
-acnlTypeToModel.set(Acnl.types.LongSleevedShirt, assets.acnl.longSleevedShirt);
-acnlTypeToModel.set(Acnl.types.ShortSleevedShirt, assets.acnl.shortSleevedShirt);
-acnlTypeToModel.set(Acnl.types.NoSleevedShirt, assets.acnl.noSleevedShirt);
-acnlTypeToModel.set(Acnl.types.HornedHat, assets.acnl.hornedHat);
-acnlTypeToModel.set(Acnl.types.KnittedHat, assets.acnl.knittedHat);
-acnlTypeToModel.set(Acnl.types.Standee, assets.acnl.standee);
-acnlTypeToModel.set(Acnl.types.Standard, assets.acnl.standard);
+const patternTypeToModelData = new Map<PatternType, ModelData>();
+patternTypeToModelData.set(Acnl.types.LongSleevedDress, assets.acnl.longSleevedDress);
+patternTypeToModelData.set(Acnl.types.ShortSleevedDress, assets.acnl.shortSleevedDress);
+patternTypeToModelData.set(Acnl.types.NoSleevedDress, assets.acnl.noSleevedDress);
+patternTypeToModelData.set(Acnl.types.LongSleevedShirt, assets.acnl.longSleevedShirt);
+patternTypeToModelData.set(Acnl.types.ShortSleevedShirt, assets.acnl.shortSleevedShirt);
+patternTypeToModelData.set(Acnl.types.NoSleevedShirt, assets.acnl.noSleevedShirt);
+patternTypeToModelData.set(Acnl.types.HornedHat, assets.acnl.hornedHat);
+patternTypeToModelData.set(Acnl.types.KnittedHat, assets.acnl.knittedHat);
+patternTypeToModelData.set(Acnl.types.Standee, assets.acnl.standee);
+patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
 
 export interface ModelerOptions {
   pattern: Drawable;
@@ -94,9 +94,13 @@ class Modeler {
   private _camera: ArcRotateCamera = null;
   private _hemisphericLight: HemisphericLight = null;
   private _directionalLight: DirectionalLight = null;
+
   // variable meshes that change w/ type.
   private _loadedContainer: AssetContainer = null;
   private _clothingStandContainer: AssetContainer = null;
+
+  // settings
+  private _isPixelFiltering = false;
 
 
   public constructor({
@@ -163,7 +167,7 @@ class Modeler {
     this._directionalLight.intensity = 2;
 
     // assume only ACNL for now
-    let modelData: ModelData = acnlTypeToModel.get(this._pattern.type);
+    let modelData: ModelData = patternTypeToModelData.get(this._pattern.type);
     const container: AssetContainer = await new Promise<AssetContainer>(resolve => {
       SceneLoader.LoadAssetContainer("", modelData.model, this._scene, (container: AssetContainer) => {
         resolve(container);
@@ -330,7 +334,7 @@ class Modeler {
     this._source.hook.tap(this._onPixelUpdate);
 
     // assume only ACNL compatibility for now
-    let modelData = acnlTypeToModel.get(this._pattern.type);
+    let modelData = patternTypeToModelData.get(this._pattern.type);
 
     // exchange resources
     this._scene.unfreezeActiveMeshes();
@@ -388,31 +392,35 @@ class Modeler {
 
 
   private _refreshPixels(): void {
-    this._pixelsContext.clearRect(0, 0, this._source[0].length, this._source.length);
+    this._pixelsContext.fillStyle = "rgba(255, 255, 255, 1)";
+    this._pixelsContext.fillRect(0, 0, this._source[0].length, this._source.length);
     for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
-        if (this._source[sourceY][sourceX] === 15) this._pixelsContext.fillStyle = "#FFFFFF";
-        else this._pixelsContext.fillStyle = this._pattern.palette[this._source[sourceY][sourceX]];
+        const paletteIdx = this._source[sourceY][sourceX];
+        if (paletteIdx === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
   }
 
   private _redraw(): void {
-    xbrz(
-      this._pixelsContext,
-      this._measurements.sourceWidth,
-      this._measurements.sourceHeight,
-      this._textureContext,
-      this._measurements.textureWidth,
-      this._measurements.textureHeight,
-    );
-    // this._textureContext.drawImage(
-    //   this._pixelsCanvas,
-    //   0, 0,
-    //   this._measurements.textureWidth,
-    //   this._measurements.textureHeight,
-    // );
+    if (this._isPixelFiltering)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
+    else
+      this._textureContext.drawImage(
+        this._pixelsCanvas,
+        0, 0,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
     this._texture.update(false);
   }
 
@@ -421,7 +429,20 @@ class Modeler {
   }
 
   public set canvas(canvas: HTMLCanvasElement) {
+    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
+    // prepare by unloading all resources from current canvas;
+    
+  }
 
+
+  public get isPixelFiltering(): boolean {
+    return this._isPixelFiltering;
+  }
+
+  public set isPixelFiltering(isPixelFiltering: boolean) {
+    if (typeof isPixelFiltering !== "boolean") throw new TypeError();
+    this._isPixelFiltering = isPixelFiltering;
+    this._redraw();
   }
 
 
