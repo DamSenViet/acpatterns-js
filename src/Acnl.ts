@@ -1,3 +1,4 @@
+import AcPattern from "./AcPattern";
 import Enum from "./Enum";
 import Hook from "./Hook";
 import PixelsSource from "./PixelsSource";
@@ -363,7 +364,7 @@ const colorToByte: Map<color, byte> = new Map(
   [...byteToColor.entries()].map(([i, color]) => [color, i])
 );
 
-class Acnl implements Drawable {
+class Acnl extends AcPattern implements Drawable {
   public static types = AcnlTypes;
   // 2 way mapping for conversions between numbers and strings
   public static colorToByte = colorToByte;
@@ -425,6 +426,7 @@ class Acnl implements Drawable {
   private _looks: number = 0;
 
   public constructor() {
+    super();
     // proxies and apis here
     // setup on all apis
     this._refreshHooksApi();
