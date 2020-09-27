@@ -55,14 +55,15 @@
       background-color: black;
     }
 
-    canvas.model {
-      resize: both;
+    canvas.model,
+    canvas.model-alt {
       outline: none;
       cursor: grab;
       width: 640px;
       height: 640px;
     }
-    canvas.model:active {
+    canvas.model:active,
+    canvas.model-alt:active {
       cursor: grabbing;
     }
   </style>
@@ -72,6 +73,7 @@
   <div class="container">
     <canvas class="model"></canvas>
     <canvas class="draw" width=640 height=640></canvas>
+    <canvas class="model-alt"></canvas>
   </div>
   <div>
     <input class="acnl" type="file" accept=".acnl" />
@@ -92,6 +94,7 @@
 
     const drawCanvas = document.querySelector("canvas.draw");
     const modelCanvas = document.querySelector("canvas.model");
+    const modelCanvasAlt = document.querySelector("canvas.model-alt");
     const input = document.querySelector("input.acnl");
     const toBinaryStr = document.querySelector("input.toBinaryStr");
 

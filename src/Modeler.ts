@@ -100,9 +100,9 @@ class Modeler {
   private _clothingStandContainer: AssetContainer = null;
 
   // settings
-  private _isPixelFiltering = false;
+  private _isPixelFiltering = true;
 
-
+  
   public constructor({
     canvas,
     pattern,
@@ -124,6 +124,7 @@ class Modeler {
     this._setupScene();
   }
 
+  
   private async _setupScene(): Promise<void> {
     this._engine = new Engine(this._canvas, true);
     this._scene = new Scene(this._engine);
@@ -132,7 +133,7 @@ class Modeler {
 
     this._camera = new ArcRotateCamera(
       "camera",
-      Math.PI / 2, Math.PI / 2, 40,
+      Math.PI / 2.5, Math.PI / 2, 40,
       new Vector3(0, 8, 0),
       this._scene
     );
@@ -202,6 +203,7 @@ class Modeler {
     this._engine.runRenderLoop(() => { this._scene.render(); });
   }
 
+  
   // for debugging
   private _showWorldAxis(size: number) {
     const makeTextPlane = (text, color, size) => {
@@ -277,6 +279,7 @@ class Modeler {
     zChar.position = new Vector3(0, 0.05 * size, 0.9 * size);
   }
 
+  
   private _updateMeasurements(): void {
     const sourceHeight = this._source.length;
     const sourceWidth = this._source[0].length;
@@ -300,6 +303,7 @@ class Modeler {
     });
   }
 
+  
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
     if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
     else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
@@ -307,6 +311,7 @@ class Modeler {
     this._redraw();
   }
 
+  
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     for (
       let sourceY: number = 0;
@@ -326,6 +331,7 @@ class Modeler {
     this._redraw();
   };
 
+  
   private _onTypeUpdate = async (type: PatternType): Promise<void> => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.sections.texture;
@@ -378,17 +384,18 @@ class Modeler {
     this._redraw();
   };
 
+  
   // refers to refresh hook
   private _onRefresh = (): void => {
     this._refreshPixels();
     this._redraw();
   }
 
+  
   // assume everything has changed
   private _onLoad = (): void => {
     this._onTypeUpdate(null);
   };
-
 
 
   private _refreshPixels(): void {
@@ -404,6 +411,7 @@ class Modeler {
     }
   }
 
+  
   private _redraw(): void {
     if (this._isPixelFiltering)
       xbrz(
@@ -424,14 +432,27 @@ class Modeler {
     this._texture.update(false);
   }
 
+  
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
   }
 
+  
   public set canvas(canvas: HTMLCanvasElement) {
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     // prepare by unloading all resources from current canvas;
-    
+    this.stop();
+    // set new canvas
+    this._canvas = canvas;
+    // do regular setup
+    this._updateMeasurements();
+    this._refreshPixels();
+    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
+    this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
+    this._pattern.hooks.load.tap(this._onLoad);
+    this._source.hook.tap(this._onPixelUpdate);
+    this._setupScene();
   }
 
 
@@ -439,6 +460,7 @@ class Modeler {
     return this._isPixelFiltering;
   }
 
+  
   public set isPixelFiltering(isPixelFiltering: boolean) {
     if (typeof isPixelFiltering !== "boolean") throw new TypeError();
     this._isPixelFiltering = isPixelFiltering;
