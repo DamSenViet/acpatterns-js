@@ -23,6 +23,9 @@ const pathToWebpackConfig = path.resolve(pathToConfig, "webpack.config.js");
 const pathToSrcIndex = path.resolve(pathToSrc, "index.ts")
 const pathToPathsJs = path.resolve(pathToEtc, "paths.js");
 
+// paths to tests
+const pathToTests = path.resolve(pathToRoot, "tests");
+const pathToTestsSystem = path.resolve(pathToTests, "system");
 
 module.exports = {
   pathToRoot,
@@ -41,4 +44,7 @@ module.exports = {
   pathToWebpackConfig,
   pathToSrcIndex,
   pathToPathsJs,
+  
+  pathToTests,
+  pathToTestsSystem,
 };

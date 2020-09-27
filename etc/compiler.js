@@ -7,6 +7,8 @@ const {
   webpackProdConfigCJS,
   webpackDevConfigUMD,
   webpackProdConfigUMD,
+  webpackDevConfigUMDTest,
+  webpackProdConfigUMDTest,
 } = require('../config/webpack.config');
 const webpackFormatMessages = require('webpack-format-messages');
 const { ifProdVal } = require('./env');
@@ -14,8 +16,8 @@ const { NODE_ENV } = process.env;
 
 let webpackConfig = ifProdVal(
   // use multi configuration, compiles two different sets
-  [webpackProdConfigCJS, webpackProdConfigUMD],
-  [webpackDevConfigCJS, webpackDevConfigUMD]
+  [webpackProdConfigCJS, webpackProdConfigUMD, webpackProdConfigUMDTest],
+  [webpackDevConfigCJS, webpackDevConfigUMD, webpackDevConfigUMDTest]
 );
 const compiler = webpack(webpackConfig);
 
