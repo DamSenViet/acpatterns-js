@@ -62,9 +62,14 @@
       width: 640px;
       height: 640px;
     }
+
     canvas.model:active,
     canvas.model-alt:active {
       cursor: grabbing;
+    }
+
+    .qrs-images {
+      display: none;
     }
   </style>
 </head>
@@ -77,7 +82,7 @@
   </div>
   <div>
     <input class="acnl" type="file" accept=".acnl" />
-    <input class="toBinaryStr" type="file"/>
+    <input class="toBinaryStr" type="file" />
   </div>
   <div class="types-container">
     <div>Types</div>
@@ -86,6 +91,19 @@
   <div class="sections-container">
     <div>Sections</div>
     <div class="sections"></div>
+  </div>
+  <div class="qrs-container">
+    <div>QRs</div>
+    <div class="qrs">
+      <div class="qrs-images">
+        <img src="./qr-acnl-dress.png" />
+        <img src="./qr-acnl-standard.jpg" />
+      </div>
+      <div class="qrs-buttons">
+        <button>qr-acnl-dress</button>
+        <button>qr-acnl-standard</button>
+      </div>
+    </div>
   </div>
 
   <script>
@@ -100,6 +118,10 @@
 
     const sectionsElement = document.querySelector("div.sections");
     const typesElement = document.querySelector("div.types");
+
+    const qrsImagesElement = document.querySelector("div.qrs-images");
+    const qrsButtonsElement = document.querySelector("div.qrs-buttons");
+
     let acnl = new acpatterns.Acnl();
     let drawer = new acpatterns.Drawer({
       pattern: acnl,
@@ -144,6 +166,19 @@
       }
     };
     fillSectionElement();
+
+    for (let i = 0; i < qrsImagesElement.childNodes.length; ++i) {
+      const qrImage = qrsImagesElement.childNodes[i];
+      const qrButton = qrsButtonsElement.childNodes[i];
+      if (
+        !(qrImage instanceof HTMLElement) ||
+        !(qrButton instanceof HTMLElement)
+      ) continue;
+      qrButton.onclick = function() {
+        console.log(`loading ${this.innerText}`);
+        acnl.fromImage(qrImage);
+      }
+    }
 
     acnl.hooks.type.tap(() => {
       clearSectionElement();

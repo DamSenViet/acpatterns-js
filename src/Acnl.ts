@@ -19,6 +19,12 @@ import {
   bytesToBinaryString,
   propertyConfig,
 } from "./utils";
+import {
+  DecodeHintType,
+  ResultMetadataType,
+  Result,
+} from '@zxing/library';
+import { MyBrowserQRCodeReader } from "./myZxing";
 
 // ACNL binary data layout.
 //
@@ -904,6 +910,70 @@ class Acnl extends AcPattern implements Drawable {
 
   public static toBinaryString(acnl: Acnl): string {
     return acnl.toBinaryString();
+  }
+
+  // from single image
+  public async fromImage(image: HTMLImageElement) {
+    if (!(image instanceof HTMLImageElement)) throw new TypeError();
+    const browserQRCodeReader = new MyBrowserQRCodeReader();
+    const hints = new Map();
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    browserQRCodeReader.hints = hints;
+    const results: Array<Result> = await browserQRCodeReader.decodeFromImage(image);
+    browserQRCodeReader.reset();
+    if (results.length < 1) {
+      const message = `No valid QR Codes could be read from the image.`;
+      throw new Error(message);
+    }
+    else if (results.length === 1) {
+      const bytes: Uint8Array = results[0]
+        .getResultMetadata()
+        .get(ResultMetadataType.BYTE_SEGMENTS)[0];
+      const binaryString = bytesToBinaryString(<Array<byte>><unknown>bytes);
+      return this.fromBinaryString(binaryString);
+    }
+    else if (results.length === 4) {
+      interface ExtractedResult {
+        bytes: Uint8Array;
+        sequenceNumber: number;
+      };
+      const extractedResults: Array<ExtractedResult> = results.map((result) => {
+        const resultMetadata = result.getResultMetadata();
+        const bytes: Uint8Array = resultMetadata
+          .get(ResultMetadataType.BYTE_SEGMENTS)[0];
+        const sequenceNumber: number = <number>resultMetadata
+          .get(ResultMetadataType.STRUCTURED_APPEND_SEQUENCE) >> 4;
+        return {
+          bytes,
+          sequenceNumber,
+        };
+      });
+      extractedResults.sort((a, b) => {
+        return a.sequenceNumber - b.sequenceNumber;
+      });
+      const includedSequenceNumbers = new Set(
+        extractedResults.map((extractedResult) => extractedResult.sequenceNumber)
+      );
+      if (
+        !includedSequenceNumbers.has(0) ||
+        !includedSequenceNumbers.has(1) ||
+        !includedSequenceNumbers.has(2) ||
+        !includedSequenceNumbers.has(3)
+      ) throw new Error();
+      const binaryString = extractedResults.map((extractedResult) => {
+        return bytesToBinaryString(<Array<byte>><unknown> extractedResult.bytes);
+      }).join("");
+      return this.fromBinaryString(binaryString);
+    }
+    else {
+      // not enough or too many qr codes in the image, need custom error
+      throw new Error();
+    }
+  }
+
+  public static async fromImage(image: HTMLImageElement) {
+    const acnl = new Acnl();
+    return acnl.fromImage(image);
   }
 }
 
