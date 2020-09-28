@@ -13,7 +13,7 @@ import {
 } from "@zxing/library/esm";
 import MyQRCodeReader from "./MyQRCodeReader";
 import MyDecodeContinuouslyCallback from "./MyDecodeContinuouslyCallback";
-import ImageLoadingError from "./ImageLoadingError";
+import ImageLoadingException from "./ImageLoadingException";
 
 /**
  * Patched BrowserQRCodeReader for multi-QR reading.
@@ -484,7 +484,7 @@ class MyBrowserQRCodeReader {
       return this.decodeFromImageUrl(url);
     }
 
-    return this.decodeFromImageElement(source);
+    return this.decodeFromImageElement(<HTMLImageElement>source);
   }
 
   /**
@@ -536,27 +536,22 @@ class MyBrowserQRCodeReader {
   /**
    * Decodes something from an image HTML element.
    */
-  public decodeFromImageElement(source: string | HTMLImageElement): Promise<Array<Result>> {
+  public decodeFromImageElement(image: HTMLImageElement): Promise<Array<Result>> {
 
-    if (!source) {
+    if (!image) {
       throw new ArgumentException('An image element must be provided.');
     }
 
     this.reset();
 
-    const element = this.prepareImageElement(source);
-
-    this.imageElement = element;
-
-    let task: Promise<Array<Result>>;
-
-    if (this.isImageLoaded(element)) {
-      task = this.decodeOnce(element, false, false);
-    } else {
-      task = this._decodeOnLoadImage(element);
-    }
-
-    return task;
+    const imageCopy = document.createElement("img");
+    this.imageElement = imageCopy;
+    
+    const decodeTask = this._decodeOnLoadImage(imageCopy);
+    
+    imageCopy.src = image.src;
+    
+    return decodeTask;
   }
 
   /**
@@ -666,8 +661,8 @@ class MyBrowserQRCodeReader {
     return decodeTask;
   }
 
-  private async _decodeOnLoadImage(element: HTMLImageElement): Promise<Array<Result>> {
-    return await new Promise((resolve, reject) => {
+  private _decodeOnLoadImage(element: HTMLImageElement): Promise<Array<Result>> {
+    return new Promise((resolve, reject) => {
       this.imageLoadedListener = async () => {
         resolve(await this.decodeOnce(element, false, false));
       };
@@ -676,7 +671,8 @@ class MyBrowserQRCodeReader {
         element.removeEventListener('error', this.imageErrorListener);
         this.imageErrorListener = undefined;
         // still not firing idk why
-        reject(new ImageLoadingError());
+        const message = `The image at ${element.currentSrc} could not be loaded.`;
+        reject(new ImageLoadingException(message));
       };
       element.addEventListener('error', this.imageErrorListener);
     });
@@ -731,7 +727,7 @@ class MyBrowserQRCodeReader {
     }
 
     if (imageSource instanceof HTMLImageElement) {
-      imageElement = imageSource;
+      imageElement = document.createElement('img');
     }
 
     return imageElement;
@@ -1024,8 +1020,8 @@ class MyBrowserQRCodeReader {
 
     // then forget about that element 😢
 
-    // this.imageElement.src = undefined;
-    // this.imageElement.removeAttribute('src');
+    this.imageElement.src = undefined;
+    this.imageElement.removeAttribute('src');
     this.imageElement = undefined;
   }
 
