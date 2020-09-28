@@ -102,7 +102,7 @@ const clothingTextureMapping: mapping = (() => {
 })();
 
 const createStandeeMapping = (isTextureMapping: boolean): mapping => {
-  const width = isTextureMapping? 64 :  52;
+  const width = isTextureMapping ? 64 : 52;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
     new Array(height).fill(null).map(i => new Array(width).fill(null));
@@ -138,8 +138,8 @@ const createTopMapping = (clothLength: ClothLength, clothSide: ClothSide.Front |
     new Array(height).fill(null).map(i => new Array(width).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (y < 32) mapping[y][x] = [y + (16 * (clothSide === ClothSide.Front? 0: 2)), x];
-      else if (y < 48) mapping[y][x] = [y - 32 + (16 * (clothSide === ClothSide.Front? 6 : 7)), x];
+      if (y < 32) mapping[y][x] = [y + (16 * (clothSide === ClothSide.Front ? 0 : 2)), x];
+      else if (y < 48) mapping[y][x] = [y - 32 + (16 * (clothSide === ClothSide.Front ? 6 : 7)), x];
     }
   }
   return mapping;
@@ -371,25 +371,61 @@ const colorToByte: Map<color, byte> = new Map(
   [...byteToColor.entries()].map(([i, color]) => [color, i])
 );
 
+/**
+ * Class representing an Animal Crossing New Leaf in-game pattern.
+ */
 class Acnl extends AcPattern implements Drawable {
+  
+  /**
+   * An Enum of all possible PatternTypes.
+   */
   public static types = AcnlTypes;
-  // 2 way mapping for conversions between numbers and strings
+  
+  /**
+   * A mapping of hex color strings to bytes.
+   */
   public static colorToByte = colorToByte;
+  
+  /**
+   * A mapping of bytes to hex color strings.
+   */
   public static byteToColor = byteToColor;
-  // standard pattern with defaults
+  
+  /**
+   * Title of the Acnl pattern.
+   */
   private _title: string = "Empty";
+  
+  /**
+   * The designer attributes.
+   */
   public _designer: Designer = {
     id: 0,
     name: "Unknown",
     isFemale: false
   };
+
+  /**
+   * Controls access of the designer attributes.
+   */
   public _designerApi: Designer = null;
+
+  /**
+   * The town attributes.
+   */
   private _town: Town = {
     id: 0,
     name: "Unknown"
   };
+
+  /**
+   * Controls access of the town attributes.
+   */
   private _townApi: Town = null;
 
+  /**
+   * The PatternType (e.g. Standard, Shirt, Dress)
+   */
   private _type: PatternType = Acnl.types.Standard;
 
   // lookup table for rendering colors
@@ -425,13 +461,17 @@ class Acnl extends AcPattern implements Drawable {
   } = null;
   private _hooks: HookSystem = null;
 
-  // stuff no one should touch
+  // stuff no one should touch b/c actual mapped values are unknown
   private _language: number = 0;
   private _country: number = 0;
   private _region: number = 0;
   private _color: number = 0;
   private _looks: number = 0;
 
+
+  /**
+   * Creates an Acnl instance.
+   */
   public constructor() {
     super();
     // proxies and apis here
@@ -444,6 +484,10 @@ class Acnl extends AcPattern implements Drawable {
     this._refreshSectionsApi();
   };
 
+
+  /**
+   * Refreshes the town API.
+   */
   private _refreshTownApi(): void {
     const { _town } = this;
     const api = new Proxy(_town, {
@@ -461,6 +505,10 @@ class Acnl extends AcPattern implements Drawable {
     this._townApi = api;
   }
 
+
+  /**
+   * Refreshes the designer API.
+   */
   private _refreshDesignerApi(): void {
     const { _designer } = this;
     // divert all sets back to setter
@@ -479,7 +527,10 @@ class Acnl extends AcPattern implements Drawable {
     this._designerApi = api;
   }
 
-  // partially dependent on sectionsApi to create its hooks as well
+
+  /**
+   * Refreshes the hooks API.
+   */
   private _refreshHooksApi(): void {
     this._hooks = {
       type: new Hook<[PatternType]>(),
@@ -490,6 +541,9 @@ class Acnl extends AcPattern implements Drawable {
   }
 
 
+  /**
+   * Refreshes the palette API.
+   */
   private _refreshPaletteApi(): void {
     const { _palette } = this;
     const api: Array<color> = new Array<color>(_palette.length);
@@ -507,6 +561,10 @@ class Acnl extends AcPattern implements Drawable {
     this._paletteApi = <PatternPalette>api;
   }
 
+
+  /**
+   * Refreshes the pixels API and cleans up pixels hook.
+   */
   private _refreshPixelsApi(): void {
     const { _pixels, _pixelsApi } = this;
     if (_pixelsApi != null) _pixelsApi.hook.clear();
@@ -564,6 +622,10 @@ class Acnl extends AcPattern implements Drawable {
     api.unreactive = unreactiveApi;
   }
 
+
+  /**
+   * Refresh the sections API and cleans up sections hooks.
+   */
   private _refreshSectionsApi(): void {
     const { _pixels, pixels, _type, _sectionsApi } = this;
     // cleanup to prevent memory leak
@@ -644,12 +706,17 @@ class Acnl extends AcPattern implements Drawable {
   }
 
 
-  // PUBLIC INTERFACE
+  /**
+   * Gets the title of the Acnl.
+   */
   public get title(): string {
     return this._title;
   }
 
 
+  /**
+   * Sets the title of the Acnl.
+   */
   public set title(title: string) {
     if (typeof title !== "string") return;
     if (title.length > 20) return;
@@ -657,10 +724,17 @@ class Acnl extends AcPattern implements Drawable {
   }
 
 
+  /**
+   * Gets the town attributes.
+   */
   public get town(): Town {
     return this._townApi;
   }
 
+
+  /**
+   * Sets the town attributes.
+   */
   public set town(town: Town) {
     const { _town } = this;
     // no undefined values (null still possible)
@@ -678,10 +752,17 @@ class Acnl extends AcPattern implements Drawable {
   }
 
 
+  /**
+   * Gets the designer.
+   */
   public get designer(): Designer {
     return this._designerApi;
   }
 
+
+  /**
+   * Sets the designer attributes.
+   */
   public set designer(designer: Designer) {
     // no undefined values (null still possible)
     const { _designer } = this;
@@ -703,6 +784,17 @@ class Acnl extends AcPattern implements Drawable {
   }
 
 
+  /**
+   * Gets the PatternType of the Acnl.
+   */
+  public get type(): PatternType {
+    return this._type;
+  }
+
+
+  /**
+   * Sets the PatternType of the Acnl.
+   */
   public set type(type: PatternType) {
     const { _hooks, _type } = this;
     // must match from enum, no excuses
@@ -718,12 +810,19 @@ class Acnl extends AcPattern implements Drawable {
     }
   }
 
-  public get type(): PatternType {
-    return this._type;
+
+  /**
+   * Gets the palette of the Acnl.
+   */
+  public get palette(): PatternPalette {
+    return this._paletteApi;
   }
 
 
-  set palette(palette: PatternPalette) {
+  /**
+   * Sets the palette of the Acnl.
+   */
+  public set palette(palette: PatternPalette) {
     const { _palette, _hooks } = this;
     if (typeof palette !== "object" || !(palette instanceof Array)) throw new TypeError();
     if (palette.length > 15) throw new TypeError(); // too many
@@ -739,26 +838,10 @@ class Acnl extends AcPattern implements Drawable {
     }
   }
 
-  get palette(): PatternPalette {
-    return this._paletteApi;
-  }
 
-
-  public get pixels(): PixelsSource {
-    return this._pixelsApi;
-  }
-
-  private get language(): number {
-    return this._language;
-  }
-
-  private set language(language: number) {
-    if (language < 128) {
-      this._language = language;
-    }
-  }
-
-  // COMPUTED properties
+  /**
+   * Gets the sections of the Acnl.
+   */
   public get sections(): {
     texture: PixelsSource;
     [key: string]: PixelsSource;
@@ -766,53 +849,117 @@ class Acnl extends AcPattern implements Drawable {
     return this._sectionsApi;
   }
 
+
+  /**
+   * Gets the pixels of the Acnl.
+   */
+  public get pixels(): PixelsSource {
+    return this._pixelsApi;
+  }
+
+  /**
+   * Gets the hooks of the Acnl.
+   */
   public get hooks(): HookSystem {
     return this._hooks;
   }
 
 
+  /**
+   * Gets the language byte of the Acnl.
+   */
+  private get language(): number {
+    return this._language;
+  }
+
+
+  /**
+   * Sets the language byte of the Acnl.
+   */
+  private set language(language: number) {
+    if (language < 128) {
+      this._language = language;
+    }
+  }
+
+
+  /**
+   * Gets the country byte of the Acnl.
+   */
   private get country(): number {
     return this._country;
   }
 
+
+  /**
+   * Sets the country byte of the Acnl.
+   */
   private set country(country: number) {
     if (country < 128) {
       this._country = country;
     }
   }
 
+
+  /**
+   * Gets the region byte of the Acnl.
+   */
   private get region(): number {
     return this._region;
   }
 
+
+  /**
+   * Sets the region byte of the Acnl.
+   */
   private set region(region: number) {
     if (region < 128) {
       this._region = region;
     }
   }
 
+
+  /**
+   * Gets the color byte of the Acnl.
+   */
   private get color(): number {
     return this._color;
   }
 
+
+  /**
+   * Sets the color byte of the Acnl.
+   */
   private set color(color: number) {
     if (color < 15) {
       this._color = color;
     }
   }
 
+
+  /**
+   * Gets looks byte of the Acnl.
+   */
   private get looks(): number {
     return this._looks;
   }
 
+
+  /**
+   * Sets looks byte of the Acnl.
+   */
   private set looks(looks: number) {
     if (looks < 128) {
       this._looks = looks;
     }
   }
 
-  // loads binary data into itself
-  public fromBinaryString(binaryString: string): Acnl {
+
+  /**
+   * Loads data into the Acnl from a formatted binary string.
+   * @param binaryString - the formatted binary string
+   */
+  public fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
     // decode everything
     const bytes = binaryStringToBytes(binaryString);
     if (
@@ -862,11 +1009,20 @@ class Acnl extends AcPattern implements Drawable {
     return this;
   }
 
-  public static fromBinaryString(binaryString: string): Acnl {
+
+  /**
+   * Creates an Acnl from a formatted binary string.
+   * @param binaryString - the formatted binary string to convert
+   */
+  public static fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
     const acnl = new Acnl();
     return acnl.fromBinaryString(binaryString);
   }
 
+
+  /**
+   * Creates a formatted binary string from the Acnl.
+   */
   public toBinaryString(): string {
     // encode everything into hex numbers
     const {
@@ -915,11 +1071,21 @@ class Acnl extends AcPattern implements Drawable {
     return bytesToBinaryString(bytes);
   }
 
+
+  /**
+   * Creates a formatted binary string from an Acnl.
+   * @param acnl - the acnl instance
+   */
   public static toBinaryString(acnl: Acnl): string {
     return acnl.toBinaryString();
   }
 
-  public async fromImage(image: HTMLImageElement): Promise<Acnl> {
+
+  /**
+   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in an image.
+   * @param image - an image to scan for QR Codes
+   */
+  public async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     if (!(image instanceof HTMLImageElement)) {
       const message = `Expected instanceof ${HTMLImageElement.name}`;
       throw new TypeError(message);
@@ -994,12 +1160,19 @@ class Acnl extends AcPattern implements Drawable {
       }
     }
     else {
+      // not enough or too many qr codes in the image, need custom error
       const message = `Image contains too many or too few QR codes to extract a single Acnl formatted pattern.`;
       throw new QRScanningError(message);
     }
   }
 
-  public static async fromImage(image: HTMLImageElement): Promise<Acnl> {
+
+  /**
+   * Creates an Acnl from 1 whole or 4 multipart QR Codes in an image.
+   * @param image - an image to scan for QR Codes
+   * @returns - a promise containing the Acnl
+   */
+  public static async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     const acnl = new Acnl();
     return acnl.fromImage(image);
   }
