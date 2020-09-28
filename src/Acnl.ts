@@ -25,6 +25,7 @@ import {
   Result,
 } from '@zxing/library';
 import { MyBrowserQRCodeReader } from "./myZxing";
+import { QRScanningError } from "./errors";
 
 // ACNL binary data layout.
 //
@@ -814,8 +815,14 @@ class Acnl extends AcPattern implements Drawable {
   public fromBinaryString(binaryString: string): Acnl {
     // decode everything
     const bytes = binaryStringToBytes(binaryString);
-    if (bytes.length < 620) throw new RangeError();
-    if (bytes.length > 620 && bytes.length < 2156) throw new RangeError();
+    if (
+      bytes.length < 620 ||
+      (bytes.length > 620 && bytes.length < 2156) ||
+      bytes.length > 2160
+    ) {
+      const message = `Expected binary string with 620 or 2156 - 2160 bytes, but received ${bytes.length} bytes.`;
+      throw new RangeError(message);
+    }
     // do a size check
     this._title = bytesToString(bytes.splice(0, 42));
     this._designer.id = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
@@ -912,25 +919,41 @@ class Acnl extends AcPattern implements Drawable {
     return acnl.toBinaryString();
   }
 
-  // from single image
-  public async fromImage(image: HTMLImageElement) {
-    if (!(image instanceof HTMLImageElement)) throw new TypeError();
+  public async fromImage(image: HTMLImageElement): Promise<Acnl> {
+    if (!(image instanceof HTMLImageElement)) {
+      const message = `Expected instanceof ${HTMLImageElement.name}`;
+      throw new TypeError(message);
+    }
     const browserQRCodeReader = new MyBrowserQRCodeReader();
     const hints = new Map();
     hints.set(DecodeHintType.TRY_HARDER, true);
     browserQRCodeReader.hints = hints;
-    const results: Array<Result> = await browserQRCodeReader.decodeFromImage(image);
+
+    let results: Array<Result>;
+    try {
+      results = await browserQRCodeReader.decodeFromImage(image);
+    }
+    catch (error) {
+      const message = `No valid QR codes could be scanned from the image.`;
+      throw new QRScanningError(message);
+    }
     browserQRCodeReader.reset();
-    if (results.length < 1) {
-      const message = `No valid QR Codes could be read from the image.`;
-      throw new Error(message);
+    if (results.length === 0) {
+      const message = `No valid QR Codes could be scanned from the image.`;
+      throw new QRScanningError(message);
     }
     else if (results.length === 1) {
       const bytes: Uint8Array = results[0]
         .getResultMetadata()
         .get(ResultMetadataType.BYTE_SEGMENTS)[0];
       const binaryString = bytesToBinaryString(<Array<byte>><unknown>bytes);
-      return this.fromBinaryString(binaryString);
+      try {
+        return this.fromBinaryString(binaryString);
+      }
+      catch (error) {
+        const message = `QR Code(s) contained invalid contents.`;
+        throw new QRScanningError(message);
+      }
     }
     else if (results.length === 4) {
       interface ExtractedResult {
@@ -951,27 +974,32 @@ class Acnl extends AcPattern implements Drawable {
       extractedResults.sort((a, b) => {
         return a.sequenceNumber - b.sequenceNumber;
       });
-      const includedSequenceNumbers = new Set(
-        extractedResults.map((extractedResult) => extractedResult.sequenceNumber)
-      );
-      if (
-        !includedSequenceNumbers.has(0) ||
-        !includedSequenceNumbers.has(1) ||
-        !includedSequenceNumbers.has(2) ||
-        !includedSequenceNumbers.has(3)
-      ) throw new Error();
+      const missingSequenceNumbers = new Set([0, 1, 2, 3]);
+      extractedResults.forEach((extractedResult) => {
+        missingSequenceNumbers.delete(extractedResult.sequenceNumber);
+      });
+      if (missingSequenceNumbers.size > 0) {
+        const message = `Image is missing specific QR codes that make up the Acnl formatted pattern.`
+        throw new QRScanningError(message);
+      }
       const binaryString = extractedResults.map((extractedResult) => {
-        return bytesToBinaryString(<Array<byte>><unknown> extractedResult.bytes);
+        return bytesToBinaryString(<Array<byte>><unknown>extractedResult.bytes);
       }).join("");
-      return this.fromBinaryString(binaryString);
+      try {
+        return this.fromBinaryString(binaryString);
+      }
+      catch (error) {
+        const message = `QR Code(s) contained invalid contents.`;
+        throw new QRScanningError(message);
+      }
     }
     else {
-      // not enough or too many qr codes in the image, need custom error
-      throw new Error();
+      const message = `Image contains too many or too few QR codes to extract a single Acnl formatted pattern.`;
+      throw new QRScanningError(message);
     }
   }
 
-  public static async fromImage(image: HTMLImageElement) {
+  public static async fromImage(image: HTMLImageElement): Promise<Acnl> {
     const acnl = new Acnl();
     return acnl.fromImage(image);
   }
