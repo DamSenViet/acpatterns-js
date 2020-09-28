@@ -24,7 +24,10 @@ import {
   ResultMetadataType,
   Result,
 } from '@zxing/library';
-import { MyBrowserQRCodeReader } from "./myZxing";
+import {
+  MyBrowserQRCodeReader,
+  ImageLoadingException,
+} from "./myZxing";
 import { QRScanningError } from "./errors";
 
 // ACNL binary data layout.
@@ -1100,7 +1103,8 @@ class Acnl extends AcPattern implements Drawable {
       results = await browserQRCodeReader.decodeFromImage(image);
     }
     catch (error) {
-      const message = `No valid QR codes could be scanned from the image.`;
+      let message = `No valid QR codes could be scanned from the image.`;
+      if (error instanceof ImageLoadingException) message = error.message;
       throw new QRScanningError(message);
     }
     browserQRCodeReader.reset();
