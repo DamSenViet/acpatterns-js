@@ -664,7 +664,7 @@ class MyBrowserQRCodeReader {
   private _decodeOnLoadImage(element: HTMLImageElement): Promise<Array<Result>> {
     return new Promise((resolve, reject) => {
       this.imageLoadedListener = async () => {
-        resolve(await this.decodeOnce(element, false, false));
+        this.decodeOnce(element, false, false).then(resolve, reject);
       };
       element.addEventListener('load', this.imageLoadedListener);
       this.imageErrorListener = () => {
