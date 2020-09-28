@@ -1,0 +1,1 @@
+export { default as MyBrowserQRCodeReader } from "./MyBrowserQRCodeReader";
