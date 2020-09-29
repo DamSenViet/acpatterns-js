@@ -5,6 +5,7 @@ const {
   pathToBuildUMD,
   pathToNodeModules,
   pathToSrcIndex,
+  pathToTestsSystem,
 } = require('../etc/paths');
 const {
   babelDevConfig,
@@ -33,6 +34,12 @@ const outputUMD = {
   library: "acpatterns",
   libraryTarget: "umd",
   path: pathToBuildUMD,
+};
+
+// for system testing
+const outputUMDTest = {
+  ...outputUMD,
+  path: pathToTestsSystem,
 };
 
 const babelLoaderDev = {
@@ -119,10 +126,22 @@ const webpackProdConfigUMD = {
   output: outputUMD,
 };
 
+const webpackDevConfigUMDTest = {
+  ...webpackDevConfigUMD,
+  output: outputUMDTest,  
+};
+
+const webpackProdConfigUMDTest = {
+  ...webpackProdConfigUMD,
+  output: outputUMDTest,
+};
+
 
 module.exports = {
   webpackDevConfigCJS,
   webpackProdConfigCJS,
   webpackDevConfigUMD,
   webpackProdConfigUMD,
+  webpackDevConfigUMDTest,
+  webpackProdConfigUMDTest,
 };

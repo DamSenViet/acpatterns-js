@@ -11,3 +11,6 @@
 
 # Ignore Workspace Settings
 **/.vscode
+/tests/index.js
+/tests/system/index.js
+/tests/system/index.js.map

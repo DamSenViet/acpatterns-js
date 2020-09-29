@@ -1,36 +1,46 @@
 {
   "name": "acpatterns",
   "version": "0.0.0",
-  "description": "",
-  "main": "build/cjs/index..js",
+  "description": "A JavaScript library for interacting with Animal Crossing pattern data structures and files.",
+  "main": "build/cjs/index.js",
   "module": "build/esm/index.js",
+  "types": "build/esm/index.d.ts",
   "browser": "build/umd/build.js",
   "scripts": {
+    "clean": "node scripts/clean.js",
     "watch": "node scripts/watch.js",
     "watch:esm": "tsc -w",
-    "clean": "node scripts/clean.js",
     "build": "node scripts/build.js",
     "build:esm": "tsc",
-    "test": "npx jest --passWithNoTests"
+    "test": "jest --passWithNoTests"
   },
   "repository": {
-    "type": "git"
+    "type": "git",
+    "url": "git+https://github.com/DamSenViet/acpatterns-js.git"
   },
+  "bugs": {
+    "url": "https://github.com/DamSenViet/acpatterns-js/issues"
+  },
+  "homepage": "https://github.com/DamSenViet/acpattern-js#readme",
   "author": "DamSenViet",
   "license": "MIT",
-  "dependencies": {},
+  "peerDependencies": {
+    "babylonjs": "^4.1.0",
+    "babylonjs-loaders": "^4.1.0"
+  },
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/plugin-transform-runtime": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
     "@babel/runtime": "^7.9.6",
-    "@types/mathjs": "^6.0.5",
+    "@zxing/library": "^0.17.1",
     "babel-loader": "^8.1.0",
     "clear": "^0.1.0",
     "dotenv": "^8.2.0",
     "fs-extra": "^9.0.0",
     "jest": "^26.0.1",
     "signale": "^1.4.0",
+    "ts-custom-error": "^3.2.0",
     "ts-loader": "^7.0.4",
     "typescript": "^3.9.2",
     "webpack": "^4.43.0",

@@ -8,6 +8,7 @@
   ],
   "compilerOptions": {
     "declaration": true,
+    "declarationMap": true,
     // ### PROJECT OPTIONS
     //  module type to compile into
     "module": "ES6",
@@ -24,8 +25,7 @@
       "ES6",
       "DOM",
     ],
-    "moduleResolution": "node"
-
+    "moduleResolution": "node",
     // ### STRICT CHECKS
     // "alwaysStrict": true,
     // "noImplicitAny": true,

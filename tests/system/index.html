@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="./index.js"></script>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      border: 0;
+    }
+    
+    body {
+      padding-bottom: 30px;
+    }
+
+    @keyframes moving-polkadots {
+      from {
+        background-position: 0px 0px, 50px 50px;
+      }
+
+      to {
+        background-position: 50px 50px, 100px 100px;
+      }
+    }
+
+    .container {
+      /* background-color: #ffffe5; */
+      background-image: radial-gradient(#a39277 2px, transparent 2px),
+        radial-gradient(#a39277 2px, transparent 2px);
+      background-color: #8C7C64;
+      background-position: 0 0, 50px 50px;
+      background-size: 20px 20px;
+      background-repeat: repeat;
+      animation: moving-polkadots 5s linear infinite;
+
+      display: grid;
+      grid-template-rows: auto;
+      grid-template-columns: 1fr 1fr;
+      justify-content: center;
+      justify-items: auto;
+      align-content: center;
+      align-items: center;
+
+      position: relative;
+      top: 0;
+      left: 0;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .canvases {
+      background-color: black;
+    }
+
+    canvas.model,
+    canvas.model-alt {
+      outline: none;
+      cursor: grab;
+      width: 640px;
+      height: 640px;
+    }
+    canvas.model-alt {
+      width: 256px;
+      height: 256px;
+    }
+
+    canvas.model:active,
+    canvas.model-alt:active {
+      cursor: grabbing;
+    }
+
+    .qrs-images {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <canvas class="model"></canvas>
+    <canvas class="draw" width=640 height=640></canvas>
+    <canvas class="model-alt"></canvas>
+  </div>
+  <div>
+    <input class="acnl" type="file" accept=".acnl" />
+    <input class="toBinaryStr" type="file" />
+  </div>
+  <div class="types-container">
+    <div>Types</div>
+    <div class="types"></div>
+  </div>
+  <div class="sections-container">
+    <div>Sections</div>
+    <div class="sections"></div>
+  </div>
+  <div class="qrs-container">
+    <div>QRs</div>
+    <div class="qrs">
+      <div class="qrs-images">
+        <img src="./this-is-a-broken-link.jpg" />
+        <img src="./nothing.jpeg" />
+        <img src="./qr-acnl-standard.jpg" />
+        <img src="./qr-acnl-dress.png" />
+      </div>
+      <div class="qrs-buttons">
+        <button>invalid image path</button>
+        <button>nothing</button>
+        <button>qr-acnl-standard</button>
+        <button>qr-acnl-dress</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const pixelsCanvas = document.querySelector("canvas.pixels");
+    const textureCanvas = document.querySelector("canvas.texture");
+
+    const drawCanvas = document.querySelector("canvas.draw");
+    const modelCanvas = document.querySelector("canvas.model");
+    const modelCanvasAlt = document.querySelector("canvas.model-alt");
+    const input = document.querySelector("input.acnl");
+    const toBinaryStr = document.querySelector("input.toBinaryStr");
+
+    const sectionsElement = document.querySelector("div.sections");
+    const typesElement = document.querySelector("div.types");
+
+    const qrsImagesElement = document.querySelector("div.qrs-images");
+    const qrsButtonsElement = document.querySelector("div.qrs-buttons");
+
+    let acnl = new acpatterns.Acnl();
+    let drawer = new acpatterns.Drawer({
+      pattern: acnl,
+      canvas: drawCanvas,
+    });
+    let modeler = new acpatterns.Modeler({
+      pattern: acnl,
+      canvas: modelCanvas,
+    });
+
+    const fillTypesElement = () => {
+      for (let typeKey of Object.keys(acpatterns.Acnl.types)) {
+        const button = new DOMParser().parseFromString(
+          `<button>${acpatterns.Acnl.types[typeKey].name}</button>`,
+          "text/html").querySelector("body").firstChild;
+        typesElement.insertBefore(button, null);
+        button.onclick = (() => {
+          acnl.type = acpatterns.Acnl.types[typeKey];
+        });
+      }
+    };
+    fillTypesElement();
+
+    const clearSectionElement = () => {
+      const childNodes = new Set();
+      for (let childNode of sectionsElement.childNodes) {
+        childNodes.add(childNode);
+      }
+      for (let childNode of childNodes) {
+        sectionsElement.removeChild(childNode);
+      }
+    };
+    const fillSectionElement = () => {
+      for (let sectionsName of Object.keys(acnl.sections)) {
+        const button = new DOMParser().parseFromString(
+          `<button>${sectionsName}</button>`,
+          "text/html").querySelector("body").firstChild;
+        sectionsElement.insertBefore(button, null);
+        button.onclick = (() => {
+          drawer.source = acnl.sections[sectionsName];
+        });
+      }
+    };
+    fillSectionElement();
+
+    for (let i = 0; i < qrsImagesElement.childNodes.length; ++i) {
+      const qrImage = qrsImagesElement.childNodes[i];
+      const qrButton = qrsButtonsElement.childNodes[i];
+      if (
+        !(qrImage instanceof HTMLElement) ||
+        !(qrButton instanceof HTMLElement)
+      ) continue;
+      qrButton.onclick = function() {
+        console.log(`loading ${this.innerText}`);
+        acnl.fromImage(qrImage);
+      }
+    }
+
+    acnl.hooks.type.tap(() => {
+      clearSectionElement();
+      fillSectionElement();
+    });
+    acnl.hooks.load.tap(() => {
+      clearSectionElement();
+      fillSectionElement();
+    });
+
+    input.onchange = (async (event) => {
+      const fileReader = new FileReader();
+      const binaryString = await new Promise((resolve) => {
+        fileReader.onload = event => resolve(event.target.result);
+        fileReader.readAsBinaryString(event.target.files[0]);
+      });
+
+      acnl.fromBinaryString(binaryString);
+      console.log(acnl);
+    });
+
+    toBinaryStr.onchange = (async (event) => {
+      const fileReader = new FileReader();
+      const binaryString = await new Promise((resolve) => {
+        fileReader.onload = event => resolve(event.target.result);
+        fileReader.readAsBinaryString(event.target.files[0]);
+      });
+      console.log(binaryString);
+    });
+
+
+  </script>
+</body>
+
+</html>
