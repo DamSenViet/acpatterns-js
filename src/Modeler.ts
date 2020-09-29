@@ -102,7 +102,7 @@ class Modeler {
   // settings
   private _isPixelFiltering = true;
 
-  
+
   public constructor({
     canvas,
     pattern,
@@ -124,7 +124,7 @@ class Modeler {
     this._setupScene();
   }
 
-  
+
   private async _setupScene(): Promise<void> {
     this._engine = new Engine(this._canvas, true);
     this._scene = new Scene(this._engine);
@@ -169,11 +169,12 @@ class Modeler {
 
     // assume only ACNL for now
     let modelData: ModelData = patternTypeToModelData.get(this._pattern.type);
-    const container: AssetContainer = await new Promise<AssetContainer>(resolve => {
-      SceneLoader.LoadAssetContainer("", modelData.model, this._scene, (container: AssetContainer) => {
-        resolve(container);
-      }, null, null, ".gltf");
-    });
+    const container: AssetContainer = await new Promise<AssetContainer>(
+      (resolve) => {
+        SceneLoader.LoadAssetContainer("", modelData.model, this._scene, (container: AssetContainer) => {
+          resolve(container);
+        }, null, null, ".gltf");
+      });
     container.addAllToScene(); // hold onto it
     this._loadedContainer = container;
 
@@ -199,11 +200,11 @@ class Modeler {
     // setup world axis for debugging
     // this._showWorldAxis(20);
 
-    await new Promise(resolve => { this._scene.executeWhenReady(resolve); });
+    await new Promise((resolve) => { this._scene.executeWhenReady(resolve); });
     this._engine.runRenderLoop(() => { this._scene.render(); });
   }
 
-  
+
   // for debugging
   private _showWorldAxis(size: number) {
     const makeTextPlane = (text, color, size) => {
@@ -279,7 +280,7 @@ class Modeler {
     zChar.position = new Vector3(0, 0.05 * size, 0.9 * size);
   }
 
-  
+
   private _updateMeasurements(): void {
     const sourceHeight = this._source.length;
     const sourceWidth = this._source[0].length;
@@ -303,7 +304,7 @@ class Modeler {
     });
   }
 
-  
+
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
     if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
     else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
@@ -311,7 +312,7 @@ class Modeler {
     this._redraw();
   }
 
-  
+
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     for (
       let sourceY: number = 0;
@@ -331,7 +332,7 @@ class Modeler {
     this._redraw();
   };
 
-  
+
   private _onTypeUpdate = async (type: PatternType): Promise<void> => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.sections.texture;
@@ -349,7 +350,7 @@ class Modeler {
     }
     this._loadedContainer.dispose();
     this._loadedContainer = await new Promise<AssetContainer>(
-      resolve => {
+      (resolve) => {
         SceneLoader.LoadAssetContainer(
           "", modelData.model,
           this._scene,
@@ -363,7 +364,7 @@ class Modeler {
       this._clothingStandContainer.dispose();
     if (modelData.useClothingStand) {
       this._clothingStandContainer = await new Promise<AssetContainer>(
-        resolve => {
+        (resolve) => {
           SceneLoader.LoadAssetContainer(
             "", assets.acnl.clothingStand.model,
             this._scene,
@@ -384,14 +385,14 @@ class Modeler {
     this._redraw();
   };
 
-  
+
   // refers to refresh hook
   private _onRefresh = (): void => {
     this._refreshPixels();
     this._redraw();
   }
 
-  
+
   // assume everything has changed
   private _onLoad = (): void => {
     this._onTypeUpdate(null);
@@ -411,7 +412,7 @@ class Modeler {
     }
   }
 
-  
+
   private _redraw(): void {
     if (this._isPixelFiltering)
       xbrz(
@@ -432,16 +433,18 @@ class Modeler {
     this._texture.update(false);
   }
 
-  
+
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
   }
 
-  
+
   public set canvas(canvas: HTMLCanvasElement) {
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     // prepare by unloading all resources from current canvas;
-    this.stop();
+    this.pause();
+    this._loadedContainer.dispose();
+    this._engine.dispose();
     // set new canvas
     this._canvas = canvas;
     // do regular setup
@@ -460,7 +463,7 @@ class Modeler {
     return this._isPixelFiltering;
   }
 
-  
+
   public set isPixelFiltering(isPixelFiltering: boolean) {
     if (typeof isPixelFiltering !== "boolean") throw new TypeError();
     this._isPixelFiltering = isPixelFiltering;
