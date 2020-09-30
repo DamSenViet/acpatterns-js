@@ -70,11 +70,18 @@ export interface ModelerMeasurements {
 };
 
 
+enum ModelerStates {
+  playing,
+  paused,
+  disposed,
+};
+
 /**
  * Renders a Drawable Pattern on a model.
  */
 class Modeler {
-
+  public static states = ModelerStates;
+  
   /**
    * The canvas to render the model on.
    */
@@ -164,6 +171,11 @@ class Modeler {
    * Whether pixel filtering is used on the model texture.
    */
   private _isPixelFiltering = true;
+  
+  /**
+   * Modeler reactive state.
+   */
+  private _state = ModelerStates.playing;
 
 
   /**
@@ -536,8 +548,8 @@ class Modeler {
       );
     this._texture.update(false);
   }
-
-
+  
+  
   /**
    * Gets the canvas that the model is rendered on.
    */
@@ -547,30 +559,7 @@ class Modeler {
 
 
   /**
-   * Changes the canvas the model is rendered on.
-   */
-  public set canvas(canvas: HTMLCanvasElement) {
-    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
-    // prepare by unloading all resources from current canvas;
-    this.pause();
-    this._loadedContainer.dispose();
-    this._engine.dispose();
-    // set new canvas
-    this._canvas = canvas;
-    // do regular setup
-    this._updateMeasurements();
-    this._refreshPixels();
-    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
-    this._pattern.hooks.type.tap(this._onTypeUpdate);
-    this._pattern.hooks.refresh.tap(this._onRefresh);
-    this._pattern.hooks.load.tap(this._onLoad);
-    this._source.hook.tap(this._onPixelUpdate);
-    this._setupScene();
-  }
-
-
-  /**
-   * Gets the _isPixelFiltering setting.
+   * Gets whether the pixel filtering is applied on the model.
    */
   public get isPixelFiltering(): boolean {
     return this._isPixelFiltering;
@@ -578,7 +567,7 @@ class Modeler {
 
 
   /**
-   * Sets the _isPixelFiltering setting.
+   * Changes whether the pixel filtering is applied on the model.
    */
   public set isPixelFiltering(isPixelFiltering: boolean) {
     if (typeof isPixelFiltering !== "boolean") throw new TypeError();
@@ -591,6 +580,7 @@ class Modeler {
    * Puts the modeler into reactive state.
    */
   public play(): void {
+    if (this._state !== ModelerStates.paused) return;
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
     this._pattern.hooks.refresh.tap(this._onRefresh);
@@ -599,6 +589,7 @@ class Modeler {
 
     // assume everything changed
     this._onLoad();
+    this._state = Modeler.states.playing;
   }
 
 
@@ -606,11 +597,13 @@ class Modeler {
    * Puts the modeler into the non-reactive state.
    */
   public pause(): void {
+    if (this._state !== Modeler.states.playing) return;
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
     this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
+    this._state = Modeler.states.paused;
   }
 
 
@@ -618,10 +611,29 @@ class Modeler {
    * Puts the modeler into stopped state and cleans up all resources expended.
    * Modeler cannot be used beyond this function call.
    */
-  public stop(): void {
+  public dispose(): void {
+    if (this._state === Modeler.states.disposed) return;
     this.pause();
+    this._canvas = null;
+    this._pattern = null;
+    this._source = null;
+    this._pixelsCanvas = null;
+    this._pixelsContext = null;
+    this._textureCanvas = null;
+    this._textureContext = null;
+    this._measurements = null;
     this._loadedContainer.dispose();
     this._engine.dispose();
+    this._engine = null;
+    this._scene = null;
+    this._texture = null;
+    this._camera = null;
+    this._hemisphericLight = null;
+    this._directionalLight = null;
+    this._loadedContainer = null;
+    this._clothingStandContainer = null;
+    this._pattern = null;
+    this._state =  Modeler.states.disposed;
   }
 }
 
