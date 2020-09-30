@@ -7,6 +7,7 @@ import {
   PatternType,
   debounce,
 } from "./utils";
+import { IllegalStateError } from "./errors";
 
 export interface DrawerOptions {
   canvas: HTMLCanvasElement,
@@ -38,11 +39,24 @@ export interface DrawerMeasurements {
   pixelXStop: number;
 };
 
+
+enum DrawerStates {
+  PLAYING,
+  PAUSED,
+  DISPOSED,
+};
+
+
 /**
  * Renders a Drawable Pattern on a canvas.
  * Reacts to changes to the pattern by default.
  */
 class Drawer {
+  
+  /**
+   * The possible states the Drawer can be in.
+   */
+  public static states = DrawerStates;
   
   /**
    * The final canvas to render the pattern on.
@@ -149,10 +163,14 @@ class Drawer {
   /**
    * Tool uses this callback to force refresh everything.
    * This callback propogates to any other connected Drawers
-   * or Modelers.
+   * or Modelers that are still in their reactive state.
    */
   private _forceRefresh: () => void = null;
-
+  
+  /**
+   * Drawer reactive state.
+   */
+  private _state: DrawerStates = DrawerStates.PLAYING;
   
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
@@ -181,7 +199,7 @@ class Drawer {
     this._gridContext.imageSmoothingEnabled = false;
     this._previewContext.imageSmoothingEnabled = false;
 
-    this.refresh(); // draw first round
+    this._refresh(); // draw first round
     // initialize all hooks
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -381,7 +399,7 @@ class Drawer {
 
 
   // private _onWindowResize = debounce(() => {
-  //   this.refresh();
+  //   this._refresh();
   // }, 200);
 
 
@@ -506,7 +524,7 @@ class Drawer {
   private _onTypeUpdate = (type: PatternType): void => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
-    this.refresh();
+    this._refresh();
     this._source.hook.tap(this._onPixelUpdate);
   };
 
@@ -539,21 +557,6 @@ class Drawer {
 
 
   /**
-   * Sets the canvas the pattern is rendered on.
-   */
-  public set canvas(canvas: HTMLCanvasElement) {
-    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
-    this._canvas.removeEventListener("mousemove", this._onMouse);
-    this._canvas.removeEventListener("mousedown", this._onMouse);
-    this._canvas = canvas;
-    this._context = canvas.getContext("2d");
-    this.refresh();
-    this._canvas.addEventListener("mousemove", this._onMouse);
-    this._canvas.addEventListener("mousedown", this._onMouse);
-  }
-
-
-  /**
    * Gets the source from the pattern.
    */
   public get source(): PixelsSource {
@@ -565,17 +568,32 @@ class Drawer {
    * Sets the source from the pattern to draw.
    */
   public set source(source: PixelsSource) {
-    if (!(source instanceof PixelsSource)) throw new TypeError();
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set source.`;
+      throw new IllegalStateError(message);
+    }
+    if (this._source === source) return;
+    if (!(source instanceof PixelsSource)) {
+      const message = `Expected an instance of PixelsSource from the loaded pattern.`;
+      throw new TypeError(message);
+    }
     let isFromPattern = false;
-    for (const sectionName in this._pattern.sections)
-      if (source === this._pattern.sections[sectionName])
+    for (const sectionName in this._pattern.sections) {
+      if (source == this._pattern.sections[sectionName]) {
         isFromPattern = true;
+        break;
+      }
+    }
     if (source === this._pattern.pixels) isFromPattern = true;
-    if (!isFromPattern) throw new TypeError();
+    if (!isFromPattern) {
+      const message = `Expected an instance of PixelsSource from the loaded pattern.`;
+      throw new TypeError(message);
+    }
+    if (this._state !== DrawerStates.PLAYING) return;
     // change sources and redraw
     this._source.hook.untap(this._onPixelUpdate);
     this._source = source;
-    this.refresh();
+    this._refresh();
     this._source.hook.tap(this._onPixelUpdate);
   }
 
@@ -592,15 +610,23 @@ class Drawer {
    * Sets the current tool used for interactive drawing.
    */
   public set tool(tool: Tool) {
-    if (!(tool instanceof Tool)) throw new TypeError();
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set tool.`;
+      throw new IllegalStateError(message);
+    }
+    if (!(tool instanceof Tool)) {
+      const message = `Expected an instance of Tool.`;
+      throw new TypeError(message);
+    }
+    if (this._tool === tool) return;
     this._tool = tool;
   }
 
 
   /**
-   * 
+   * Does the refreshes the canvas with all changes.
    */
-  public refresh(): void {
+  private _refresh(): void {
     this._updateMeasurements();
     this._refreshPixels();
     this._refreshGrid();
@@ -614,6 +640,7 @@ class Drawer {
    * Puts the drawing into reactive state.
    */
   public play(): void {
+    if (this._state !== DrawerStates.PAUSED) return;
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
     this._pattern.hooks.refresh.tap(this._onRefresh);
@@ -632,6 +659,7 @@ class Drawer {
    * Puts the drawer into the unreactive state.
    */
   public pause(): void {
+    if (this._state !== DrawerStates.PLAYING) return;
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
     this._pattern.hooks.refresh.untap(this._onRefresh);
@@ -640,15 +668,30 @@ class Drawer {
 
     this._canvas.removeEventListener("mousemove", this._onMouse);
     this._canvas.removeEventListener("mousedown", this._onMouse);
+    this._state = DrawerStates.PAUSED;
   }
 
 
   /**
-   * Puts the drawer into stopped state nad cleans up all resources expendded.
+   * Puts the drawer into stopped state and cleans up all resources expendded.
    * Drawer cannot be used beyond this function call.
    */
   public dispose(): void {
+    if (this._state === DrawerStates.DISPOSED) return;
     this.pause();
+    this._canvas = null;
+    this._context = null;
+    this._pattern = null;
+    this._source = null;
+    this._pixelsCanvas = null;
+    this._pixelsContext = null;
+    this._gridCanvas = null;
+    this._gridContext = null;
+    this._previewCanvas = null;
+    this._previewContext = null;
+    this._measurements = null;
+    this._tool = null;
+    this._state = DrawerStates.DISPOSED;
   }
 }
 

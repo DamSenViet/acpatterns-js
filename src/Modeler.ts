@@ -71,9 +71,9 @@ export interface ModelerMeasurements {
 
 
 enum ModelerStates {
-  playing,
-  paused,
-  disposed,
+  PLAYING,
+  PAUSED,
+  DISPOSED,
 };
 
 /**
@@ -81,6 +81,10 @@ enum ModelerStates {
  * Reacts to changes to the pattern by default.
  */
 class Modeler {
+  
+  /**
+   * The possible states the Modeler can be in.
+   */
   public static states = ModelerStates;
 
   /**
@@ -176,7 +180,7 @@ class Modeler {
   /**
    * Modeler reactive state.
    */
-  private _state = ModelerStates.playing;
+  private _state = ModelerStates.PLAYING;
 
 
   /**
@@ -581,7 +585,7 @@ class Modeler {
    * Puts the modeler into reactive state.
    */
   public play(): void {
-    if (this._state !== ModelerStates.paused) return;
+    if (this._state !== ModelerStates.PAUSED) return;
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
     this._pattern.hooks.refresh.tap(this._onRefresh);
@@ -590,7 +594,7 @@ class Modeler {
 
     // assume everything changed
     this._onLoad();
-    this._state = Modeler.states.playing;
+    this._state = ModelerStates.PLAYING;
   }
 
 
@@ -598,13 +602,13 @@ class Modeler {
    * Puts the modeler into the non-reactive state.
    */
   public pause(): void {
-    if (this._state !== Modeler.states.playing) return;
+    if (this._state !== ModelerStates.PLAYING) return;
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
     this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
-    this._state = Modeler.states.paused;
+    this._state = ModelerStates.PAUSED;
   }
 
 
@@ -613,7 +617,7 @@ class Modeler {
    * Modeler cannot be used beyond this function call.
    */
   public dispose(): void {
-    if (this._state === Modeler.states.disposed) return;
+    if (this._state === ModelerStates.DISPOSED) return;
     this.pause();
     this._canvas = null;
     this._pattern = null;
@@ -634,7 +638,7 @@ class Modeler {
     this._loadedContainer = null;
     this._clothingStandContainer = null;
     this._pattern = null;
-    this._state = Modeler.states.disposed;
+    this._state = ModelerStates.DISPOSED;
   }
 }
 
