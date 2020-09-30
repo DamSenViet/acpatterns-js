@@ -69,17 +69,50 @@ export interface ModelerMeasurements {
   textureWidth: number;
 };
 
+
+/**
+ * Renders a Drawable Pattern on a model.
+ */
 class Modeler {
-  // for actual rendering, for babylon
+
+  /**
+   * The canvas to render the model on.
+   */
   private _canvas: HTMLCanvasElement = null;
+
+  /**
+   * The pattern to texture the model with.
+   */
   private _pattern: Drawable = null;
+
+  /**
+   * Cached pixels source from the pattern.
+   */
   private _source: PixelsSource = null;
-  // just pixels with transparent pixels set to white
+
+  /**
+   * The canvas to render the pattern onto.
+   */
   private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
+
+  /**
+   * Cached context of the _pixelsCanvas.
+   */
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
-  // always use textures context to apply texture to models
+
+  /**
+   * The canvas to render the post-processed pixelsCanvas onto. Textures model.
+   */
   private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
+
+  /**
+   * Cached context of the _textureCanvas.
+   */
   private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
+
+  /**
+   * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
+   */
   private _measurements: ModelerMeasurements = {
     sourceHeight: null,
     sourceWidth: null,
@@ -87,26 +120,58 @@ class Modeler {
     textureWidth: null,
   };
 
-  // babylon stuff
-  private _scene: Scene = null;
+  /**
+   * The babylonjs engine.
+   */
   private _engine: Engine = null;
+
+  /**
+   * The babylonjs scene.
+   */
+  private _scene: Scene = null;
+
+  /**
+   * The babylonjs texture object.
+   */
   private _texture: DynamicTexture = null;
+
+  /**
+   * The babylonjs camera pov for the scene.
+   */
   private _camera: ArcRotateCamera = null;
+
+  /**
+   * The hemispheric lighting for the scene.
+   */
   private _hemisphericLight: HemisphericLight = null;
+
+  /**
+   * The directional lighting for the scene.
+   */
   private _directionalLight: DirectionalLight = null;
 
-  // variable meshes that change w/ type.
+  /**
+   * Container for meshes that change depending on PatternType
+   */
   private _loadedContainer: AssetContainer = null;
+
+  /**
+   * Container for clothing stand for patterns that need it.
+   */
   private _clothingStandContainer: AssetContainer = null;
 
-  // settings
+  /**
+   * Whether pixel filtering is used on the model texture.
+   */
   private _isPixelFiltering = true;
 
 
-  public constructor({
-    canvas,
-    pattern,
-  }: ModelerOptions) {
+  /**
+   * Instantiates a Point.
+   * @param options - A configuration Object with a 'canvas' and 'pattern'
+   */
+  public constructor(options: ModelerOptions) {
+    const { canvas, pattern } = options;
     if (pattern == null) throw new Error();
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     this._canvas = canvas;
@@ -125,6 +190,9 @@ class Modeler {
   }
 
 
+  /**
+   * Sets up the initial babylonjs scene and renders it.
+   */
   private async _setupScene(): Promise<void> {
     this._engine = new Engine(this._canvas, true);
     this._scene = new Scene(this._engine);
@@ -205,7 +273,10 @@ class Modeler {
   }
 
 
-  // for debugging
+  /**
+   * Renders the world axis in the scene.
+   * @param size - the size of all axis guides
+   */
   private _showWorldAxis(size: number) {
     const makeTextPlane = (text, color, size) => {
       const dynamicTexture = new DynamicTexture(
@@ -281,6 +352,9 @@ class Modeler {
   }
 
 
+  /**
+   * Updates the measurements for the _pixelsCanvas to render the pattern.
+   */
   private _updateMeasurements(): void {
     const sourceHeight = this._source.length;
     const sourceWidth = this._source[0].length;
@@ -288,12 +362,12 @@ class Modeler {
     const textureWidth = sourceWidth * 4;
 
     // sync canvases to correct sizes
+    // image smoothing resets when sizes changed, undo reset
     this._pixelsCanvas.height = sourceHeight;
     this._pixelsCanvas.width = sourceWidth;
     this._pixelsContext.imageSmoothingEnabled = false;
     this._textureCanvas.height = textureHeight;
     this._textureCanvas.width = textureWidth;
-    // image smoothing resets when sizes changed
     this._textureContext.imageSmoothingEnabled = false;
 
     this._measurements = Object.freeze<ModelerMeasurements>({
@@ -305,6 +379,13 @@ class Modeler {
   }
 
 
+  /**
+   * Callback for when the _pixelCanvas source (the texture) changes.
+   * Updates the pixel that changed.
+   * @param sourceY - the y coordinate of the changed pixel
+   * @param sourceX - the x coordinate of the changed pixel
+   * @param pixel - the pixel value, pointing to the idx of its palette
+   */
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
     if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
     else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
@@ -312,7 +393,12 @@ class Modeler {
     this._redraw();
   }
 
-
+  /**
+   * Callback for when the palette of the pattern changes.
+   * Updates pixels that have had their color mapping changed.
+   * @param i - the idx of the palette that changed
+   * @param color - the hex color that it changed to
+   */
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     for (
       let sourceY: number = 0;
@@ -333,6 +419,11 @@ class Modeler {
   };
 
 
+  /**
+   * Callback for when the type of the pattern changes.
+   * Updates the measurements, pixels, and the model.
+   * @param type - the pattern type that it's changed to.
+   */
   private _onTypeUpdate = async (type: PatternType): Promise<void> => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.sections.texture;
@@ -386,19 +477,29 @@ class Modeler {
   };
 
 
-  // refers to refresh hook
+  /**
+   * Callback for when the pattern's pixels needs to be updated forcefully.
+   * Updates the pixels and the model.
+   */
   private _onRefresh = (): void => {
     this._refreshPixels();
     this._redraw();
-  }
+  };
 
 
-  // assume everything has changed
+  /**
+   * Callback for when the pattern loads in new data.
+   * Updates measurements, pixels, and model.
+   */
   private _onLoad = (): void => {
+    // assumes everything changed.
     this._onTypeUpdate(null);
   };
 
 
+  /**
+   * Refreshes the pixelsCanvas only, does not apply changes to model.
+   */
   private _refreshPixels(): void {
     this._pixelsContext.fillStyle = "rgba(255, 255, 255, 1)";
     this._pixelsContext.fillRect(0, 0, this._source[0].length, this._source.length);
@@ -413,6 +514,9 @@ class Modeler {
   }
 
 
+  /**
+   * Draws the _pixelsCanvas onto after the _textureCanvas after processing.
+   */
   private _redraw(): void {
     if (this._isPixelFiltering)
       xbrz(
@@ -434,11 +538,17 @@ class Modeler {
   }
 
 
+  /**
+   * Gets the canvas that the model is rendered on.
+   */
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
   }
 
 
+  /**
+   * Changes the canvas the model is rendered on.
+   */
   public set canvas(canvas: HTMLCanvasElement) {
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     // prepare by unloading all resources from current canvas;
@@ -459,11 +569,17 @@ class Modeler {
   }
 
 
+  /**
+   * Gets the _isPixelFiltering setting.
+   */
   public get isPixelFiltering(): boolean {
     return this._isPixelFiltering;
   }
 
 
+  /**
+   * Sets the _isPixelFiltering setting.
+   */
   public set isPixelFiltering(isPixelFiltering: boolean) {
     if (typeof isPixelFiltering !== "boolean") throw new TypeError();
     this._isPixelFiltering = isPixelFiltering;
@@ -471,6 +587,9 @@ class Modeler {
   }
 
 
+  /**
+   * Puts the modeler into reactive state.
+   */
   public play(): void {
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -483,6 +602,9 @@ class Modeler {
   }
 
 
+  /**
+   * Puts the modeler into the non-reactive state.
+   */
   public pause(): void {
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
@@ -492,6 +614,10 @@ class Modeler {
   }
 
 
+  /**
+   * Puts the modeler into stopped state and cleans up all resources expended.
+   * Modeler cannot be used beyond this function call.
+   */
   public stop(): void {
     this.pause();
     this._loadedContainer.dispose();
