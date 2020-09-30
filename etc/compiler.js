@@ -2,6 +2,8 @@
 const signale = require('signale');
 const clear = require('clear');
 const webpack = require('webpack');
+const yargs = require('yargs');
+const argv = yargs.parse();
 const {
   webpackDevConfigCJS,
   webpackProdConfigCJS,
@@ -10,6 +12,8 @@ const {
   webpackDevConfigUMDTest,
   webpackProdConfigUMDTest,
 } = require('../config/webpack.config');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const { pathToBundleStats } = require('../etc/paths');
 const webpackFormatMessages = require('webpack-format-messages');
 const { ifProdVal } = require('./env');
 const { NODE_ENV } = process.env;
@@ -19,6 +23,19 @@ let webpackConfig = ifProdVal(
   [webpackProdConfigCJS, webpackProdConfigUMD, webpackProdConfigUMDTest],
   [webpackDevConfigCJS, webpackDevConfigUMD, webpackDevConfigUMDTest]
 );
+
+const selectedConfigUMD = ifProdVal(webpackProdConfigUMD, webpackDevConfigUMD);
+if (argv.analyze) selectedConfigUMD.plugins = [
+  new BundleAnalyzerPlugin({
+    analyzerMode: "static",
+    reportFilename: pathToBundleStats,
+    generateStatsFile: false,
+    statsOptions: { source: true },
+    openAnalyzer: true,
+    logLevel: "silent"
+  })
+];
+
 const compiler = webpack(webpackConfig);
 
 compiler.hooks.watchRun.tap('wow', () => {

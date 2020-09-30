@@ -3,7 +3,7 @@ import {
   DecodeHintType,
   DetectorResult,
   ResultPointCallback,
-} from "@zxing/library/esm";
+} from '@zxing/library/esm';
 import Detector from "@zxing/library/esm/core/qrcode/detector/Detector";
 import FinderPatternInfo from "@zxing/library/esm/core/qrcode/detector/FinderPatternInfo";
 import MyFinderPatternFinder from "./MyFinderPatternFinder";

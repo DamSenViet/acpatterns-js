@@ -10,7 +10,7 @@ import {
   ChecksumException,
   FormatException,
   NotFoundException,
-} from "@zxing/library/esm";
+} from '@zxing/library/esm';
 import MyQRCodeReader from "./MyQRCodeReader";
 import MyDecodeContinuouslyCallback from "./MyDecodeContinuouslyCallback";
 import ImageLoadingException from "./ImageLoadingException";

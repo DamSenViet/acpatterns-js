@@ -11,6 +11,11 @@ const argv = yargs
     describe: "Use production environment",
     type: "boolean"
   })
+  .option("analyze", {
+    alias: "a",
+    describe: "Analyze bundle",
+    type: "boolean"
+  })
   .conflicts("development", "production")
   .parse();
 

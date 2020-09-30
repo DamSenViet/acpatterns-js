@@ -6,7 +6,7 @@ import {
   DecoderResult,
   BarcodeFormat,
   ResultMetadataType,
-} from "@zxing/library/esm";
+} from '@zxing/library/esm';
 import ResultPoint from "@zxing/library/esm/core/ResultPoint";
 import MyDetector from "./MyDetector";
 import QRCodeDecoderMetaData from "@zxing/library/esm/core/qrcode/decoder/QRCodeDecoderMetaData";

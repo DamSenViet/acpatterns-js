@@ -1,4 +1,5 @@
 "use strict";
+const TerserPlugin = require('terser-webpack-plugin');
 const {
   pathToBuild,
   pathToBuildCJS,
@@ -87,6 +88,28 @@ const resolve = {
   extensions: [".ts", ".js"],
 };
 
+
+const optimizationProd = {
+  minimize: true,
+  minimizer: [
+    new TerserPlugin({
+      test: /\.js(\?.*)?$/i,
+      parallel: true,
+      terserOptions: {
+        mangle: true,
+        ie8: false,
+      },
+      extractComments: true,
+    }),
+  ]
+};
+
+const externals = {
+  "babylonjs": "BABYLON",
+  "babylonjs-loaders": "BABYLON",
+};
+
+
 const webpackDevConfigCJS = {
   target: "node",
   mode: "development",
@@ -97,6 +120,8 @@ const webpackDevConfigCJS = {
     rules: rulesDev
   },
   resolve,
+  performance: false,
+  externals,
 };
 
 
@@ -110,8 +135,9 @@ const webpackProdConfigCJS = {
     rules: rulesProd
   },
   resolve,
+  performance: false,
+  externals,
 };
-
 
 const webpackDevConfigUMD = {
   ...webpackDevConfigCJS,
@@ -119,11 +145,11 @@ const webpackDevConfigUMD = {
   output: outputUMD,
 };
 
-
 const webpackProdConfigUMD = {
   ...webpackProdConfigCJS,
   target: "web",
   output: outputUMD,
+  optimization: optimizationProd,
 };
 
 const webpackDevConfigUMDTest = {
