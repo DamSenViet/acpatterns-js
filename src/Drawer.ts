@@ -38,21 +38,69 @@ export interface DrawerMeasurements {
   pixelXStop: number;
 };
 
+/**
+ * Renders a Drawable Pattern on a canvas.
+ * Reacts to changes to the pattern by default.
+ */
 class Drawer {
+  
+  /**
+   * The final canvas to render the pattern on.
+   */
   private _canvas: HTMLCanvasElement = null;
+  
+  /**
+   * Cached context of the _canvas.
+   */
   private _context: CanvasRenderingContext2D = null;
+  
+  /**
+   * The pattern to draw.
+   */
   private _pattern: Drawable = null;
+  
+  /**
+   * The source of the pattern to be drawn.
+   */
   private _source: PixelsSource = null;
 
-  // three separate canvases to mux onto the target canvas
+  
+  /**
+   * The canvas responsible for drawing just the pixels of the pattern.
+   * Muxed onto _canvas in the drawing process.
+   */
   private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
+  
+  /**
+   * Cached context of _pixelsCanvas.
+   */
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
+  
+  /**
+   * The canvas responsible for drawing just the grid.
+   * Muxed onto _canvas in the drawing process.
+   */
   private _gridCanvas: HTMLCanvasElement = document.createElement("canvas");
+  
+  /**
+   * Cached context of _gridCanvas.
+   */
   private _gridContext: CanvasRenderingContext2D = this._gridCanvas.getContext("2d");
+  
+  /**
+   * The canvas responsible for drawing just the preview created by the preview.
+   * Muxed onto _canvas in the drawing process.
+   */
   private _previewCanvas: HTMLCanvasElement = document.createElement("canvas");
+  
+  /**
+   * Cached context of the _previewCanvas.
+   */
   private _previewContext: CanvasRenderingContext2D = this._previewCanvas.getContext("2d");
 
-  // measurements for drawing
+  /**
+   * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
+   */
   private _measurements: DrawerMeasurements = {
     // source meaasurements
     sourceHeight: null,
@@ -78,23 +126,44 @@ class Drawer {
     pixelXStop: null,
   };
 
-  // optimize overlayCanvas determines when to redraw/draw
+  /**
+   * The last sourceY drawn on.
+   */
   private _lastSourceY: number = null;
+
+  /**
+   * The last sourceX drawn on.
+   */
   private _lastSourceX: number = null;
+
+  /**
+   * Flag to reduce drawing operations.
+   */
   private _didDrawOnLastSource: boolean = false;
 
+  /**
+   * The drawing tool to interact with the canvas.
+   */
   private _tool: Tool = new Brush({ size: 10 });
-  // tool uses this callback to force refresh everything
-  private _forceRefresh: () => void = null;
-  // private this._windowResizeDelay: number = 100;
 
+  /**
+   * Tool uses this callback to force refresh everything.
+   * This callback propogates to any other connected Drawers
+   * or Modelers.
+   */
+  private _forceRefresh: () => void = null;
+
+  
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
-  public constructor({
-    canvas,
-    pattern,
-  }: DrawerOptions) {
-    if (pattern == null) throw new Error();
+  /**
+   * Instantiates a Drawer.
+   * @param options - A configuration Object with a 'canvas' and 'pattern'
+   */
+  public constructor(options: DrawerOptions) {
+    if (options == null) throw new TypeError();
+    const { canvas, pattern } = options;
+    if (pattern == null) throw new TypeError();
     if (
       canvas == null ||
       !(canvas instanceof HTMLCanvasElement)
@@ -124,6 +193,10 @@ class Drawer {
     this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
+  
+  /**
+   * Updates the measurements for the _pixelsCanvas to render the pattern.
+   */
   private _updateMeasurements(): void {
     if (
       this._canvas.offsetHeight !== this._canvas.offsetWidth ||
@@ -196,6 +269,9 @@ class Drawer {
     });
   }
 
+  /**
+   * Redraws the _canvas.
+   */
   private _redraw(): void {
     this._context.clearRect(
       0, 0,
@@ -207,9 +283,11 @@ class Drawer {
   }
 
 
-  // refresh individual
+  /**
+   * Refreshes the _pixelsCanvas.
+   */
   private _refreshPixels(): void {
-    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);    
+    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         const paletteIdx = this._source[sourceY][sourceX];
@@ -225,6 +303,9 @@ class Drawer {
     }
   }
 
+  /**
+   * Refreshes the _gridCanvas.
+   */
   private _refreshGrid(): void {
     this._gridContext.clearRect(
       0,
@@ -285,7 +366,10 @@ class Drawer {
     this._gridContext.stroke();
   }
 
-  // this job should be done by the tool
+
+  /**
+   * Refreshes the _previewsCanvas.
+   */
   private _refreshPreview(): void {
     this._previewContext.clearRect(
       0,
@@ -295,10 +379,16 @@ class Drawer {
     );
   }
 
+
   // private _onWindowResize = debounce(() => {
   //   this.refresh();
   // }, 200);
 
+
+  /**
+   * Callback for the mouse interaction with the canvas.
+   * @param event - the passed event
+   */
   private _onMouse = (event: MouseEvent) => {
     // need - 1 to use zero indexed values
     const bdr = this._canvas.getBoundingClientRect();
@@ -349,6 +439,14 @@ class Drawer {
     this._redraw();
   }
 
+
+  /**
+   * Callback for when the _pixelCanvas source changes.
+   * Updates the pixel that changed.
+   * @param sourceY - the y coordinate of the changed pixel
+   * @param sourceX - the x coordinate of the changed pixel
+   * @param pixel - the pixel value, pointing to the idx of its palette
+   */
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
     this._pixelsContext.clearRect(
       (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
@@ -367,6 +465,13 @@ class Drawer {
     this._redraw();
   };
 
+
+  /**
+   * Callback for when the palette of the pattern changes.
+   * Updates pixels that have had their color mapping changed.
+   * @param i - the idx of the palette that changed
+   * @param color - the hex color that it changed to
+   */
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     // loop through entire source for i, replace all i values with new color
     for (
@@ -392,6 +497,12 @@ class Drawer {
     this._redraw();
   };
 
+
+  /**
+   * Callback for when the type of the pattern changes.
+   * Updates the source, measurements.
+   * @param type - the pattern type that it's changed to
+   */
   private _onTypeUpdate = (type: PatternType): void => {
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.pixels; // reset to default
@@ -399,21 +510,37 @@ class Drawer {
     this._source.hook.tap(this._onPixelUpdate);
   };
 
+
+  /**
+   * Callback for when the pattern's pixels need to be updated forcefully.
+   * Updates the pixels and the model.
+   */
   private _onRefresh = (): void => {
     this._refreshPixels();
     this._redraw();
   }
 
-  // assume everything has changed
+
+  /**
+   * Callback for when the pattern loads in new data.
+   * Updates measurements, pixels, and model.
+   */
   private _onLoad = (): void => {
     this._onTypeUpdate(null);
   };
 
-  // public api
+
+  /**
+   * Gets the canvas the pattern is rendered on.
+   */
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
   }
 
+
+  /**
+   * Sets the canvas the pattern is rendered on.
+   */
   public set canvas(canvas: HTMLCanvasElement) {
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     this._canvas.removeEventListener("mousemove", this._onMouse);
@@ -425,6 +552,18 @@ class Drawer {
     this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
+
+  /**
+   * Gets the source from the pattern.
+   */
+  public get source(): PixelsSource {
+    return this._source;
+  }
+
+
+  /**
+   * Sets the source from the pattern to draw.
+   */
   public set source(source: PixelsSource) {
     if (!(source instanceof PixelsSource)) throw new TypeError();
     let isFromPattern = false;
@@ -440,21 +579,27 @@ class Drawer {
     this._source.hook.tap(this._onPixelUpdate);
   }
 
-  public get source(): PixelsSource {
-    return this._source;
-  }
 
+  /**
+   * Gets the current tool used for interactive drawing.
+   */
   public get tool(): Tool {
     return this._tool;
   }
 
+
+  /**
+   * Sets the current tool used for interactive drawing.
+   */
   public set tool(tool: Tool) {
     if (!(tool instanceof Tool)) throw new TypeError();
     this._tool = tool;
   }
 
 
-  // public methods
+  /**
+   * 
+   */
   public refresh(): void {
     this._updateMeasurements();
     this._refreshPixels();
@@ -464,6 +609,10 @@ class Drawer {
     this._redraw();
   }
 
+
+  /**
+   * Puts the drawing into reactive state.
+   */
   public play(): void {
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -478,6 +627,10 @@ class Drawer {
     this._onLoad();
   }
 
+
+  /**
+   * Puts the drawer into the unreactive state.
+   */
   public pause(): void {
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
@@ -489,7 +642,12 @@ class Drawer {
     this._canvas.removeEventListener("mousedown", this._onMouse);
   }
 
-  public stop(): void {
+
+  /**
+   * Puts the drawer into stopped state nad cleans up all resources expendded.
+   * Drawer cannot be used beyond this function call.
+   */
+  public dispose(): void {
     this.pause();
   }
 }

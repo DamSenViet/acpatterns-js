@@ -78,10 +78,11 @@ enum ModelerStates {
 
 /**
  * Renders a Drawable Pattern on a model.
+ * Reacts to changes to the pattern by default.
  */
 class Modeler {
   public static states = ModelerStates;
-  
+
   /**
    * The canvas to render the model on.
    */
@@ -171,7 +172,7 @@ class Modeler {
    * Whether pixel filtering is used on the model texture.
    */
   private _isPixelFiltering = true;
-  
+
   /**
    * Modeler reactive state.
    */
@@ -179,12 +180,13 @@ class Modeler {
 
 
   /**
-   * Instantiates a Point.
+   * Instantiates a Modeler.
    * @param options - A configuration Object with a 'canvas' and 'pattern'
    */
   public constructor(options: ModelerOptions) {
+    if (options == null) throw new TypeError();
     const { canvas, pattern } = options;
-    if (pattern == null) throw new Error();
+    if (pattern == null) throw new TypeError();
     if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
     this._canvas = canvas;
     this._pattern = pattern;
@@ -392,8 +394,8 @@ class Modeler {
 
 
   /**
-   * Callback for when the _pixelCanvas source (the texture) changes.
-   * Updates the pixel that changed.
+   * Callback for when the _pixelCanvas source changes.
+   * Updates the pixel that changed and updates the texture.
    * @param sourceY - the y coordinate of the changed pixel
    * @param sourceX - the x coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
@@ -443,7 +445,6 @@ class Modeler {
     this._refreshPixels();
     this._source.hook.tap(this._onPixelUpdate);
 
-    // assume only ACNL compatibility for now
     let modelData = patternTypeToModelData.get(this._pattern.type);
 
     // exchange resources
@@ -548,8 +549,8 @@ class Modeler {
       );
     this._texture.update(false);
   }
-  
-  
+
+
   /**
    * Gets the canvas that the model is rendered on.
    */
@@ -633,7 +634,7 @@ class Modeler {
     this._loadedContainer = null;
     this._clothingStandContainer = null;
     this._pattern = null;
-    this._state =  Modeler.states.disposed;
+    this._state = Modeler.states.disposed;
   }
 }
 
