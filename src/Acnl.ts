@@ -23,7 +23,7 @@ import {
   DecodeHintType,
   ResultMetadataType,
   Result,
-} from '@zxing/library';
+} from '@zxing/library/esm';
 import {
   MyBrowserQRCodeReader,
   ImageLoadingException,

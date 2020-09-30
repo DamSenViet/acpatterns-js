@@ -1,6 +1,6 @@
 import {
   Exception,
-} from "@zxing/library/esm";
+} from '@zxing/library/esm';
 
 class ImageLoadingException extends Exception { }
 

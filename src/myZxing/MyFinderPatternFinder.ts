@@ -2,7 +2,7 @@ import {
   BitMatrix,
   DecodeHintType,
   NotFoundException,
-} from "@zxing/library/esm";
+} from '@zxing/library/esm';
 import FinderPattern from "@zxing/library/esm/core/qrcode/detector/FinderPattern";
 import FinderPatternInfo from "@zxing/library/esm/core/qrcode/detector/FinderPatternInfo";
 import FinderPatternFinder from "@zxing/library/esm/core/qrcode/detector/FinderPatternFinder";

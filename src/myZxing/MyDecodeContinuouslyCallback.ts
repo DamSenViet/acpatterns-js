@@ -1,7 +1,7 @@
 import {
   Exception,
   Result,
-} from "@zxing/library";
+} from '@zxing/library/esm';
 
 
 /**
