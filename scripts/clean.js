@@ -2,7 +2,10 @@
 const fse = require('fs-extra');
 const signale = require('signale');
 
-const { pathToBuild } = require('../etc/paths');
+const {
+  pathToBuild,
+  pathToStats,
+} = require('../etc/paths');
 
 ["SIGINT", "SIGTERM"].forEach((signal) => {
   process.on(signal, () => {
@@ -12,4 +15,5 @@ const { pathToBuild } = require('../etc/paths');
 });
 
 fse.removeSync(pathToBuild);
-signale.success(`Build directory cleaned successfully!`);
+fse.removeSync(pathToStats);
+signale.success(`Build and stats directory cleaned successfully!`);
