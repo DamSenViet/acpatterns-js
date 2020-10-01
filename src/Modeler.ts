@@ -120,7 +120,7 @@ class Modeler {
   /**
    * Cached context of the _pixelsCanvas.
    */
-  private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
+  private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d", { alpha: false, });
 
   /**
    * The canvas to render the post-processed pixelsCanvas onto. Textures model.
@@ -130,7 +130,7 @@ class Modeler {
   /**
    * Cached context of the _textureCanvas.
    */
-  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
+  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d", { alpha: false, });
 
   /**
    * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
@@ -557,6 +557,9 @@ class Modeler {
     else
       this._textureContext.drawImage(
         this._pixelsCanvas,
+        0, 0,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
         0, 0,
         this._measurements.textureWidth,
         this._measurements.textureHeight,

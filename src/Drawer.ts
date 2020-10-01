@@ -290,15 +290,15 @@ class Drawer {
   /**
    * Redraws the _canvas.
    */
-  private _redraw(): void {
-    this._context.clearRect(
-      0, 0,
+  private _redraw = (): void  => {
+      this._context.clearRect(
+        0, 0,
       this._measurements.size, this._measurements.size
     );
     this._context.drawImage(this._pixelsCanvas, 0, 0);
     this._context.drawImage(this._gridCanvas, 0, 0);
     this._context.drawImage(this._previewCanvas, 0, 0);
-  }
+  };
 
 
   /**
@@ -393,10 +393,9 @@ class Drawer {
       0,
       0,
       this._measurements.size,
-      this._measurements.size
+      this._measurements.size,
     );
   }
-
 
   // private _onWindowResize = debounce(() => {
   //   this._refresh();
@@ -454,7 +453,7 @@ class Drawer {
       this._previewContext,
       this._measurements,
     );
-    this._redraw();
+    requestAnimationFrame(this._redraw);
   }
 
 
@@ -535,7 +534,7 @@ class Drawer {
    */
   private _onRefresh = (): void => {
     this._refreshPixels();
-    this._redraw();
+    requestAnimationFrame(this._redraw);
   }
 
 
@@ -632,7 +631,7 @@ class Drawer {
     this._refreshGrid();
     this._refreshPreview();
     // now drawImage in order to target canvas
-    this._redraw();
+    requestAnimationFrame(this._redraw);
   }
 
 
