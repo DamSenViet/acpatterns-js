@@ -1,26 +1,8 @@
 // @ts-nocheck
 // modified version of @daelsepara's PixelFilterJS's xbrz filter
 // original: https://github.com/daelsepara/PixelFilterJS/blob/master/js/filters/xbrz.js
-
-// generates image with xbrz filter and applies it to the same canvas
-const xbrz = (
-  input: CanvasRenderingContext2D,
-  inputWidth: number,
-  inputHeight: number,
-  output: CanvasRenderingContext2D,
-  outputWidth: number,
-  outputHeight,
-): void => {
-  const filter = new Filter();
-  //Apply filter
-  const inData = input.getImageData(0, 0, inputWidth, inputHeight);
-  filter.Apply(inData.data, inData.width, inData.height, 4, true);
-  const newPreview = new ImageData(Common.SizeX, Common.SizeY);
-  newPreview.data.set(Common.ScaledImage);
-  output.putImageData(newPreview, 0, 0);
-};
-
 // Zenju's XBRz nX family of filters
+
 class ScaleSize {
 
 	constructor(scaler) {
@@ -163,7 +145,7 @@ class Utility {
 	}
 }
 
-let ColorDistanceARGB = class {
+class ColorDistanceARGB {
 
 	static val(i, luminanceWeight) {
 
@@ -240,7 +222,7 @@ let ColorDistanceARGB = class {
 	}
 }
 
-let IColorDist = class {
+class IColorDist {
 
 	_ColorDist(pix1, pix2, luminanceWeight) {
 
@@ -253,7 +235,7 @@ let IColorDist = class {
 	}
 }
 
-let IColorEq = class {
+class IColorEq {
 
 	constructor(a) {
 
@@ -266,7 +248,7 @@ let IColorEq = class {
 	}
 }
 
-let Kernel_3X3 = class {
+class Kernel_3X3 {
 
 	constructor() {
 
@@ -275,7 +257,7 @@ let Kernel_3X3 = class {
 	}
 }
 
-let Kernel_4X4 = class {
+class Kernel_4X4 {
 
 	constructor() {
 
@@ -311,7 +293,7 @@ input kernel area naming convention:
 -----------------
 */
 
-let RotationDegree = class {
+class RotationDegree {
 
 	static get Rot0() {
 
@@ -334,7 +316,7 @@ let RotationDegree = class {
 	}
 }
 
-let Rot = class {
+class Rot {
 
 	static get _() {
 
@@ -380,7 +362,7 @@ let Rot = class {
 	}
 }
 
-let BlendInfo = class {
+ class BlendInfo {
 
 	static GetTopL(b) {
 
@@ -431,7 +413,7 @@ let BlendInfo = class {
 	}
 }
 
-let Alpha = class {
+class Alpha {
 
 	static Grad(m, n, dstPtr, col) {
 
@@ -474,7 +456,7 @@ let Alpha = class {
 	}
 }
 
-let OutputMatrix = class {
+class OutputMatrix {
 
 	constructor(scale, output, outWidth) {
 
@@ -500,7 +482,7 @@ let OutputMatrix = class {
 	}
 }
 
-let Scaler_2X = class {
+ class Scaler_2X {
 
 	constructor() {
 
@@ -543,7 +525,7 @@ let Scaler_2X = class {
 	}
 }
 
-let Scaler_3X = class {
+class Scaler_3X {
 
 	constructor() {
 
@@ -596,7 +578,7 @@ let Scaler_3X = class {
 	}
 }
 
-let Scaler_4X = class {
+class Scaler_4X {
 
 	constructor() {
 
@@ -656,7 +638,7 @@ let Scaler_4X = class {
 	}
 }
 
-let Scaler_5X = class {
+class Scaler_5X {
 
 	constructor() {
 
@@ -731,7 +713,7 @@ let Scaler_5X = class {
 	}
 }
 
-let Scaler_6X = class {
+class Scaler_6X {
 
 	constructor() {
 
@@ -816,7 +798,7 @@ let Scaler_6X = class {
 	}
 }
 
-let Filter = class {
+class Filter {
 
 	constructor() {
 
@@ -2087,5 +2069,23 @@ class Init {
         Common.ScaledImage = this.New(Common.SizeX, Common.SizeY);
     }
 }
+
+// generates image with xbrz filter and applies it to the same canvas
+const filter = new Filter();
+const xbrz = (
+  input: CanvasRenderingContext2D,
+  inputWidth: number,
+  inputHeight: number,
+  output: CanvasRenderingContext2D,
+  outputWidth: number,
+  outputHeight,
+): void => {
+  //Apply filter
+	const inData = input.getImageData(0, 0, inputWidth, inputHeight);
+  filter.Apply(inData.data, inData.width, inData.height, 4, true);
+  const newPreview = new ImageData(Common.SizeX, Common.SizeY);
+  newPreview.data.set(Common.ScaledImage);
+  output.putImageData(newPreview, 0, 0, 0, 0, outputWidth, outputHeight);
+};
 
 export default xbrz;

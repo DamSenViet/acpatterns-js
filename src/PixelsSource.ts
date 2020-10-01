@@ -1,6 +1,9 @@
 import Hook from "./Hook";
 import { pixel } from "./utils";
 
+/**
+ *  Hookable pixel grid, unreactive optional.
+ */
 class PixelsSource extends Array<Array<pixel>> {
   public hook: Hook<[number, number, pixel]>
     = new Hook<[number, number, pixel]>();

@@ -1,12 +1,10 @@
 import Acnl from "./Acnl";
 import PixelsSource from "./PixelsSource";
-import assets from "./assets";
-import xbrz from "./xbrz";
+import PatternType from "./PatternType";
+import Drawable from "./Drawable";
 import {
   color,
   pixel,
-  PatternType,
-  Drawable
 } from "./utils";
 import {
   Engine,
@@ -25,6 +23,8 @@ import {
   AssetContainer,
 } from "babylonjs";
 import "babylonjs-loaders";
+import assets from "./assets";
+import xbrz from "./xbrz";
 
 
 export interface ModelData {
@@ -43,6 +43,9 @@ export interface ModelData {
   }
 };
 
+/**
+ * Mapping from model types to model data.
+ */
 const patternTypeToModelData = new Map<PatternType, ModelData>();
 patternTypeToModelData.set(Acnl.types.LongSleevedDress, assets.acnl.longSleevedDress);
 patternTypeToModelData.set(Acnl.types.ShortSleevedDress, assets.acnl.shortSleevedDress);
@@ -55,6 +58,10 @@ patternTypeToModelData.set(Acnl.types.KnittedHat, assets.acnl.knittedHat);
 patternTypeToModelData.set(Acnl.types.Standee, assets.acnl.standee);
 patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
 
+
+/**
+ * Modeler constructor options.
+ */
 export interface ModelerOptions {
   pattern: Drawable;
   canvas: HTMLCanvasElement;
@@ -62,6 +69,9 @@ export interface ModelerOptions {
   pixelsCanvas: HTMLCanvasElement;
 };
 
+/**
+ * Cached Modeler measurements.
+ */
 export interface ModelerMeasurements {
   sourceHeight: number;
   sourceWidth: number;
@@ -110,7 +120,7 @@ class Modeler {
   /**
    * Cached context of the _pixelsCanvas.
    */
-  private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
+  private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d", { alpha: false, });
 
   /**
    * The canvas to render the post-processed pixelsCanvas onto. Textures model.
@@ -120,7 +130,7 @@ class Modeler {
   /**
    * Cached context of the _textureCanvas.
    */
-  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
+  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d", { alpha: false, });
 
   /**
    * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
@@ -547,6 +557,9 @@ class Modeler {
     else
       this._textureContext.drawImage(
         this._pixelsCanvas,
+        0, 0,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
         0, 0,
         this._measurements.textureWidth,
         this._measurements.textureHeight,
