@@ -1,12 +1,10 @@
 import Acnl from "./Acnl";
 import PixelsSource from "./PixelsSource";
-import assets from "./assets";
-import xbrz from "./xbrz";
+import PatternType from "./PatternType";
+import Drawable from "./Drawable";
 import {
   color,
   pixel,
-  PatternType,
-  Drawable
 } from "./utils";
 import {
   Engine,
@@ -25,6 +23,8 @@ import {
   AssetContainer,
 } from "babylonjs";
 import "babylonjs-loaders";
+import assets from "./assets";
+import xbrz from "./xbrz";
 
 
 export interface ModelData {
@@ -43,6 +43,9 @@ export interface ModelData {
   }
 };
 
+/**
+ * Mapping from model types to model data.
+ */
 const patternTypeToModelData = new Map<PatternType, ModelData>();
 patternTypeToModelData.set(Acnl.types.LongSleevedDress, assets.acnl.longSleevedDress);
 patternTypeToModelData.set(Acnl.types.ShortSleevedDress, assets.acnl.shortSleevedDress);
@@ -55,6 +58,10 @@ patternTypeToModelData.set(Acnl.types.KnittedHat, assets.acnl.knittedHat);
 patternTypeToModelData.set(Acnl.types.Standee, assets.acnl.standee);
 patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
 
+
+/**
+ * Modeler constructor options.
+ */
 export interface ModelerOptions {
   pattern: Drawable;
   canvas: HTMLCanvasElement;
@@ -62,6 +69,9 @@ export interface ModelerOptions {
   pixelsCanvas: HTMLCanvasElement;
 };
 
+/**
+ * Cached Modeler measurements.
+ */
 export interface ModelerMeasurements {
   sourceHeight: number;
   sourceWidth: number;

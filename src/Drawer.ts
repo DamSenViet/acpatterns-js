@@ -1,10 +1,10 @@
 import PixelsSource from "./PixelsSource";
+import PatternType from "./PatternType";
+import Drawable from "./Drawable";
 import { Tool, Brush } from "./tools";
 import {
   color,
   pixel,
-  Drawable,
-  PatternType,
   debounce,
 } from "./utils";
 import { IllegalStateError } from "./errors";

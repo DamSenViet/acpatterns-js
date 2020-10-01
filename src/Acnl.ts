@@ -1,16 +1,14 @@
-import AcPattern from "./AcPattern";
+import Drawable from "./Drawable";
 import Enum from "./Enum";
 import Hook from "./Hook";
 import PixelsSource from "./PixelsSource";
+import PatternType from "./PatternType";
+import HookSystem from "./HookSystem";
 import {
   color,
   pixel,
   byte,
   mapping,
-  PatternPalette,
-  PatternType,
-  HookSystem,
-  Drawable,
   Uint16ToBytes,
   bytesToUint16,
   stringToBytes,
@@ -377,7 +375,7 @@ const colorToByte: Map<color, byte> = new Map(
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends AcPattern implements Drawable {
+class Acnl extends Drawable {
   
   /**
    * An Enum of all possible PatternTypes.
@@ -433,7 +431,7 @@ class Acnl extends AcPattern implements Drawable {
 
   // lookup table for rendering colors
   // palette size is 15, 16th is always transparent but not included
-  private _palette: PatternPalette = [
+  private _palette: Array<color> = [
     "#FFFFFF",
     "#FFFFFF",
     "#FFFFFF",
@@ -450,7 +448,7 @@ class Acnl extends AcPattern implements Drawable {
     "#FFFFFF",
     "#FFFFFF",
   ];
-  private _paletteApi: PatternPalette = null;
+  private _paletteApi: Array<color> = null;
 
   // type size determines what to truncate down when converting to binary.
   // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
@@ -557,11 +555,11 @@ class Acnl extends AcPattern implements Drawable {
         set: (color: color) => {
           const mutations = _palette.slice();
           mutations[i] = color;
-          this.palette = <PatternPalette>mutations;
+          this.palette = <Array<color>>mutations;
         }
       })
     }
-    this._paletteApi = <PatternPalette>api;
+    this._paletteApi = <Array<color>>api;
   }
 
 
@@ -817,7 +815,7 @@ class Acnl extends AcPattern implements Drawable {
   /**
    * Gets the palette of the Acnl.
    */
-  public get palette(): PatternPalette {
+  public get palette(): Array<color> {
     return this._paletteApi;
   }
 
@@ -825,7 +823,7 @@ class Acnl extends AcPattern implements Drawable {
   /**
    * Sets the palette of the Acnl.
    */
-  public set palette(palette: PatternPalette) {
+  public set palette(palette: Array<color>) {
     const { _palette, _hooks } = this;
     if (typeof palette !== "object" || !(palette instanceof Array)) throw new TypeError();
     if (palette.length > 15) throw new TypeError(); // too many
