@@ -1,11 +1,10 @@
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
 import Drawable from "./Drawable";
-import { Tool, Brush } from "./tools";
+import { Tool } from "./tools";
 import {
   color,
   pixel,
-  debounce,
 } from "./utils";
 import { IllegalStateError } from "./errors";
 import xbrz from "./xbrz";
@@ -16,14 +15,19 @@ export interface DrawerOptions {
 };
 
 export interface DrawerMeasurements {
-  // source meaasurements
+  /**
+   * Pattern source measurements.
+   */
   sourceHeight: number;
   sourceHalfHeight: number;
   sourceWidth: number;
   sourceHalfWidth: number;
   textureHeight: number;
   textureWidth: number;
-  // raw canvas measurements
+
+  /**
+   * Raw canvas measurements.
+   */
   size: number;
   pixelSize: number,
   yStart: number;
@@ -34,7 +38,10 @@ export interface DrawerMeasurements {
   xCenter: number;
   xStop: number;
   xSize: number;
-  // canvas pixel measurements
+
+  /**
+   * Canvas pixel grid measurements.
+   */
   pixelGridSize: number;
   pixelYStart: number;
   pixelYCenter: number;
@@ -160,24 +167,9 @@ class Drawer {
   };
 
   /**
-   * The last sourceY drawn on.
-   */
-  private _lastSourceY: number = null;
-
-  /**
-   * The last sourceX drawn on.
-   */
-  private _lastSourceX: number = null;
-
-  /**
-   * Flag to reduce drawing operations.
-   */
-  private _didDrawOnLastSource: boolean = false;
-
-  /**
    * The drawing tool to interact with the canvas.
    */
-  private _tool: Tool = new Brush({ size: 1, });
+  private _tool: Tool = null;
 
   /**
    * Tool uses this callback to force refresh everything.
@@ -242,9 +234,6 @@ class Drawer {
     this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
-    window.addEventListener("resize", this._onWindowResize);
-    this._canvas.addEventListener("mousemove", this._onMouse);
-    this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
 
@@ -315,7 +304,8 @@ class Drawer {
     const xStop = pixelXStop * pixelSize;
     const xSize = xStop - xStart;
 
-    this._measurements = Object.freeze<DrawerMeasurements>({
+    // overwrite, don't replace
+    Object.assign(this._measurements, Object.freeze<DrawerMeasurements>({
       sourceHeight,
       sourceHalfHeight,
       sourceWidth,
@@ -339,7 +329,7 @@ class Drawer {
       pixelXStart,
       pixelXCenter,
       pixelXStop,
-    });
+    }));
   }
 
 
@@ -486,89 +476,14 @@ class Drawer {
   /**
    * Refreshes the _previewsCanvas.
    */
-  private _refreshPreview(): void {
+  private _refreshPreview: () => void = (): void => {
     this._previewContext.clearRect(
       0,
       0,
       this._measurements.size,
       this._measurements.size,
     );
-  }
-
-  private _onWindowResize = debounce(() => {
-    this._refresh();
-  }, 100);
-
-
-  /**
-   * Callback for the mouse interaction with the canvas.
-   * @param event - the passed event
-   */
-  private _onMouse = (event: MouseEvent) => {
-    // EVENT AND BDR VALUES ARE POST-CSS
-    // STORED MEASUREMENTS IGNORE CSS, BASED ON ATTRIBUTE VALUES
-    const bdr = this._canvas.getBoundingClientRect();
-
-    // need to convert pixelSize to POST-CSS value
-    const pixelY = Math.floor(
-      (event.clientY - bdr.top) /
-      (bdr.height / this._measurements.pixelGridSize)
-    );
-    const pixelX = Math.floor(
-      (event.clientX - bdr.left) /
-      (bdr.width / this._measurements.pixelGridSize)
-    );
-
-    if (
-      pixelY < this._measurements.pixelYStart ||
-      pixelY > this._measurements.pixelYStop - 1
-    ) return;
-    if (
-      pixelX < this._measurements.pixelXStart ||
-      pixelX > this._measurements.pixelXStop - 1
-    ) return;
-
-    const sourceY = pixelY - this._measurements.pixelYStart;
-    const sourceX = pixelX - this._measurements.pixelXStart;
-
-    if (
-      this._lastSourceY === sourceY &&
-      this._lastSourceX === sourceX
-    ) return;
-
-    this._lastSourceY = sourceY;
-    this._lastSourceX = sourceX;
-    this._didDrawOnLastSource = false;
-
-    // draw on main canvas
-    // redraw preview
-    if (this._preview) {
-      this._refreshPreview();
-      this._tool.preview(
-        this._source,
-        this._lastSourceY,
-        this._lastSourceX,
-        this._previewContext,
-        this._measurements,
-      );
-    }
-
-    // this will automatically trigger redraw if it fires
-    if (event.buttons === 1 && this._didDrawOnLastSource === false) {
-      this._tool.draw(
-        this._source,
-        sourceY,
-        sourceX,
-        this._previewContext,
-        this._measurements,
-        this._forceRefresh,
-      );
-      this._didDrawOnLastSource = true;
-    }
-    // otherwise make sure to request it!!!
-    else if (this._preview) requestAnimationFrame(this._redraw);
-  }
-
+  };
 
   /**
    * Callback for when the _pixelCanvas source changes.
@@ -607,26 +522,22 @@ class Drawer {
    */
   private _onPaletteUpdate = (i: pixel, color: color): void => {
     // loop through entire source for i, replace all i values with new color
-    for (
-      let sourceY: number = 0;
-      sourceY < this._measurements.sourceHeight;
-      ++sourceY
-    ) {
-      for (
-        let sourceX: number = 0;
-        sourceX < this._measurements.sourceWidth;
-        ++sourceX
-      ) {
+    for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         if (this._source[sourceY][sourceX] !== i) continue;
         this._pixelsContext.fillStyle = color;
-        this._pixelsContext.fillRect(
-          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-          this._measurements.pixelSize,
-          this._measurements.pixelSize,
-        );
+        this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
     requestAnimationFrame(this._redraw);
   };
 
@@ -646,19 +557,9 @@ class Drawer {
 
   /**
    * Callback for when the pattern's pixels need to be updated forcefully.
-   * Updates the pixels and the model.
    */
   private _onRefresh = (): void => {
     this._refreshPixels();
-    if (this._pixelFilter)
-      xbrz(
-        this._pixelsContext,
-        this._measurements.sourceWidth,
-        this._measurements.sourceHeight,
-        this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
-      );
     requestAnimationFrame(this._redraw);
   };
 
@@ -698,6 +599,14 @@ class Drawer {
    */
   public get source(): PixelsSource {
     return this._source;
+  }
+
+
+  /**
+   * Gets the drawer's cached measurements.
+   */
+  public get measurements(): Readonly<DrawerMeasurements> {
+    return this._measurements;
   }
 
 
@@ -751,11 +660,26 @@ class Drawer {
       const message = `Drawer has been disposed. Cannot set tool.`;
       throw new IllegalStateError(message);
     }
-    if (!(tool instanceof Tool)) {
+    if (!(tool instanceof Tool) && tool != null) {
       const message = `Expected an instance of Tool.`;
       throw new TypeError(message);
     }
     if (this._tool === tool) return;
+    // unmount old tool
+    if (this._tool != null) {
+      // @ts-ignore
+      this._tool.unmount();
+      // @ts-ignore
+      this._tool._drawer = null;
+    }
+    // mount new tool
+    if (tool != null) {
+      // @ts-ignore
+      tool._drawer = this;
+      if (this._state === DrawerStates.PLAYING)
+        tool.mount();
+    }
+
     this._tool = tool;
   }
 
@@ -837,9 +761,7 @@ class Drawer {
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
-    this._canvas.addEventListener("mousemove", this._onMouse);
-    this._canvas.addEventListener("mousedown", this._onMouse);
-
+    this._tool.mount();
     // assume everything changed
     this._onLoad();
   }
@@ -855,9 +777,6 @@ class Drawer {
     this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
-    window.removeEventListener("resize", this._onWindowResize);
-    this._canvas.removeEventListener("mousemove", this._onMouse);
-    this._canvas.removeEventListener("mousedown", this._onMouse);
     this._state = DrawerStates.PAUSED;
   }
 
