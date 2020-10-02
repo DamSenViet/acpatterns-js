@@ -52,61 +52,61 @@ enum DrawerStates {
  * Reacts to changes to the pattern by default.
  */
 class Drawer {
-  
+
   /**
    * The possible states the Drawer can be in.
    */
   public static states = DrawerStates;
-  
+
   /**
    * The final canvas to render the pattern on.
    */
   private _canvas: HTMLCanvasElement = null;
-  
+
   /**
    * Cached context of the _canvas.
    */
   private _context: CanvasRenderingContext2D = null;
-  
+
   /**
    * The pattern to draw.
    */
   private _pattern: Drawable = null;
-  
+
   /**
    * The source of the pattern to be drawn.
    */
   private _source: PixelsSource = null;
 
-  
+
   /**
    * The canvas responsible for drawing just the pixels of the pattern.
    * Muxed onto _canvas in the drawing process.
    */
   private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+
   /**
    * Cached context of _pixelsCanvas.
    */
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
-  
+
   /**
    * The canvas responsible for drawing just the grid.
    * Muxed onto _canvas in the drawing process.
    */
   private _gridCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+
   /**
    * Cached context of _gridCanvas.
    */
   private _gridContext: CanvasRenderingContext2D = this._gridCanvas.getContext("2d");
-  
+
   /**
    * The canvas responsible for drawing just the preview created by the preview.
    * Muxed onto _canvas in the drawing process.
    */
   private _previewCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+
   /**
    * Cached context of the _previewCanvas.
    */
@@ -158,7 +158,7 @@ class Drawer {
   /**
    * The drawing tool to interact with the canvas.
    */
-  private _tool: Tool = new Brush({ size: 10 });
+  private _tool: Tool = new Brush({ size: 1, });
 
   /**
    * Tool uses this callback to force refresh everything.
@@ -166,12 +166,12 @@ class Drawer {
    * or Modelers that are still in their reactive state.
    */
   private _forceRefresh: () => void = null;
-  
+
   /**
    * Drawer reactive state.
    */
   private _state: DrawerStates = DrawerStates.PLAYING;
-  
+
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
   /**
@@ -211,7 +211,7 @@ class Drawer {
     this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
-  
+
   /**
    * Updates the measurements for the _pixelsCanvas to render the pattern.
    */
@@ -235,14 +235,15 @@ class Drawer {
 
 
     // determine pixel size based on source
-    // if pattern is <= 64, scale up size is scaled up, double pixel size
     const sourceHeight: number = this._source.length;
     const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
     const sourceWidth: number = this._source[0].length;
     const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
-    let pixelGridSize: number = 1;
-    while (pixelGridSize < sourceHeight || pixelGridSize < sourceWidth)
-      pixelGridSize = pixelGridSize * 2;
+
+    // the number of pixels the canvas can fit
+    // expand to fit
+    let pixelGridSize: number = sourceHeight > sourceWidth ? sourceHeight : sourceWidth;
+    // figure out how many css pixels each pixel will be
     const pixelSize = this._canvas.offsetHeight / pixelGridSize;
 
     const top: number = Math.floor(pixelGridSize / 2);
@@ -290,9 +291,9 @@ class Drawer {
   /**
    * Redraws the _canvas.
    */
-  private _redraw = (): void  => {
-      this._context.clearRect(
-        0, 0,
+  private _redraw = (): void => {
+    this._context.clearRect(
+      0, 0,
       this._measurements.size, this._measurements.size
     );
     this._context.drawImage(this._pixelsCanvas, 0, 0);
@@ -332,7 +333,7 @@ class Drawer {
       this._measurements.size
     );
 
-    this._gridContext.strokeStyle = "#E2E2E2";
+    this._gridContext.strokeStyle = "rgba(226, 226, 226, 1)";
     this._gridContext.lineWidth = 1;
 
     // vertical pixel grid lines
@@ -358,8 +359,8 @@ class Drawer {
       this._gridContext.stroke();
     }
     // guide lines
-    this._gridContext.strokeStyle = "#624C37";
-    this._gridContext.lineWidth = 2;
+    this._gridContext.strokeStyle = "rgba(0, 0, 0, 1)";
+    this._gridContext.lineWidth = 1;
     // vertical guide
     this._gridContext.beginPath();
     this._gridContext.moveTo(
@@ -423,7 +424,28 @@ class Drawer {
 
     const sourceY = pixelY - this._measurements.pixelYStart;
     const sourceX = pixelX - this._measurements.pixelXStart;
+
+    if (
+      this._lastSourceY === sourceY &&
+      this._lastSourceX === sourceX
+    ) return;
+    
+    this._lastSourceY = sourceY;
+    this._lastSourceX = sourceX;
+    this._didDrawOnLastSource = false;
+    
     // draw on main canvas
+    // redraw preview
+    this._refreshPreview();
+    this._tool.preview(
+      this._source,
+      this._lastSourceY,
+      this._lastSourceX,
+      this._previewContext,
+      this._measurements,
+    );
+    
+    // this will automatically trigger redraw if it fires
     if (event.buttons === 1 && this._didDrawOnLastSource === false) {
       this._tool.draw(
         this._source,
@@ -435,25 +457,8 @@ class Drawer {
       );
       this._didDrawOnLastSource = true;
     }
-    // draw on overlay
-    if (
-      this._lastSourceY === sourceY &&
-      this._lastSourceX === sourceX
-    ) return;
-    this._lastSourceY = sourceY;
-    this._lastSourceX = sourceX;
-    this._didDrawOnLastSource = false;
-
-    // redraw preview
-    this._refreshPreview();
-    this._tool.preview(
-      this._source,
-      sourceY,
-      sourceX,
-      this._previewContext,
-      this._measurements,
-    );
-    requestAnimationFrame(this._redraw);
+    // otherwise make sure to request it!!!
+    else requestAnimationFrame(this._redraw);
   }
 
 
@@ -479,7 +484,7 @@ class Drawer {
       this._measurements.pixelSize,
       this._measurements.pixelSize,
     );
-    this._redraw();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -511,7 +516,7 @@ class Drawer {
         );
       }
     }
-    this._redraw();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -535,7 +540,7 @@ class Drawer {
   private _onRefresh = (): void => {
     this._refreshPixels();
     requestAnimationFrame(this._redraw);
-  }
+  };
 
 
   /**

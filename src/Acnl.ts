@@ -584,7 +584,6 @@ class Acnl extends Drawable {
           set: (pixel: pixel) => {
             if (pixel < 0 && pixel > 15)
               throw new RangeError();
-            if (_pixels[y][x] === pixel) return pixel;
             // assignment hook
             _pixels[y][x] = pixel;
             api.hook.trigger(y, x, pixel);
@@ -658,7 +657,6 @@ class Acnl extends Drawable {
             ...propertyConfig,
             get: get,
             set: (pixel) => {
-              if (get() === pixel) return pixel;
               // run the existing function, but now with hook call after it finishes
               set(pixel);
               // console.log(`modifying at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
