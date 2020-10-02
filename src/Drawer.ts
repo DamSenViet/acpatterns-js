@@ -252,14 +252,18 @@ class Drawer {
    * Updates the measurements for the _pixelsCanvas to render the pattern.
    */
   private _updateMeasurements(): void {
+    // NOTE: USING NON-CSS MEASUREMENTS
+    // BASE VALUES OFF OF ATTRIBUTE VALUES WHICH ARE NOT AFFECTED BY CSS
     if (
-      this._canvas.offsetHeight !== this._canvas.offsetWidth ||
-      this._canvas.offsetHeight % 128 !== 0
+      this._canvas.height !== this._canvas.width ||
+      this._canvas.height % 128 !== 0
     ) throw new TypeError();
 
-    const size = this._canvas.offsetHeight;
+    const size = this._canvas.height;
+    this._context.imageSmoothingEnabled = false;
 
     // sync necessary sizes together
+    // imageSmoothingEnabled auto reset to true after size changes, force false
     this._gridCanvas.height = size;
     this._gridCanvas.width = size;
     this._gridContext.imageSmoothingEnabled = false;
@@ -286,8 +290,8 @@ class Drawer {
     // the number of pixels the canvas can fit
     // expand to fit
     let pixelGridSize: number = sourceHeight > sourceWidth ? sourceHeight : sourceWidth;
-    // figure out how many css pixels each pixel will be
-    const pixelSize = Math.floor(this._canvas.offsetHeight / pixelGridSize);
+    // figure out how many canvas (NOT CSS) pixels each pixel will be
+    const pixelSize = this._canvas.height / pixelGridSize;
 
     const top: number = Math.floor(pixelGridSize / 2);
     const left: number = Math.floor(pixelGridSize / 2);
@@ -492,9 +496,8 @@ class Drawer {
   }
 
   private _onWindowResize = debounce(() => {
-    console.log("fired");
     this._refresh();
-  }, 200);
+  }, 100);
 
 
   /**
@@ -502,10 +505,19 @@ class Drawer {
    * @param event - the passed event
    */
   private _onMouse = (event: MouseEvent) => {
-    // need - 1 to use zero indexed values
+    // EVENT AND BDR VALUES ARE POST-CSS
+    // STORED MEASUREMENTS IGNORE CSS, BASED ON ATTRIBUTE VALUES
     const bdr = this._canvas.getBoundingClientRect();
-    const pixelY = Math.floor((event.clientY - bdr.top) / this._measurements.pixelSize);
-    const pixelX = Math.floor((event.clientX - bdr.left) / this._measurements.pixelSize);
+
+    // need to convert pixelSize to POST-CSS value
+    const pixelY = Math.floor(
+      (event.clientY - bdr.top) /
+      (bdr.height / this._measurements.pixelGridSize)
+    );
+    const pixelX = Math.floor(
+      (event.clientX - bdr.left) /
+      (bdr.width / this._measurements.pixelGridSize)
+    );
 
     if (
       pixelY < this._measurements.pixelYStart ||
