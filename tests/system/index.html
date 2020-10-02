@@ -68,20 +68,14 @@
       background-color: black;
     }
 
-    canvas.model,
-    canvas.model-alt {
+    canvas.model {
       outline: none;
       cursor: grab;
       width: 640px;
       height: 640px;
     }
-    canvas.model-alt {
-      width: 256px;
-      height: 256px;
-    }
 
-    canvas.model:active,
-    canvas.model-alt:active {
+    canvas.model:active {
       cursor: grabbing;
     }
 
@@ -95,7 +89,6 @@
   <div class="container">
     <canvas class="model"></canvas>
     <canvas class="draw" width=640 height=640></canvas>
-    <canvas class="model-alt"></canvas>
   </div>
   <div>
     <input class="acnl" type="file" accept=".acnl" />
@@ -117,12 +110,14 @@
         <img src="./nothing.jpeg" />
         <img src="./qr-acnl-standard.jpg" />
         <img src="./qr-acnl-dress.png" />
+        <img src="./qr-acnl-standee.jpg" />
       </div>
       <div class="qrs-buttons">
         <button>invalid image path</button>
         <button>nothing</button>
         <button>qr-acnl-standard</button>
         <button>qr-acnl-dress</button>
+        <button>qr-acnl-standee</button>
       </div>
     </div>
   </div>
@@ -133,7 +128,6 @@
 
     const drawCanvas = document.querySelector("canvas.draw");
     const modelCanvas = document.querySelector("canvas.model");
-    const modelCanvasAlt = document.querySelector("canvas.model-alt");
     const input = document.querySelector("input.acnl");
     const toBinaryStr = document.querySelector("input.toBinaryStr");
 

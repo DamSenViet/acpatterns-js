@@ -530,9 +530,9 @@ class Modeler {
    */
   private _refreshPixels(): void {
     this._pixelsContext.fillStyle = "rgba(255, 255, 255, 1)";
-    this._pixelsContext.fillRect(0, 0, this._source[0].length, this._source.length);
-    for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
-      for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
+    this._pixelsContext.fillRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
+    for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         const paletteIdx = this._source[sourceY][sourceX];
         if (paletteIdx === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];

@@ -2078,7 +2078,7 @@ const xbrz = (
   inputHeight: number,
   output: CanvasRenderingContext2D,
   outputWidth: number,
-  outputHeight,
+  outputHeight: number,
 ): void => {
   //Apply filter
 	const inData = input.getImageData(0, 0, inputWidth, inputHeight);

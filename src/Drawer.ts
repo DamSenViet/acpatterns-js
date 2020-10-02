@@ -8,6 +8,7 @@ import {
   debounce,
 } from "./utils";
 import { IllegalStateError } from "./errors";
+import xbrz from "./xbrz";
 
 export interface DrawerOptions {
   canvas: HTMLCanvasElement,
@@ -20,15 +21,19 @@ export interface DrawerMeasurements {
   sourceHalfHeight: number;
   sourceWidth: number;
   sourceHalfWidth: number;
+  textureHeight: number;
+  textureWidth: number;
   // raw canvas measurements
   size: number;
   pixelSize: number,
   yStart: number;
   yCenter: number;
   yStop: number;
+  ySize: number;
   xStart: number;
   xCenter: number;
   xStop: number;
+  xSize: number;
   // canvas pixel measurements
   pixelGridSize: number;
   pixelYStart: number;
@@ -91,6 +96,16 @@ class Drawer {
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
 
   /**
+   * The canvas to render the post-processed pixelsCanvas onto. Textures model.
+   */
+  private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
+
+  /**
+   * Cached context of the _textureCanvas.
+   */
+  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
+
+  /**
    * The canvas responsible for drawing just the grid.
    * Muxed onto _canvas in the drawing process.
    */
@@ -121,15 +136,19 @@ class Drawer {
     sourceHalfHeight: null,
     sourceWidth: null,
     sourceHalfWidth: null,
+    textureHeight: null,
+    textureWidth: null,
     // raw canvas measurements
     size: null,
     pixelSize: null,
     yStart: null,
     yCenter: null,
     yStop: null,
+    ySize: null,
     xStart: null,
     xCenter: null,
     xStop: null,
+    xSize: null,
     // canvas pixel measurements
     pixelGridSize: null,
     pixelYStart: null,
@@ -223,7 +242,7 @@ class Drawer {
     this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
-
+    window.addEventListener("resize", this._onWindowResize);
     this._canvas.addEventListener("mousemove", this._onMouse);
     this._canvas.addEventListener("mousedown", this._onMouse);
   }
@@ -239,10 +258,8 @@ class Drawer {
     ) throw new TypeError();
 
     const size = this._canvas.offsetHeight;
-    // sync all sizes together
-    this._pixelsCanvas.height = size;
-    this._pixelsCanvas.width = size;
-    this._pixelsContext.imageSmoothingEnabled = false;
+
+    // sync necessary sizes together
     this._gridCanvas.height = size;
     this._gridCanvas.width = size;
     this._gridContext.imageSmoothingEnabled = false;
@@ -256,6 +273,15 @@ class Drawer {
     const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
     const sourceWidth: number = this._source[0].length;
     const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
+    const textureHeight = sourceHeight * 4;
+    const textureWidth = sourceWidth * 4;
+
+    this._pixelsCanvas.height = sourceHeight;
+    this._pixelsCanvas.width = sourceWidth;
+    this._pixelsContext.imageSmoothingEnabled = false;
+    this._textureCanvas.height = textureHeight;
+    this._textureCanvas.width = textureWidth;
+    this._textureContext.imageSmoothingEnabled = false;
 
     // the number of pixels the canvas can fit
     // expand to fit
@@ -278,22 +304,29 @@ class Drawer {
     const yStart = pixelYStart * pixelSize;
     const yCenter = pixelYCenter * pixelSize;
     const yStop = pixelYStop * pixelSize;
+    const ySize = yStop - yStart;
+
     const xStart = pixelXStart * pixelSize;
     const xCenter = pixelXCenter * pixelSize;
     const xStop = pixelXStop * pixelSize;
+    const xSize = xStop - xStart;
 
     this._measurements = Object.freeze<DrawerMeasurements>({
       sourceHeight,
       sourceHalfHeight,
       sourceWidth,
       sourceHalfWidth,
+      textureHeight,
+      textureWidth,
       size,
       pixelSize,
       yStart,
       yCenter,
       yStop,
+      ySize,
       xStart,
       xCenter,
+      xSize,
       xStop,
       pixelGridSize,
       pixelYStart,
@@ -305,6 +338,7 @@ class Drawer {
     });
   }
 
+
   /**
    * Redraws the _canvas.
    */
@@ -313,9 +347,46 @@ class Drawer {
       0, 0,
       this._measurements.size, this._measurements.size
     );
-    this._context.drawImage(this._pixelsCanvas, 0, 0);
-    if (this._grid) this._context.drawImage(this._gridCanvas, 0, 0);
-    if (this._preview) this._context.drawImage(this._previewCanvas, 0, 0);
+    if (this._pixelFilter)
+      this._context.drawImage(
+        this._textureCanvas,
+        0, 0,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+        this._measurements.xStart, this._measurements.yStart,
+        this._measurements.xSize,
+        this._measurements.ySize,
+      );
+    else
+      this._context.drawImage(
+        this._pixelsCanvas,
+        0, 0,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._measurements.xStart, this._measurements.yStart,
+        this._measurements.xSize,
+        this._measurements.ySize,
+      );
+    if (this._grid)
+      this._context.drawImage(
+        this._gridCanvas,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+      );
+    if (this._preview)
+      this._context.drawImage(
+        this._previewCanvas,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+      );
   };
 
 
@@ -323,21 +394,26 @@ class Drawer {
    * Refreshes the _pixelsCanvas.
    */
   private _refreshPixels(): void {
-    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
+    this._pixelsContext.clearRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         const paletteIdx = this._source[sourceY][sourceX];
         if (paletteIdx === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
-        this._pixelsContext.fillRect(
-          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-          this._measurements.pixelSize,
-          this._measurements.pixelSize,
-        );
+        this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
   }
+
 
   /**
    * Refreshes the _gridCanvas.
@@ -415,9 +491,10 @@ class Drawer {
     );
   }
 
-  // private _onWindowResize = debounce(() => {
-  //   this._refresh();
-  // }, 200);
+  private _onWindowResize = debounce(() => {
+    console.log("fired");
+    this._refresh();
+  }, 200);
 
 
   /**
@@ -489,20 +566,23 @@ class Drawer {
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
   private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    this._pixelsContext.clearRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
-    if (pixel === 15) return;
+    if (pixel === 15) {
+      this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
+      return;
+    }
     this._pixelsContext.fillStyle = this._pattern.palette[pixel];
-    this._pixelsContext.fillRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
+    this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
+
+
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
     requestAnimationFrame(this._redraw);
   };
 
@@ -558,6 +638,15 @@ class Drawer {
    */
   private _onRefresh = (): void => {
     this._refreshPixels();
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
     requestAnimationFrame(this._redraw);
   };
 
@@ -660,6 +749,34 @@ class Drawer {
 
 
   /**
+   * Gets whether or not the pixel filtering is applied.
+   */
+  public get pixelFilter(): boolean {
+    return this._pixelFilter;
+  }
+
+
+  /**
+   * Sets whether or not the pixelFilter is applied.
+   */
+  public set pixelFilter(pixelFilter: boolean) {
+    if (typeof pixelFilter !== "boolean") throw new TypeError();
+    if (this._pixelFilter === pixelFilter) return;
+    this._pixelFilter = pixelFilter;
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+      );
+    requestAnimationFrame(this._redraw);
+  }
+
+
+  /**
    * Gets whether or not to render the grid.
    */
   public get grid(): boolean {
@@ -672,6 +789,7 @@ class Drawer {
    */
   public set grid(grid: boolean) {
     if (typeof grid !== "boolean") throw new TypeError();
+    if (this._grid === grid) return;
     this._grid = grid;
     requestAnimationFrame(this._redraw);
   }
@@ -690,6 +808,7 @@ class Drawer {
    */
   public set preview(preview: boolean) {
     if (typeof preview !== "boolean") throw new TypeError();
+    if (this._preview === preview) return;
     this._preview = preview;
     requestAnimationFrame(this._redraw);
   };
@@ -724,7 +843,7 @@ class Drawer {
     this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
-
+    window.removeEventListener("resize", this._onWindowResize);
     this._canvas.removeEventListener("mousemove", this._onMouse);
     this._canvas.removeEventListener("mousedown", this._onMouse);
     this._state = DrawerStates.PAUSED;
@@ -744,6 +863,8 @@ class Drawer {
     this._source = null;
     this._pixelsCanvas = null;
     this._pixelsContext = null;
+    this._textureCanvas = null;
+    this._textureContext = null;
     this._gridCanvas = null;
     this._gridContext = null;
     this._previewCanvas = null;
