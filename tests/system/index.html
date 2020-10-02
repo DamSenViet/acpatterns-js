@@ -58,12 +58,12 @@
       position: relative;
       top: 0;
       left: 0;
-      
+
       padding-top: 30px;
       padding-bottom: 30px;
     }
-    
-    
+
+
     canvas {
       display: block;
     }
@@ -91,37 +91,41 @@
     .qrs-images {
       display: none;
     }
-    
+
     @media only screen and (min-width: 480px) {
       canvas.model {
         width: 450px;
         height: 450px;
       }
+
       canvas.draw {
         width: 450px;
         height: 450px;
       }
     }
-    
+
     @media only screen and (min-width: 640px) {
       .container {
         grid-template-columns: 1fr 1fr;
       }
+
       canvas.model {
         width: 320px;
         height: 320px;
       }
+
       canvas.draw {
         width: 320px;
         height: 320px;
       }
     }
-    
+
     @media only screen and (min-width: 1300px) {
       canvas.model {
         width: 600px;
         height: 600px;
       }
+
       canvas.draw {
         width: 600px;
         height: 600px;
@@ -138,14 +142,6 @@
   <div>
     <input class="acnl" type="file" accept=".acnl" />
     <input class="toBinaryStr" type="file" />
-  </div>
-  <div class="types-container">
-    <div>Types</div>
-    <div class="types"></div>
-  </div>
-  <div class="sections-container">
-    <div>Sections</div>
-    <div class="sections"></div>
   </div>
   <div class="qrs-container">
     <div>QRs</div>
@@ -167,6 +163,40 @@
     </div>
   </div>
 
+  <div class="types-container">
+    <div>Types</div>
+    <div class="types"></div>
+  </div>
+  <div class="sections-container">
+    <div>Sections</div>
+    <div class="sections"></div>
+  </div>
+  <div class="drawer-options-container">
+    <div>Drawer Settings</div>
+    <div class="drawer-options">
+      <button
+        onclick="drawer.pixelFilter = !drawer.pixelFilter; this.innerText = `pixelFilter: ${drawer.pixelFilter}`;">
+        pixelFilter: false
+      </button>
+      <button
+        onclick="drawer.preview = !drawer.preview; this.innerText = `preview: ${drawer.preview}`;">
+        preview: false
+      </button>
+      <button
+        onclick="drawer.grid = !drawer.grid; this.innerText = `grid: ${drawer.grid}`;">
+        grid: false
+      </button>
+    </div>
+  </div>
+  <div class="modeler-options-container">
+    <div>Modeler Settings</div>
+    <div class="modeler-options">
+      <button
+        onclick="modeler.pixelFilter = !modeler.pixelFilter; this.innerText = `pixelFilter: ${modeler.pixelFilter}`;">
+        pixelFilter: false
+      </button>
+    </div>
+  </div>
   <script>
     const pixelsCanvas = document.querySelector("canvas.pixels");
     const textureCanvas = document.querySelector("canvas.texture");
