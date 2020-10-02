@@ -184,8 +184,9 @@ class Modeler {
 
   /**
    * Whether pixel filtering is used on the model texture.
+   * If turned on, will incur a large performance cost.
    */
-  private _isPixelFiltering = true;
+  private _pixelFilter = false;
 
   /**
    * Modeler reactive state.
@@ -545,7 +546,7 @@ class Modeler {
    * Draws the _pixelsCanvas onto after the _textureCanvas after processing.
    */
   private _redraw(): void {
-    if (this._isPixelFiltering)
+    if (this._pixelFilter)
       xbrz(
         this._pixelsContext,
         this._measurements.sourceWidth,
@@ -579,17 +580,17 @@ class Modeler {
   /**
    * Gets whether the pixel filtering is applied on the model.
    */
-  public get isPixelFiltering(): boolean {
-    return this._isPixelFiltering;
+  public get pixelFilter(): boolean {
+    return this._pixelFilter;
   }
 
 
   /**
    * Changes whether the pixel filtering is applied on the model.
    */
-  public set isPixelFiltering(isPixelFiltering: boolean) {
-    if (typeof isPixelFiltering !== "boolean") throw new TypeError();
-    this._isPixelFiltering = isPixelFiltering;
+  public set pixelFilter(pixelFilter: boolean) {
+    if (typeof pixelFilter !== "boolean") throw new TypeError();
+    this._pixelFilter = pixelFilter;
     this._redraw();
   }
 

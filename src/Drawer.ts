@@ -168,9 +168,26 @@ class Drawer {
   private _forceRefresh: () => void = null;
 
   /**
+   * Whether or not to render the grid.
+   */
+  private _grid: boolean = false;
+
+  /**
+   * Whether or not to render the tool preview.
+   */
+  private _preview: boolean = false;
+
+  /**
+   * Whether or not to apply pixel filtering.
+   * If turned on, will incur a large performance cost.
+   */
+  private _pixelFilter: boolean = false;
+
+  /**
    * Drawer reactive state.
    */
   private _state: DrawerStates = DrawerStates.PLAYING;
+
 
   // CENTERS NON SQUARE SOURCES INSIDE GRID
   // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
@@ -244,7 +261,7 @@ class Drawer {
     // expand to fit
     let pixelGridSize: number = sourceHeight > sourceWidth ? sourceHeight : sourceWidth;
     // figure out how many css pixels each pixel will be
-    const pixelSize = this._canvas.offsetHeight / pixelGridSize;
+    const pixelSize = Math.floor(this._canvas.offsetHeight / pixelGridSize);
 
     const top: number = Math.floor(pixelGridSize / 2);
     const left: number = Math.floor(pixelGridSize / 2);
@@ -297,8 +314,8 @@ class Drawer {
       this._measurements.size, this._measurements.size
     );
     this._context.drawImage(this._pixelsCanvas, 0, 0);
-    this._context.drawImage(this._gridCanvas, 0, 0);
-    this._context.drawImage(this._previewCanvas, 0, 0);
+    if (this._grid) this._context.drawImage(this._gridCanvas, 0, 0);
+    if (this._preview) this._context.drawImage(this._previewCanvas, 0, 0);
   };
 
 
@@ -429,22 +446,24 @@ class Drawer {
       this._lastSourceY === sourceY &&
       this._lastSourceX === sourceX
     ) return;
-    
+
     this._lastSourceY = sourceY;
     this._lastSourceX = sourceX;
     this._didDrawOnLastSource = false;
-    
+
     // draw on main canvas
     // redraw preview
-    this._refreshPreview();
-    this._tool.preview(
-      this._source,
-      this._lastSourceY,
-      this._lastSourceX,
-      this._previewContext,
-      this._measurements,
-    );
-    
+    if (this._preview) {
+      this._refreshPreview();
+      this._tool.preview(
+        this._source,
+        this._lastSourceY,
+        this._lastSourceX,
+        this._previewContext,
+        this._measurements,
+      );
+    }
+
     // this will automatically trigger redraw if it fires
     if (event.buttons === 1 && this._didDrawOnLastSource === false) {
       this._tool.draw(
@@ -458,7 +477,7 @@ class Drawer {
       this._didDrawOnLastSource = true;
     }
     // otherwise make sure to request it!!!
-    else requestAnimationFrame(this._redraw);
+    else if (this._preview) requestAnimationFrame(this._redraw);
   }
 
 
@@ -553,6 +572,19 @@ class Drawer {
 
 
   /**
+   * Does the refreshes the canvas with all changes.
+   */
+  private _refresh(): void {
+    this._updateMeasurements();
+    this._refreshPixels();
+    this._refreshGrid();
+    this._refreshPreview();
+    // now drawImage in order to target canvas
+    requestAnimationFrame(this._redraw);
+  }
+
+
+  /**
    * Gets the canvas the pattern is rendered on.
    */
   public get canvas(): HTMLCanvasElement {
@@ -628,16 +660,39 @@ class Drawer {
 
 
   /**
-   * Does the refreshes the canvas with all changes.
+   * Gets whether or not to render the grid.
    */
-  private _refresh(): void {
-    this._updateMeasurements();
-    this._refreshPixels();
-    this._refreshGrid();
-    this._refreshPreview();
-    // now drawImage in order to target canvas
+  public get grid(): boolean {
+    return this._grid;
+  }
+
+
+  /**
+   * Sets whether or not to render the grid.
+   */
+  public set grid(grid: boolean) {
+    if (typeof grid !== "boolean") throw new TypeError();
+    this._grid = grid;
     requestAnimationFrame(this._redraw);
   }
+
+
+  /**
+   * Gets whether or not to render the tool preview.
+   */
+  public get preview(): boolean {
+    return this._preview;
+  }
+
+
+  /**
+   * Sets whether or not to render the tool preview.
+   */
+  public set preview(preview: boolean) {
+    if (typeof preview !== "boolean") throw new TypeError();
+    this._preview = preview;
+    requestAnimationFrame(this._redraw);
+  };
 
 
   /**
