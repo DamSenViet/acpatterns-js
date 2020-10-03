@@ -62,7 +62,7 @@ class Tool {
    * @param mouseEvent - the mouse event to calculate from
    * @returns - an array containg [sourceY, sourceX]
    */
-  public mouseEventToSourceYX(mouseEvent: MouseEvent): [number, number] {
+  protected mouseEventToSourceYX(mouseEvent: MouseEvent): [number, number] {
     const bdr = this.canvas.getBoundingClientRect();
 
     // need to convert pixelSize to POST-CSS value
@@ -88,6 +88,20 @@ class Tool {
     const sourceY = pixelY - this.measurements.pixelYStart;
     const sourceX = pixelX - this.measurements.pixelXStart;
     return [sourceY, sourceX];
+  }
+  
+  
+  /**
+   * Helper to determine whether or not the y, x values are valid to access.
+   * @param sourceY - the y component of the source coordinate to validate
+   * @param sourceX - the x component of the source coordinate to validate
+   */
+  protected isValidSourceYX(sourceY: number, sourceX: number): boolean {
+    if (sourceY >= this.measurements.sourceHeight || sourceY < 0)
+      return false;
+    if (sourceX >= this.measurements.sourceWidth || sourceX < 0)
+      return false;
+    return true;
   }
 
 

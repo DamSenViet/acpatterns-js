@@ -38,7 +38,7 @@ class Brush extends Tool {
 
   /**
    * Creates a Brush instance.
-   * @param options - a config option with 'size'.
+   * @param options - a config object with 'size'.
    */
   public constructor(options?: BrushOptions) {
     super();
