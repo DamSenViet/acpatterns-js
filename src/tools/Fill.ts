@@ -1,22 +1,21 @@
 import Tool from "./Tool";
-import { pixel } from "../utils";
+import { paletteIndex } from "../utils";
 
-export interface BucketOptions {
-
+export interface FillOptions {
 }
 
 
 /**
  * A fill tool.
  */
-class Bucket extends Tool {
+class Fill extends Tool {
   /**
-   * The last sourceY drawn on.
+   * The last sourceY passed over.
    */
   protected _lastSourceY: number = null;
 
   /**
-   * The last sourceX drawn on.
+   * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
 
@@ -24,55 +23,54 @@ class Bucket extends Tool {
    * Flag to reduce drawing operations.
    */
   protected _didDrawOnLastSource: boolean = false;
-  
-  
+
   /**
    * Flag to determine whether to highlight fill area.
    */
   protected _fillArea: boolean = false;
 
-
   /**
    * The value to overwrite pixels with.
    * A pointer to a color in the palette palette.
    */
-  protected _colorIndex: pixel = 0;
+  protected _paletteIndex: paletteIndex = 0;
+
 
   /**
    * Creates a Bucket instance.
    * @param options - a config object
    */
-  public constructor(options?: BucketOptions) {
+  public constructor(options?: FillOptions) {
     super();
     if (arguments.length <= 0) return;
   }
 
 
   /**
-   * Gets the color idx of the bucket.
+   * Gets the palette pointer of the bucket.
    */
-  public get colorIndex(): number {
-    return this._colorIndex;
+  public get paletteIndex(): number {
+    return this._paletteIndex;
   }
 
 
   /**
-   * Sets the color idx of the bucket.
+   * Sets the palette pointer of the bucket.
    */
-  public set colorIndex(colorIndex: number) {
-    if (typeof colorIndex !== "number") {
+  public set paletteIndex(paletteIndex: number) {
+    if (typeof paletteIndex !== "number") {
       throw new TypeError();
     }
-    this._colorIndex = colorIndex;
+    this._paletteIndex = paletteIndex;
   };
 
 
   /**
-   * Draws the preview/indicator.
+   * Draws the cursor preview/indicator.
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _drawPreview(
+  protected _previewCursor(
     sourceY: number,
     sourceX: number,
   ): void {
@@ -118,25 +116,24 @@ class Bucket extends Tool {
    * @param sourceX  - the x coordinate of the source
    */
   protected _previewFillArea(
-    sourceY: number,
-    sourceX: number,
+    targetSourceY: number,
+    targetSourceX: number,
   ): void {
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-    const target = this.source.unreactive[sourceY][sourceX];
-    const replacement = this._colorIndex;
-    if (target === replacement) return;
+    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    if (paletteIndexToReplace === this._paletteIndex) return;
     // jsoned points
     const set = new Set<string>();
-    set.add(JSON.stringify([sourceY, sourceX]));
+    set.add(JSON.stringify([targetSourceY, targetSourceX]));
     const queue = new Array<[number, number]>();
-    queue.push([sourceY, sourceX]);
+    queue.push([targetSourceY, targetSourceX]);
     while (queue.length > 0) {
       const [nextSourceY, nextSourceX]: [number, number] = queue.shift();
 
       const westJSON = JSON.stringify([nextSourceY, nextSourceX - 1]);
       if (
         this.isValidSourceYX(nextSourceY, nextSourceX - 1) &&
-        this.source.unreactive[nextSourceY][nextSourceX - 1] === target &&
+        this.source.unreactive[nextSourceY][nextSourceX - 1] === paletteIndexToReplace &&
         !set.has(westJSON)
       ) {
         set.add(westJSON);
@@ -146,7 +143,7 @@ class Bucket extends Tool {
       const eastJSON = JSON.stringify([nextSourceY, nextSourceX + 1])
       if (
         this.isValidSourceYX(nextSourceY, nextSourceX + 1) &&
-        this.source.unreactive[nextSourceY][nextSourceX + 1] === target &&
+        this.source.unreactive[nextSourceY][nextSourceX + 1] === paletteIndexToReplace &&
         !set.has(eastJSON)
       ) {
         set.add(eastJSON);
@@ -156,7 +153,7 @@ class Bucket extends Tool {
       const southJSON = JSON.stringify([nextSourceY - 1, nextSourceX]);
       if (
         this.isValidSourceYX(nextSourceY - 1, nextSourceX) &&
-        this.source.unreactive[nextSourceY - 1][nextSourceX] === target &&
+        this.source.unreactive[nextSourceY - 1][nextSourceX] === paletteIndexToReplace &&
         !set.has(southJSON)
       ) {
         set.add(southJSON);
@@ -166,7 +163,7 @@ class Bucket extends Tool {
       const northJSON = JSON.stringify([nextSourceY + 1, nextSourceX]);
       if (
         this.isValidSourceYX(nextSourceY + 1, nextSourceX) &&
-        this.source.unreactive[nextSourceY + 1][nextSourceX] === target &&
+        this.source.unreactive[nextSourceY + 1][nextSourceX] === paletteIndexToReplace &&
         !set.has(northJSON)
       ) {
         set.add(northJSON);
@@ -186,59 +183,58 @@ class Bucket extends Tool {
 
 
   /**
-   * Draws pixels from the and triggers a redraws when fininished.
-   * @param sourceY - the y coordinate of the source
-   * @param sourceX - the x coordinate of the source
-   * @returns - whether the draw operation succeeded
+   * Commits pixels from the and triggers a redraws when fininished.
+   * @param sourceY - the y coordinate of the source target
+   * @param sourceX - the x coordinate of the source target
    */
-  protected _drawPixels(
-    sourceY: number,
-    sourceX: number,
+  protected _pixels(
+    targetSourceY: number,
+    targetSourceX: number,
   ): void {
     // BFS
-    const target = this.source.unreactive[sourceY][sourceX];
-    const replacement = this._colorIndex;
-    if (target === replacement) return;
-    this.source.unreactive[sourceY][sourceX] = replacement;
+    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    if (paletteIndexToReplace === this._paletteIndex) return;
+    this.source.unreactive[targetSourceY][targetSourceX] = this._paletteIndex;
     const queue = new Array<[number, number]>();
-    queue.push([sourceY, sourceX]);
+    queue.push([targetSourceY, targetSourceX]);
     while (queue.length > 0) {
       const [nextSourceY, nextSourceX]: [number, number] = queue.shift();
 
       if (
         this.isValidSourceYX(nextSourceY, nextSourceX - 1) &&
-        this.source.unreactive[nextSourceY][nextSourceX - 1] === target
+        this.source.unreactive[nextSourceY][nextSourceX - 1] === paletteIndexToReplace
       ) {
-        this.source.unreactive[nextSourceY][nextSourceX - 1] = replacement;
+        this.source.unreactive[nextSourceY][nextSourceX - 1] = this._paletteIndex;
         queue.push([nextSourceY, nextSourceX - 1]);
       }
 
       if (
         this.isValidSourceYX(nextSourceY, nextSourceX + 1) &&
-        this.source.unreactive[nextSourceY][nextSourceX + 1] === target
+        this.source.unreactive[nextSourceY][nextSourceX + 1] === paletteIndexToReplace
       ) {
-        this.source.unreactive[nextSourceY][nextSourceX + 1] = replacement;
+        this.source.unreactive[nextSourceY][nextSourceX + 1] = this._paletteIndex;
         queue.push([nextSourceY, nextSourceX + 1]);
       }
 
       if (
         this.isValidSourceYX(nextSourceY - 1, nextSourceX) &&
-        this.source.unreactive[nextSourceY - 1][nextSourceX] === target
+        this.source.unreactive[nextSourceY - 1][nextSourceX] === paletteIndexToReplace
       ) {
-        this.source.unreactive[nextSourceY - 1][nextSourceX] = replacement;
+        this.source.unreactive[nextSourceY - 1][nextSourceX] = this._paletteIndex;
         queue.push([nextSourceY - 1, nextSourceX]);
       }
 
       if (
         this.isValidSourceYX(nextSourceY + 1, nextSourceX) &&
-        this.source.unreactive[nextSourceY + 1][nextSourceX] === target
+        this.source.unreactive[nextSourceY + 1][nextSourceX] === paletteIndexToReplace
       ) {
-        this.source.unreactive[nextSourceY][nextSourceX - 1] = replacement;
+        this.source.unreactive[nextSourceY + 1][nextSourceX] = this._paletteIndex;
         queue.push([nextSourceY + 1, nextSourceX]);
       }
     }
     this.forceRefresh();
   }
+
 
   /**
    * Mousemove callback.
@@ -261,10 +257,11 @@ class Bucket extends Tool {
     if (this.preview) {
       this.refreshPreview();
       if (this._fillArea) this._previewFillArea(sourceY, sourceX);
-      this._drawPreview(sourceY, sourceX);
+      this._previewCursor(sourceY, sourceX);
       requestAnimationFrame(this.redraw);
     }
   };
+
 
   /**
    * Mousedown callback.
@@ -280,10 +277,10 @@ class Bucket extends Tool {
 
     if (this.preview) {
       this.refreshPreview();
-      this._drawPreview(sourceY, sourceX);
+      this._previewCursor(sourceY, sourceX);
     }
 
-    this._drawPixels(sourceY, sourceX);
+    this._pixels(sourceY, sourceX);
     this._didDrawOnLastSource = true;
   };
 
@@ -308,4 +305,4 @@ class Bucket extends Tool {
   }
 }
 
-export default Bucket;
+export default Fill;

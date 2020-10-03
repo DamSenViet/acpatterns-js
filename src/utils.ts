@@ -12,7 +12,7 @@ export type color = string;
  * A number pointing to the palette index with the color.
  * Maps a pixel's color to a pattern's palette index.
  */
-export type pixel = number;
+export type paletteIndex = number;
 
 /**
  * A grid of coordinate values [x, y].

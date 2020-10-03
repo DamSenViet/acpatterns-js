@@ -2,10 +2,7 @@ import AcPattern from "./AcPattern";
 import PatternType from "./PatternType";
 import HookSystem from "./HookSystem";
 import PixelsSource from "./PixelsSource";
-import {
-  pixel,
-  color,
-} from "./utils";
+import { color } from "./utils";
 
 /**
  * Another pure utility class for non-TypeScript users.

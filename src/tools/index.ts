@@ -1,3 +1,3 @@
-export { default as Brush } from "./Brush";
-export { default as Bucket } from "./Bucket";
+export { default as Pen } from "./Pen";
+export { default as Fill } from "./Fill";
 export { default as Tool } from "./Tool";

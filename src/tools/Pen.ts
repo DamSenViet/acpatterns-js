@@ -1,21 +1,21 @@
 import Tool from "./Tool";
-import { pixel } from "../utils";
+import { paletteIndex } from "../utils";
 
-export interface BrushOptions {
+export interface PenOptions {
   size?: number;
 }
 
 /**
  * A square Brush.
  */
-class Brush extends Tool {
+class Pen extends Tool {
   /**
-   * The last sourceY drawn on.
+   * The last sourceY passed over.
    */
   protected _lastSourceY: number = null;
 
   /**
-   * The last sourceX drawn on.
+   * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
 
@@ -33,14 +33,14 @@ class Brush extends Tool {
    * The value to overwrite pixels with.
    * A pointer to a color in the pattern palette.
    */
-  protected _colorIndex: pixel = 0;
+  protected _paletteIndex: paletteIndex = 0;
 
 
   /**
    * Creates a Brush instance.
    * @param options - a config object with 'size'.
    */
-  public constructor(options?: BrushOptions) {
+  public constructor(options?: PenOptions) {
     super();
     if (arguments.length <= 0) return;
     const { size } = options;
@@ -68,19 +68,19 @@ class Brush extends Tool {
   /**
    * Gets the color idx of the brush.
    */
-  public get colorIndex(): number {
-    return this._colorIndex;
+  public get paletteIndex(): number {
+    return this._paletteIndex;
   }
 
 
   /**
    * Sets the color idx of the brush.
    */
-  public set colorIndex(colorIndex: number) {
-    if (typeof colorIndex !== "number") {
+  public set paletteIndex(paletteIndex: number) {
+    if (typeof paletteIndex !== "number") {
       throw new TypeError();
     }
-    this._colorIndex = colorIndex;
+    this._paletteIndex = paletteIndex;
   };
 
 
@@ -89,9 +89,9 @@ class Brush extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _drawPreview(
-    sourceY: number,
-    sourceX: number,
+  protected _previewCursor(
+    targetSourceY: number,
+    targetSourceX: number,
   ): void {
     this.previewContext.strokeStyle = "#00d2c2";
     this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
@@ -99,12 +99,12 @@ class Brush extends Tool {
     let topLeftSourceX: number;
     let topLeftSourceY: number;
     if (this._size % 2 === 0) {
-      topLeftSourceX = sourceX - (this._size / 2);
-      topLeftSourceY = sourceY - (this._size / 2) + 1;
+      topLeftSourceX = targetSourceX - (this._size / 2);
+      topLeftSourceY = targetSourceY - (this._size / 2) + 1;
     }
     else {
-      topLeftSourceX = sourceX - Math.floor(this._size / 2);
-      topLeftSourceY = sourceY - Math.floor(this._size / 2);
+      topLeftSourceX = targetSourceX - Math.floor(this._size / 2);
+      topLeftSourceY = targetSourceY - Math.floor(this._size / 2);
     }
     this.previewContext.beginPath();
     // top left
@@ -137,35 +137,35 @@ class Brush extends Tool {
 
 
   /**
-   * Draws pixels from the and triggers a redraws when fininished.
+   * Commits pixels from the and triggers a redraws when fininished.
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _drawPixels(
-    sourceY: number,
-    sourceX: number,
+  protected _pixels(
+    targetSourceY: number,
+    targetSourceX: number,
   ): void {
     // even
     if (this._size === 1) {
-      this.source[sourceY][sourceX] = this._colorIndex;
+      this.source[targetSourceY][targetSourceX] = this._paletteIndex;
       return;
     }
 
     let topLeftX: number;
     let topLeftY: number;
     if (this._size % 2 === 0) {
-      topLeftX = sourceX - (this._size / 2);
-      topLeftY = sourceY - (this._size / 2) + 1;
+      topLeftX = targetSourceX - (this._size / 2);
+      topLeftY = targetSourceY - (this._size / 2) + 1;
     }
     else {
-      topLeftX = sourceX - Math.floor(this._size / 2);
-      topLeftY = sourceY - Math.floor(this._size / 2);
+      topLeftX = targetSourceX - Math.floor(this._size / 2);
+      topLeftY = targetSourceY - Math.floor(this._size / 2);
     }
-    for (let y = topLeftY; y < topLeftY + this._size; ++y) {
-      for (let x = topLeftX; x < topLeftX + this._size; ++x) {
-        if (y >= this.measurements.sourceHeight || y < 0) continue;
-        if (x >= this.measurements.sourceWidth || x < 0) continue;
-        this.source.unreactive[y][x] = this._colorIndex;
+    for (let sourceY = topLeftY; sourceY < topLeftY + this._size; ++sourceY) {
+      for (let sourceX = topLeftX; sourceX < topLeftX + this._size; ++sourceX) {
+        if (sourceY >= this.measurements.sourceHeight || sourceY < 0) continue;
+        if (sourceX >= this.measurements.sourceWidth || sourceX < 0) continue;
+        this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
       }
     }
     this.forceRefresh();
@@ -179,20 +179,21 @@ class Brush extends Tool {
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const yx = this.mouseEventToSourceYX(mouseEvent);
     if (yx == null) return;
-    const [sourceY, sourceX] = yx;
+    const targetSourceY = yx[0];
+    const targetSourceX = yx[1];
 
     if (
-      this._lastSourceY === sourceY &&
-      this._lastSourceX === sourceX
+      this._lastSourceY === targetSourceY &&
+      this._lastSourceX === targetSourceX
     ) return;
 
-    this._lastSourceY = sourceY;
-    this._lastSourceX = sourceX;
+    this._lastSourceY = targetSourceY;
+    this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
     if (this.preview) {
       this.refreshPreview();
-      this._drawPreview(sourceY, sourceX);
+      this._previewCursor(targetSourceY, targetSourceX);
     }
 
     // this will automatically trigger redraw if it fires
@@ -200,7 +201,7 @@ class Brush extends Tool {
       mouseEvent.buttons === 1 &&
       !this._didDrawOnLastSource
     ) {
-      this._drawPixels(sourceY, sourceX);
+      this._pixels(targetSourceY, targetSourceX);
       this._didDrawOnLastSource = true;
     }
     // otherwise make sure to request it!!!
@@ -222,10 +223,10 @@ class Brush extends Tool {
 
     if (this.preview) {
       this.refreshPreview();
-      this._drawPreview(sourceY, sourceX);
+      this._previewCursor(sourceY, sourceX);
     }
 
-    this._drawPixels(sourceY, sourceX);
+    this._pixels(sourceY, sourceX);
     this._didDrawOnLastSource = true;
   };
 
@@ -250,4 +251,4 @@ class Brush extends Tool {
   }
 }
 
-export default Brush;
+export default Pen;

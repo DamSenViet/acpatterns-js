@@ -4,7 +4,7 @@ import PatternType from "./PatternType";
 import Drawable from "./Drawable";
 import {
   color,
-  pixel,
+  paletteIndex,
 } from "./utils";
 import {
   Engine,
@@ -415,9 +415,9 @@ class Modeler {
    * @param sourceX - the x coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
-    else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
+  private _onPixelUpdate = (sourceY: number, sourceX: number, paletteIndex: paletteIndex): void => {
+    if (paletteIndex === 15) this._pixelsContext.fillStyle = "#FFFFFF";
+    else this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
     this._redraw();
   }
@@ -428,7 +428,7 @@ class Modeler {
    * @param i - the idx of the palette that changed
    * @param color - the hex color that it changed to
    */
-  private _onPaletteUpdate = (i: pixel, color: color): void => {
+  private _onPaletteUpdate = (i: paletteIndex, color: color): void => {
     for (
       let sourceY: number = 0;
       sourceY < this._measurements.sourceHeight;
@@ -533,9 +533,9 @@ class Modeler {
     this._pixelsContext.fillRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIdx = this._source[sourceY][sourceX];
-        if (paletteIdx === 15) continue;
-        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
+        const paletteIndex = this._source[sourceY][sourceX];
+        if (paletteIndex === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }

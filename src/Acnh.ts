@@ -3,7 +3,7 @@ import Hook from "./Hook";
 import {
   byte,
   color,
-  pixel,
+  paletteIndex,
 } from "./utils";
 
 //ACNH data layout.
@@ -120,7 +120,7 @@ class ACNH {
   ];
   private _paletteApi: color[][] = null;
 
-  private _pixels: pixel[][] = new Array(15).fill(15).map(() => {
+  private _pixels: paletteIndex[][] = new Array(15).fill(15).map(() => {
     return new Array(32).fill(15);
   });
 

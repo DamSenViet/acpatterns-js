@@ -178,21 +178,19 @@
         onclick="drawer.pixelFilter = !drawer.pixelFilter; this.innerText = `pixelFilter: ${drawer.pixelFilter}`;">
         pixelFilter: false
       </button>
-      <button
-        onclick="drawer.preview = !drawer.preview; this.innerText = `preview: ${drawer.preview}`;">
+      <button onclick="drawer.preview = !drawer.preview; this.innerText = `preview: ${drawer.preview}`;">
         preview: false
       </button>
-      <button
-        onclick="drawer.grid = !drawer.grid; this.innerText = `grid: ${drawer.grid}`;">
+      <button onclick="drawer.grid = !drawer.grid; this.innerText = `grid: ${drawer.grid}`;">
         grid: false
       </button>
     </div>
     <div>Drawer Tools</div>
     <div>
-      <button onclick="drawer.tool = new acpatterns.tools.Brush({ size: 1, })">Brush Small</button>
-      <button onclick="drawer.tool = new acpatterns.tools.Brush({ size: 5, })">Brush Medium</button>
-      <button onclick="drawer.tool = new acpatterns.tools.Brush({ size: 10, })">Brush Large</button>
-    <button onclick="drawer.tool = new acpatterns.tools.Bucket({})">Bucket</button>
+      <button onclick="drawer.tool = new acpatterns.tools.Pen({ size: 1, })">Brush Small</button>
+      <button onclick="drawer.tool = new acpatterns.tools.Pen({ size: 5, })">Brush Medium</button>
+      <button onclick="drawer.tool = new acpatterns.tools.Pen({ size: 10, })">Brush Large</button>
+      <button onclick="drawer.tool = new acpatterns.tools.Fill()">Fill</button>
     </div>
   </div>
   <div class="modeler-options-container">

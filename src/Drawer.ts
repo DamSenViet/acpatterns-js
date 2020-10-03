@@ -4,7 +4,7 @@ import Drawable from "./Drawable";
 import { Tool } from "./tools";
 import {
   color,
-  pixel,
+  paletteIndex,
 } from "./utils";
 import { IllegalStateError } from "./errors";
 import xbrz from "./xbrz";
@@ -103,7 +103,7 @@ class Drawer {
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
 
   /**
-   * The canvas to render the post-processed pixelsCanvas onto. Textures model.
+   * The canvas to render the post-processed pixelsCanvas onto.
    */
   private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
 
@@ -391,9 +391,9 @@ class Drawer {
     this._pixelsContext.clearRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIdx = this._source[sourceY][sourceX];
-        if (paletteIdx === 15) continue;
-        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
+        const paletteIndex = this._source[sourceY][sourceX];
+        if (paletteIndex === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
@@ -492,12 +492,12 @@ class Drawer {
    * @param sourceX - the x coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    if (pixel === 15) {
+  private _onPixelUpdate = (sourceY: number, sourceX: number, paletteIndex: paletteIndex): void => {
+    if (paletteIndex === 15) {
       this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
       return;
     }
-    this._pixelsContext.fillStyle = this._pattern.palette[pixel];
+    this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
 
 
@@ -520,7 +520,7 @@ class Drawer {
    * @param i - the idx of the palette that changed
    * @param color - the hex color that it changed to
    */
-  private _onPaletteUpdate = (i: pixel, color: color): void => {
+  private _onPaletteUpdate = (i: paletteIndex, color: color): void => {
     // loop through entire source for i, replace all i values with new color
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {

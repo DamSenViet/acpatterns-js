@@ -6,7 +6,7 @@ import PatternType from "./PatternType";
 import HookSystem from "./HookSystem";
 import {
   color,
-  pixel,
+  paletteIndex,
   byte,
   mapping,
   Uint16ToBytes,
@@ -452,7 +452,7 @@ class Acnl extends Drawable {
 
   // type size determines what to truncate down when converting to binary.
   // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
-  private _pixels: pixel[][] = new Array(128).fill(0).map(() => {
+  private _pixels: paletteIndex[][] = new Array(128).fill(0).map(() => {
     return new Array(32).fill(0);
   }); // start with entire transparent
   private _pixelsApi: PixelsSource = null;
@@ -572,37 +572,37 @@ class Acnl extends Drawable {
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
     const api: PixelsSource = new PixelsSource(_pixels.length);
-    const unreactiveApi: Array<Array<pixel>>
-      = new Array<Array<pixel>>(_pixels.length);
+    const unreactiveApi: Array<Array<paletteIndex>>
+      = new Array<Array<paletteIndex>>(_pixels.length);
     for (let y = 0; y < _pixels.length; ++y) {
       const rowApi = new Array(_pixels[y].length);
       const unreactiveRowApi = new Array(_pixels[y].length);
       for (let x = 0; x < _pixels[y].length; ++x) {
         Object.defineProperty(rowApi, x, {
           ...propertyConfig,
-          get: (): pixel => _pixels[y][x],
-          set: (pixel: pixel) => {
-            if (pixel < 0 && pixel > 15)
+          get: (): paletteIndex => _pixels[y][x],
+          set: (paletteIndex: paletteIndex) => {
+            if (paletteIndex < 0 && paletteIndex > 15)
               throw new RangeError();
             // assignment hook
-            _pixels[y][x] = pixel;
-            api.hook.trigger(y, x, pixel);
+            _pixels[y][x] = paletteIndex;
+            api.hook.trigger(y, x, paletteIndex);
           }
         });
         Object.defineProperty(unreactiveRowApi, x, {
           ...propertyConfig,
-          get: (): pixel => _pixels[y][x],
-          set: (pixel: pixel) => {
-            if (pixel < 0 && pixel > 15)
+          get: (): paletteIndex => _pixels[y][x],
+          set: (paletteIndex: paletteIndex) => {
+            if (paletteIndex < 0 && paletteIndex > 15)
               throw new RangeError();
-            _pixels[y][x] = pixel;
+            _pixels[y][x] = paletteIndex;
           }
         });
       }
       Object.defineProperty(api, y, {
         ...propertyConfig,
-        get: (): Array<pixel> => rowApi,
-        set: (row: Array<pixel>) => {
+        get: (): Array<paletteIndex> => rowApi,
+        set: (row: Array<paletteIndex>) => {
           for (let x = 0; x < rowApi.length; ++x) {
             rowApi[x] = row[x];
           }
@@ -610,8 +610,8 @@ class Acnl extends Drawable {
       });
       Object.defineProperty(unreactiveApi, y, {
         ...propertyConfig,
-        get: (): Array<pixel> => unreactiveRowApi,
-        set: (row: Array<pixel>) => {
+        get: (): Array<paletteIndex> => unreactiveRowApi,
+        set: (row: Array<paletteIndex>) => {
           for (let x = 0; x < unreactiveRowApi.length; ++x) {
             unreactiveRowApi[x] = row[x];
           }
@@ -643,11 +643,11 @@ class Acnl extends Drawable {
       const mapping = _type.sections[sectionName];
       const sectionApi: PixelsSource =
         new PixelsSource(mapping.length).fill(null);
-      const unreactiveSectionApi: Array<Array<pixel>>
-        = new Array<Array<pixel>>(mapping.length);
+      const unreactiveSectionApi: Array<Array<paletteIndex>>
+        = new Array<Array<paletteIndex>>(mapping.length);
       for (let y: number = 0; y < mapping.length; ++y) {
-        const rowApi = new Array<pixel>(mapping[y].length);
-        const unreactiveRowApi = new Array<pixel>(mapping[y].length);
+        const rowApi = new Array<paletteIndex>(mapping[y].length);
+        const unreactiveRowApi = new Array<paletteIndex>(mapping[y].length);
         for (let x: number = 0; x < mapping[y].length; ++x) {
           const targetY = mapping[y][x][0];
           const targetX = mapping[y][x][1];
@@ -666,23 +666,23 @@ class Acnl extends Drawable {
           // trigger setter at target
           Object.defineProperty(rowApi, x, {
             ...propertyConfig,
-            get: (): pixel => pixels[targetY][targetX],
-            set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
+            get: (): paletteIndex => pixels[targetY][targetX],
+            set: (paletteIndex: paletteIndex) => { pixels[targetY][targetX] = paletteIndex; },
           });
           Object.defineProperty(unreactiveRowApi, x, {
             ...propertyConfig,
-            get: (): pixel => _pixels[targetY][targetX],
-            set: (pixel: pixel) => {
-              if (pixel < 0 && pixel > 15)
+            get: (): paletteIndex => _pixels[targetY][targetX],
+            set: (paletteIndex: paletteIndex) => {
+              if (paletteIndex < 0 && paletteIndex > 15)
                 throw new RangeError();
-              _pixels[targetY][targetX] = pixel;
+              _pixels[targetY][targetX] = paletteIndex;
             }
           });
         }
         Object.defineProperty(sectionApi, y, {
           ...propertyConfig,
-          get: (): Array<pixel> => rowApi,
-          set: (row: Array<pixel>) => {
+          get: (): Array<paletteIndex> => rowApi,
+          set: (row: Array<paletteIndex>) => {
             for (let x = 0; x < rowApi.length; ++x) {
               rowApi[x] = row[x];
             }
@@ -690,8 +690,8 @@ class Acnl extends Drawable {
         });
         Object.defineProperty(unreactiveSectionApi, y, {
           ...propertyConfig,
-          get: (): Array<pixel> => unreactiveRowApi,
-          set: (row: Array<pixel>) => {
+          get: (): Array<paletteIndex> => unreactiveRowApi,
+          set: (row: Array<paletteIndex>) => {
             for (let x = 0; x < unreactiveRowApi.length; ++x) {
               unreactiveRowApi[x] = row[x];
             }
@@ -989,7 +989,7 @@ class Acnl extends Drawable {
     this._type = byteToType.get(bytes.splice(0, 1)[0]);
     bytes.splice(0, 2); // zero padding
     // load pixels
-    const pixelsFlattened: pixel[] = bytes
+    const pixelsFlattened: paletteIndex[] = bytes
       .splice(0, bytes.length)
       .reduce((accum, byte) => {
         // each byte contains 2 pixels
