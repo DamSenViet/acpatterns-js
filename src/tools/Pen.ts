@@ -86,8 +86,8 @@ class Pen extends Tool {
 
   /**
    * Draws the preview/indicator.
-   * @param sourceY - the y coordinate of the source
-   * @param sourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
+   * @param targetSourceX - the x coordinate of the source
    */
   protected _previewCursor(
     targetSourceY: number,
@@ -138,8 +138,8 @@ class Pen extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param sourceY - the y coordinate of the source
-   * @param sourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
+   * @param targetSourceX - the x coordinate of the source
    */
   protected _pixels(
     targetSourceY: number,
@@ -216,17 +216,18 @@ class Pen extends Tool {
   protected _onMouseDown = (mouseEvent: MouseEvent) => {
     const yx = this.mouseEventToSourceYX(mouseEvent);
     if (yx == null) return;
-    const [sourceY, sourceX] = yx;
-
-    this._lastSourceY = sourceY;
-    this._lastSourceX = sourceX;
+    const targetSourceY = yx[0];
+    const targetSourceX = yx[1];
+    
+    this._lastSourceY = targetSourceY;
+    this._lastSourceX = targetSourceX;
 
     if (this.preview) {
       this.refreshPreview();
-      this._previewCursor(sourceY, sourceX);
+      this._previewCursor(targetSourceY, targetSourceX);
     }
 
-    this._pixels(sourceY, sourceX);
+    this._pixels(targetSourceY, targetSourceX);
     this._didDrawOnLastSource = true;
   };
 
