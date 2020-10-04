@@ -1,0 +1,333 @@
+import Tool from "./Tool";
+import { paletteIndex } from "../utils";
+
+export interface RectangleOptions {
+}
+
+
+/**
+ * A fill tool.
+ */
+class Rectangle extends Tool {
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
+
+  /**
+   * The last sourceX passed over.
+   */
+  protected _lastSourceX: number = null;
+
+  /**
+   * Flag to reduce drawing operations.
+   */
+  protected _didDrawOnLastSource: boolean = false;
+
+  /**
+   * The value to overwrite pixels with.
+   * A pointer to a color in the palette palette.
+   */
+  protected _paletteIndex: paletteIndex = 0;
+
+
+  protected _startingSourceY: number = null;
+
+
+  protected _startingSourceX: number = null;
+
+
+  /**
+   * Creates a Bucket instance.
+   * @param options - a config object
+   */
+  public constructor(options?: Rectangle) {
+    super();
+    if (arguments.length <= 0) return;
+  }
+
+
+  /**
+   * Gets the palette pointer of the bucket.
+   */
+  public get paletteIndex(): number {
+    return this._paletteIndex;
+  }
+
+
+  /**
+   * Sets the palette pointer of the bucket.
+   */
+  public set paletteIndex(paletteIndex: number) {
+    if (typeof paletteIndex !== "number") {
+      throw new TypeError();
+    }
+    this._paletteIndex = paletteIndex;
+  };
+
+
+  /**
+   * Draws the default cursor preview/indicator.
+   * @param sourceY - the y coordinate of the source
+   * @param sourceX - the x coordinate of the source
+   */
+  protected _previewDefaultCursor(
+    targetSourceY: number,
+    targetSourceX: number,
+    size: number,
+  ): void {
+    this.previewContext.strokeStyle = "#00d2c2";
+    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    // top left of the square
+    let topLeftSourceX: number;
+    let topLeftSourceY: number;
+    if (size % 2 === 0) {
+      topLeftSourceX = targetSourceX - (size / 2);
+      topLeftSourceY = targetSourceY - (size / 2) + 1;
+    }
+    else {
+      topLeftSourceX = targetSourceX - Math.floor(size / 2);
+      topLeftSourceY = targetSourceY - Math.floor(size / 2);
+    }
+    this.previewContext.beginPath();
+    // top left
+    this.previewContext.moveTo(
+      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
+      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    );
+    // top right
+    this.previewContext.lineTo(
+      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
+      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    );
+    // bottom right
+    this.previewContext.lineTo(
+      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
+      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    );
+    // bottom left
+    this.previewContext.lineTo(
+      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
+      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    );
+    // back to top left
+    this.previewContext.lineTo(
+      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
+      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    );
+    this.previewContext.stroke();
+  }
+
+
+  /**
+   * Draws the cursor preview/indicator.
+   * @param sourceY - the y coordinate of the source
+   * @param sourceX - the x coordinate of the source
+   */
+  protected _previewCursor(
+    targetSourceY: number,
+    targetSourceX: number,
+  ): void {
+    if (this._startingSourceY == null && this._startingSourceX == null) {
+      this._previewDefaultCursor(targetSourceY, targetSourceX, 1);
+      return;
+    }
+
+    // if not one space, draw the two anchors, then everything in between
+    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+
+    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
+    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
+    let height: number = (
+      Math.max(this._startingSourceY, targetSourceY) -
+      Math.min(this._startingSourceY, targetSourceY)
+    );
+    let width: number = Math.abs(
+      Math.max(this._startingSourceX, targetSourceX) -
+      Math.min(this._startingSourceX, targetSourceX)
+    );
+
+    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+
+    // top left (exclusive) to top right (inclusive)
+    for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {
+      this.previewContext.fillRect(
+        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
+        (this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize,
+        this.measurements.pixelSize,
+        this.measurements.pixelSize,
+      );
+    }
+
+    // top right (exclusive) to bottom right (inclusive)
+    for (let sourceY = topLeftSourceY + 1; sourceY <= topLeftSourceY + height; ++sourceY) {
+      this.previewContext.fillRect(
+        (this.measurements.pixelXStart + topLeftSourceX + width) * this.measurements.pixelSize,
+        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
+        this.measurements.pixelSize,
+        this.measurements.pixelSize,
+      );
+    }
+
+    // bottom right (exclusive) to bottom left (inclusive)
+    for (let sourceX = topLeftSourceX + width - 1; sourceX >= topLeftSourceX; --sourceX) {
+      this.previewContext.fillRect(
+        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
+        (this.measurements.pixelYStart + topLeftSourceY + height) * this.measurements.pixelSize,
+        this.measurements.pixelSize,
+        this.measurements.pixelSize,
+      );
+    }
+
+    // bottom left (exlusive) to top left (inclusive)
+    for (let sourceY = topLeftSourceY + height - 1; sourceY >= topLeftSourceY; --sourceY) {
+      this.previewContext.fillRect(
+        (this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize,
+        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
+        this.measurements.pixelSize,
+        this.measurements.pixelSize,
+      );
+    }
+
+    // fill in area in between with intended color transparent
+    this._previewDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+    this._previewDefaultCursor(targetSourceY, targetSourceX, 1);
+  }
+
+
+  /**
+   * Commits pixels from the and triggers a redraws when fininished.
+   * @param targetSourceY - the y coordinate of the source target
+   * @param targetSourceX - the x coordinate of the source target
+   */
+  protected _pixels(
+    targetSourceY: number,
+    targetSourceX: number,
+  ): void {
+    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
+    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
+    let height: number = (
+      Math.max(this._startingSourceY, targetSourceY) -
+      Math.min(this._startingSourceY, targetSourceY)
+    );
+    let width: number = Math.abs(
+      Math.max(this._startingSourceX, targetSourceX) -
+      Math.min(this._startingSourceX, targetSourceX)
+    );
+
+
+    // top left to top right
+    for (
+      let sourceX = topLeftSourceX;
+      sourceX <= topLeftSourceX + width;
+      ++sourceX
+    ) this.source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
+
+    // top right to bottom right
+    for (
+      let sourceY = topLeftSourceY;
+      sourceY <= topLeftSourceY + height;
+      ++sourceY
+    ) this.source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
+
+    // bottom left to bottom right
+    for (
+      let sourceX = topLeftSourceX;
+      sourceX <= topLeftSourceX + width;
+      ++sourceX
+    ) this.source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
+
+    // top left to bottom left
+    for (
+      let sourceY = topLeftSourceY;
+      sourceY <= topLeftSourceY + height;
+      ++sourceY
+    ) this.source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
+
+    this.forceRefresh();
+  }
+
+
+  /**
+   * Mousemove callback.
+   * @param mouseEvent -  mouse event passed to the callback
+   */
+  protected _onMouseMove = (mouseEvent: MouseEvent) => {
+    const yx = this.mouseEventToSourceYX(mouseEvent);
+    if (yx == null) return;
+    const targetSourceY = yx[0];
+    const targetSourceX = yx[1];
+
+    if (
+      this._lastSourceY === targetSourceY &&
+      this._lastSourceX === targetSourceX
+    ) return;
+
+    this._lastSourceY = targetSourceY;
+    this._lastSourceX = targetSourceX;
+    this._didDrawOnLastSource = false;
+
+    if (this.preview) {
+      this.refreshPreview();
+      this._previewCursor(targetSourceY, targetSourceX);
+      requestAnimationFrame(this.redraw);
+    }
+  };
+
+
+  /**
+   * Mousedown callback.
+   * @param mouseEvent - mouse event passed to the callback
+   */
+  protected _onMouseDown = (mouseEvent: MouseEvent) => {
+    const yx = this.mouseEventToSourceYX(mouseEvent);
+    if (yx == null) return;
+    const targetSourceY = yx[0];
+    const targetSourceX = yx[1];
+
+    this._lastSourceY = targetSourceY;
+    this._lastSourceX = targetSourceX;
+
+    if (this._startingSourceY != null && this._startingSourceX != null) {
+      // if (this.preview) {
+      //   this.refreshPreview();
+      //   this._previewCursor(targetSourceY, targetSourceX);
+      // }
+      this._pixels(targetSourceY, targetSourceX);
+      this._startingSourceY = null;
+      this._startingSourceX = null;
+      this._didDrawOnLastSource = true;
+    }
+    else if (this._startingSourceY == null && this._startingSourceX == null) {
+      if (this.preview) {
+        this.refreshPreview();
+        this._previewCursor(targetSourceY, targetSourceX);
+      }
+      this._startingSourceY = targetSourceY;
+      this._startingSourceX = targetSourceX;
+      requestAnimationFrame(this.redraw);
+    }
+  };
+
+
+  /**
+   * Mount all event listeners onto the canvas.
+   */
+  public mount(): void {
+    super.mount();
+    this.canvas.addEventListener("mousemove", this._onMouseMove);
+    this.canvas.addEventListener("mousedown", this._onMouseDown);
+  }
+
+
+  /**
+   * Unmount all mounted event listeners on canvas.
+   */
+  public unmount(): void {
+    super.unmount();
+    this.canvas.removeEventListener("mousemove", this._onMouseMove);
+    this.canvas.removeEventListener("mousedown", this._onMouseDown);
+  }
+}
+
+export default Rectangle;

@@ -17,19 +17,37 @@ class Tool {
    */
   public constructor() { };
 
+
+  public get drawer(): Drawer {
+    return this._drawer;
+  }
+
+
+  public set drawer(drawer: Drawer) {
+    if (drawer == null) {
+      this.unmount();
+      this._drawer = drawer;
+    }
+    else if (!(drawer instanceof Drawer)) {
+      const message = `Expected an instance of Drawer.`
+      throw new TypeError(message);
+    }
+    else {
+      this._drawer = drawer;
+      this.mount();
+    }
+  };
+
   protected get canvas(): HTMLCanvasElement {
-    // @ts-ignore
-    return this._drawer._canvas;
+    return this._drawer.canvas;
   }
 
   protected get measurements(): Readonly<DrawerMeasurements> {
-    // @ts-ignore
-    return this._drawer._measurements;
+    return this._drawer.measurements;
   }
 
   protected get source(): PixelsSource {
-    // @ts-ignore
-    return this._drawer._source;
+    return this._drawer.source;
   }
 
   protected get previewContext(): CanvasRenderingContext2D {
@@ -89,8 +107,8 @@ class Tool {
     const sourceX = pixelX - this.measurements.pixelXStart;
     return [sourceY, sourceX];
   }
-  
-  
+
+
   /**
    * Helper to determine whether or not the y, x values are valid to access.
    * @param sourceY - the y component of the source coordinate to validate

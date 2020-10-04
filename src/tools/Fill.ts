@@ -25,9 +25,10 @@ class Fill extends Tool {
   protected _didDrawOnLastSource: boolean = false;
 
   /**
-   * Flag to determine whether to highlight fill area.
+   * Holds the last set of area of points that can be filled.
+   * Stores a bunch of these (JSON.stringify([sourceY, sourceX]));
    */
-  protected _fillArea: boolean = true;
+  protected _lastSourcePointJSONSet: Set<string> = new Set<string>();
 
   /**
    * The value to overwrite pixels with.
@@ -37,7 +38,7 @@ class Fill extends Tool {
 
 
   /**
-   * Creates a Bucket instance.
+   * Creates a Fill instance.
    * @param options - a config object
    */
   public constructor(options?: FillOptions) {
@@ -63,6 +64,20 @@ class Fill extends Tool {
     }
     this._paletteIndex = paletteIndex;
   };
+
+
+  /**
+   * Draws the preview/indicator.
+   * @param targetSourceY - the y coordinate of the source
+   * @param targetSourceX - the x coordinate of the source
+   */
+  protected _preview(
+    targetSourceY: number,
+    targetSourceX: number,
+  ): void {
+    this._previewCursor(targetSourceY, targetSourceX);
+    this._previewFillArea(targetSourceY, targetSourceX);
+  }
 
 
   /**
@@ -119,13 +134,10 @@ class Fill extends Tool {
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
-    const jsonSourcePointSet = new Set<string>();
-    this._previewFillAreaHelper(targetSourceY, targetSourceX, paletteIndexToReplace, jsonSourcePointSet);
-    const sourcePoints = [...jsonSourcePointSet.values()].map(v => <[number, number]>JSON.parse(v));
+    const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
-      const [sourceY, sourceX] = sourcePoints[i];
+      const [sourceY, sourceX] = <[number, number]> JSON.parse(sourcePoints[i]);
       this.previewContext.fillRect(
         (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
         (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
@@ -137,27 +149,56 @@ class Fill extends Tool {
 
 
   /**
-   * Recursive helper for _previewFillArea. Flood-fill Algorithm.
+   * Recomputes _lastSourcePointJSONSet.
+   * @param targetSourceY - the y component of the source coordinate
+   * @param targetSourceX - the x component of the source coordinate
+   */
+  protected _computeLastSourcePointJSONSet(
+    targetSourceY: number,
+    targetSourceX: number,
+  ): void {
+    this._lastSourcePointJSONSet.clear();
+    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    this._computeLastSourcePointJSONSetHelper(targetSourceY, targetSourceX, paletteIndexToReplace);
+  }
+
+
+  /**
+   * Helper for _computeLastSourcePointJSONSet. Flood-fill Algorithm.
    * @param sourceY - the y component of the source coordinate
    * @param sourceX - the x component of the source coordinate
    * @param target - the paletteIndex to replace
-   * @param jsonSourcePointSet - the set of json strings contains source coordinates
    */
-  protected _previewFillAreaHelper(
+  protected _computeLastSourcePointJSONSetHelper(
     sourceY: number,
     sourceX: number,
     target: paletteIndex,
-    jsonSourcePointSet: Set<string>,
   ): void {
     if (!this.isValidSourceYX(sourceY, sourceX)) return;
     const jsonSourcePoint = JSON.stringify([sourceY, sourceX]);
-    if (jsonSourcePointSet.has(jsonSourcePoint)) return;
+    if (this._lastSourcePointJSONSet.has(jsonSourcePoint)) return;
     else if (this.source.unreactive[sourceY][sourceX] !== target) return;
-    jsonSourcePointSet.add(JSON.stringify([sourceY, sourceX]));
-    this._previewFillAreaHelper(sourceY - 1, sourceX, target, jsonSourcePointSet);
-    this._previewFillAreaHelper(sourceY + 1, sourceX, target, jsonSourcePointSet);
-    this._previewFillAreaHelper(sourceY, sourceX - 1, target, jsonSourcePointSet);
-    this._previewFillAreaHelper(sourceY, sourceX + 1, target, jsonSourcePointSet);
+    this._lastSourcePointJSONSet.add(JSON.stringify([sourceY, sourceX]));
+    this._computeLastSourcePointJSONSetHelper(
+      sourceY - 1,
+      sourceX,
+      target,
+    );
+    this._computeLastSourcePointJSONSetHelper(
+      sourceY + 1,
+      sourceX,
+      target,
+    );
+    this._computeLastSourcePointJSONSetHelper(
+      sourceY,
+      sourceX - 1,
+      target,
+    );
+    this._computeLastSourcePointJSONSetHelper(
+      sourceY,
+      sourceX + 1,
+      target,
+    );
   }
 
 
@@ -170,33 +211,13 @@ class Fill extends Tool {
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
-    this._pixelsHelper(targetSourceY, targetSourceX, paletteIndexToReplace);
+    const sourcePoints = [...this._lastSourcePointJSONSet.values()];
+    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    for (let i = 0; i < sourcePoints.length; ++i) {
+      const [sourceY, sourceX] = <[number, number]> JSON.parse(sourcePoints[i]);
+      this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+    }
     this.forceRefresh();
-  }
-
-
-  /**
-   * Recursive helper for _pixels. Flood-fill Algorithm.
-   * @param sourceY - the y component of the source coordinate
-   * @param sourceX - the x component of the source coordinate
-   * @param target - the paletteIndex to replace
-   * @param replacement - the paletteIndex to replace it with
-   */
-  protected _pixelsHelper(
-    sourceY: number,
-    sourceX: number,
-    target: paletteIndex,
-    replacement: paletteIndex = this._paletteIndex,
-  ): void {
-    if (!this.isValidSourceYX(sourceY, sourceX)) return;
-    if (target === replacement) return;
-    else if (this.source.unreactive[sourceY][sourceX] !== target) return;
-    else this.source.unreactive[sourceY][sourceX] = replacement;
-    this._pixelsHelper(sourceY - 1, sourceX, target);
-    this._pixelsHelper(sourceY + 1, sourceX, target);
-    this._pixelsHelper(sourceY, sourceX - 1, target);
-    this._pixelsHelper(sourceY, sourceX + 1, target);
   }
 
 
@@ -214,15 +235,22 @@ class Fill extends Tool {
       this._lastSourceY === targetSourceY &&
       this._lastSourceX === targetSourceX
     ) return;
-
+    
     this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
+    
+    // coordinates have changed, recompute the cluster
+    if (
+      !this._lastSourcePointJSONSet.has(JSON.stringify([
+        targetSourceY,
+        targetSourceX
+      ]))
+    ) this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
 
     if (this.preview) {
       this.refreshPreview();
-      if (this._fillArea) this._previewFillArea(targetSourceY, targetSourceX);
-      this._previewCursor(targetSourceY, targetSourceX);
+      this._preview(targetSourceY, targetSourceX);
       requestAnimationFrame(this.redraw);
     }
   };

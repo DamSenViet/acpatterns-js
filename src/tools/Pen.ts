@@ -92,19 +92,20 @@ class Pen extends Tool {
   protected _previewCursor(
     targetSourceY: number,
     targetSourceX: number,
+    size: number = this._size,
   ): void {
     this.previewContext.strokeStyle = "#00d2c2";
     this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
-    if (this._size % 2 === 0) {
-      topLeftSourceX = targetSourceX - (this._size / 2);
-      topLeftSourceY = targetSourceY - (this._size / 2) + 1;
+    if (size % 2 === 0) {
+      topLeftSourceX = targetSourceX - (size / 2);
+      topLeftSourceY = targetSourceY - (size / 2) + 1;
     }
     else {
-      topLeftSourceX = targetSourceX - Math.floor(this._size / 2);
-      topLeftSourceY = targetSourceY - Math.floor(this._size / 2);
+      topLeftSourceX = targetSourceX - Math.floor(size / 2);
+      topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
     this.previewContext.beginPath();
     // top left
@@ -114,18 +115,18 @@ class Pen extends Tool {
     );
     // top right
     this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + this._size) * this.measurements.pixelSize, this.measurements.xStop),
+      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
       Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
     );
     // bottom right
     this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + this._size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + this._size) * this.measurements.pixelSize, this.measurements.yStop),
+      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
+      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
     );
     // bottom left
     this.previewContext.lineTo(
       Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + this._size) * this.measurements.pixelSize, this.measurements.yStop),
+      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
     );
     // back to top left
     this.previewContext.lineTo(

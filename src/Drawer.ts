@@ -665,21 +665,8 @@ class Drawer {
       throw new TypeError(message);
     }
     if (this._tool === tool) return;
-    // unmount old tool
-    if (this._tool != null) {
-      // @ts-ignore
-      this._tool.unmount();
-      // @ts-ignore
-      this._tool._drawer = null;
-    }
-    // mount new tool
-    if (tool != null) {
-      // @ts-ignore
-      tool._drawer = this;
-      if (this._state === DrawerStates.PLAYING)
-        tool.mount();
-    }
-
+    if (this._tool != null) this._tool.drawer = null;
+    if (tool != null) tool.drawer = this;
     this._tool = tool;
   }
 
