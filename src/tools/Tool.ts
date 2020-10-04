@@ -80,7 +80,7 @@ class Tool {
    * @param mouseEvent - the mouse event to calculate from
    * @returns - an array containg [sourceY, sourceX]
    */
-  protected mouseEventToSourceYX(mouseEvent: MouseEvent): [number, number] {
+  protected mouseEventToPixelPoint(mouseEvent: MouseEvent): [number, number] {
     const bdr = this.canvas.getBoundingClientRect();
 
     // need to convert pixelSize to POST-CSS value
@@ -93,6 +93,17 @@ class Tool {
       (bdr.width / this.measurements.pixelGridSize) // POST-CSS pixelSize
     );
 
+    return [pixelY, pixelX];
+  }
+
+
+  /**
+   * Computes the source point from a pixel point.
+   * @returns - null when pixelPoint not in range to be converted to a source point
+   */
+  protected pixelPointToSourcePoint(pixelPoint: [number, number]): [number, number] {
+    const pixelY = pixelPoint[0];
+    const pixelX = pixelPoint[1];
     if (
       pixelY < this.measurements.pixelYStart ||
       pixelY > this.measurements.pixelYStop - 1

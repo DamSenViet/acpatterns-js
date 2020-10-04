@@ -10,6 +10,16 @@ export interface FillOptions {
  */
 class Fill extends Tool {
   /**
+   * The last pixelY pased over.
+   */
+  protected _lastPixelY: number = null;
+
+  /**
+   * The last pixelX passed over.
+   */
+  protected _lastPixelX: number = null;
+
+  /**
    * The last sourceY passed over.
    */
   protected _lastSourceY: number = null;
@@ -137,7 +147,7 @@ class Fill extends Tool {
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
-      const [sourceY, sourceX] = <[number, number]> JSON.parse(sourcePoints[i]);
+      const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
       this.previewContext.fillRect(
         (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
         (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
@@ -214,7 +224,7 @@ class Fill extends Tool {
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
-      const [sourceY, sourceX] = <[number, number]> JSON.parse(sourcePoints[i]);
+      const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
       this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
     }
     this.forceRefresh();
@@ -226,20 +236,33 @@ class Fill extends Tool {
    * @param mouseEvent -  mouse event passed to the callback
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
-    const yx = this.mouseEventToSourceYX(mouseEvent);
-    if (yx == null) return;
-    const targetSourceY = yx[0];
-    const targetSourceX = yx[1];
+    const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
+    const targetPixelY = pixelPoint[0];
+    const targetPixelX = pixelPoint[1];
+    if (
+      this._lastPixelY === targetPixelY &&
+      this._lastPixelX === targetPixelX
+    ) return;
+    this._lastPixelY = targetPixelY;
+    this._lastPixelX = targetPixelX;
+
+    const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
+    if (sourcePoint == null) {
+      this._onMouseOut();
+      return;
+    };
+    const targetSourceY = sourcePoint[0];
+    const targetSourceX = sourcePoint[1];
 
     if (
       this._lastSourceY === targetSourceY &&
       this._lastSourceX === targetSourceX
     ) return;
-    
+
     this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
-    
+
     // coordinates have changed, recompute the cluster
     if (
       !this._lastSourcePointJSONSet.has(JSON.stringify([
@@ -261,10 +284,11 @@ class Fill extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   protected _onMouseDown = (mouseEvent: MouseEvent) => {
-    const yx = this.mouseEventToSourceYX(mouseEvent);
-    if (yx == null) return;
-    const targetSourceY = yx[0];
-    const targetSourceX = yx[1];
+    const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
+    const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
+    if (sourcePoint == null) return;
+    const targetSourceY = sourcePoint[0];
+    const targetSourceX = sourcePoint[1];
 
     this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
@@ -280,12 +304,23 @@ class Fill extends Tool {
 
 
   /**
+   * Mouseout callback. Clears the preview.
+   * @param mouseEvent - mouse event passed to the callback
+   */
+  public _onMouseOut = (mouseEvent?: MouseEvent): void => {
+    this.refreshPreview();
+    requestAnimationFrame(this.redraw);
+  };
+
+
+  /**
    * Mount all event listeners onto the canvas.
    */
   public mount(): void {
     super.mount();
     this.canvas.addEventListener("mousemove", this._onMouseMove);
     this.canvas.addEventListener("mousedown", this._onMouseDown);
+    this.canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -296,6 +331,7 @@ class Fill extends Tool {
     super.unmount();
     this.canvas.removeEventListener("mousemove", this._onMouseMove);
     this.canvas.removeEventListener("mousedown", this._onMouseDown);
+    this.canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 
