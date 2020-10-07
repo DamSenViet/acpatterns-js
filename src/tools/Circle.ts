@@ -1,14 +1,14 @@
 import Tool from "./Tool";
 import { paletteIndex } from "../utils";
 
-export interface RectangleOptions {
+export interface CircleOptions {
 }
 
 
 /**
  * A fill tool.
  */
-class Rectangle extends Tool {
+class Circle extends Tool {
   /**
    * The last pixelY pased over.
    */
@@ -41,12 +41,12 @@ class Rectangle extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Rectangle.
+   * The Y component of source anchor point for drawing the Line.
    */
   protected _startingSourceY: number = null;
 
   /**
-   * The X component of source anchor point for drawing the Rectangle.
+   * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
 
@@ -55,7 +55,7 @@ class Rectangle extends Tool {
    * Creates a Bucket instance.
    * @param options - a config object
    */
-  public constructor(options?: Rectangle) {
+  public constructor(options?: CircleOptions) {
     super();
     if (arguments.length <= 0) return;
   }
@@ -78,6 +78,48 @@ class Rectangle extends Tool {
     }
     this._paletteIndex = paletteIndex;
   };
+
+
+  /**
+   * Runs callback on a circular outline.
+   * https://web.engr.oregonstate.edu/~sllu/bcircle.pdf
+   * @param y - the y component of the first point
+   * @param x - the x component of the first point
+   * @param r - the radius of the circle
+   * @param callback - the callback to call on points on the circle
+   */
+  protected _onBresenhamsCircle(
+    cy: number,
+    cx: number,
+    r: number,
+    callback: (y: number, x: number) => void,
+  ): void {
+    let x: number = r;
+    let y: number = 0;
+    let xChange: number = 1 - (2 * r);
+    let yChange: number = 1;
+    let radiusError = 0;
+    while (x >= y) {
+      // Plot8CirclePoints
+      callback(cy + y, cx + x);
+      callback(cy + y, cx - x);
+      callback(cy - y, cx - x);
+      callback(cy - y, cx + x);
+      callback(cy + x, cx + y);
+      callback(cy + x, cx - y);
+      callback(cy - x, cx - y);
+      callback(cy - x, cx + y);
+
+      ++y;
+      radiusError += yChange;
+      yChange += 2;
+      if (2 * radiusError + xChange > 0) {
+        --x;
+        radiusError += xChange;
+        xChange += 2;
+      }
+    }
+  }
 
 
   /**
@@ -144,59 +186,24 @@ class Rectangle extends Tool {
   ): void {
     // if not one space, draw the two anchors, then everything in between
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
-    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
-    let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
+    const radius = Math.max(
+      Math.abs(this._startingSourceX - targetSourceX),
+      Math.abs(this._startingSourceY - targetSourceY),
     );
-    let width: number = Math.abs(
-      Math.max(this._startingSourceX, targetSourceX) -
-      Math.min(this._startingSourceX, targetSourceX)
-    );
-
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-
-    // top left (exclusive) to top right (inclusive)
-    for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // top right (exclusive) to bottom right (inclusive)
-    for (let sourceY = topLeftSourceY + 1; sourceY <= topLeftSourceY + height; ++sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX + width) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // bottom right (exclusive) to bottom left (inclusive)
-    for (let sourceX = topLeftSourceX + width - 1; sourceX >= topLeftSourceX; --sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY + height) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // bottom left (exlusive) to top left (inclusive)
-    for (let sourceY = topLeftSourceY + height - 1; sourceY >= topLeftSourceY; --sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
+    this._onBresenhamsCircle(
+      this._startingSourceY,
+      this._startingSourceX,
+      radius,
+      (sourceY, sourceX) => {
+        if (this.isValidSourceYX(sourceY, sourceX))
+          this.previewContext.fillRect(
+            (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
+            (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
+            this.measurements.pixelSize,
+            this.measurements.pixelSize,
+          );
+      }
+    )
   }
 
 
@@ -229,45 +236,19 @@ class Rectangle extends Tool {
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
-    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
-    let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
+    const radius = Math.max(
+      Math.abs(this._startingSourceX - targetSourceX),
+      Math.abs(this._startingSourceY - targetSourceY),
     );
-    let width: number = Math.abs(
-      Math.max(this._startingSourceX, targetSourceX) -
-      Math.min(this._startingSourceX, targetSourceX)
-    );
-
-
-    // top left to top right
-    for (
-      let sourceX = topLeftSourceX;
-      sourceX <= topLeftSourceX + width;
-      ++sourceX
-    ) this.source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
-
-    // top right to bottom right
-    for (
-      let sourceY = topLeftSourceY;
-      sourceY <= topLeftSourceY + height;
-      ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
-
-    // bottom left to bottom right
-    for (
-      let sourceX = topLeftSourceX;
-      sourceX <= topLeftSourceX + width;
-      ++sourceX
-    ) this.source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
-
-    // top left to bottom left
-    for (
-      let sourceY = topLeftSourceY;
-      sourceY <= topLeftSourceY + height;
-      ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
+    this._onBresenhamsCircle(
+      this._startingSourceY,
+      this._startingSourceX,
+      radius,
+      (sourceY, sourceX) => {
+        if (this.isValidSourceYX(sourceY, sourceX))
+          this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      }
+    )
 
     this.forceRefresh();
   }
@@ -379,4 +360,4 @@ class Rectangle extends Tool {
   }
 }
 
-export default Rectangle;
+export default Circle;

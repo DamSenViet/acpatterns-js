@@ -1,14 +1,14 @@
 import Tool from "./Tool";
 import { paletteIndex } from "../utils";
 
-export interface RectangleOptions {
+export interface LineOptions {
 }
 
 
 /**
  * A fill tool.
  */
-class Rectangle extends Tool {
+class Line extends Tool {
   /**
    * The last pixelY pased over.
    */
@@ -41,12 +41,12 @@ class Rectangle extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Rectangle.
+   * The Y component of source anchor point for drawing the Line.
    */
   protected _startingSourceY: number = null;
 
   /**
-   * The X component of source anchor point for drawing the Rectangle.
+   * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
 
@@ -55,7 +55,7 @@ class Rectangle extends Tool {
    * Creates a Bucket instance.
    * @param options - a config object
    */
-  public constructor(options?: Rectangle) {
+  public constructor(options?: LineOptions) {
     super();
     if (arguments.length <= 0) return;
   }
@@ -78,6 +78,57 @@ class Rectangle extends Tool {
     }
     this._paletteIndex = paletteIndex;
   };
+
+
+  /**
+   * Runs callback on a line between two points.
+   * https://stackoverflow.com/a/11683720/8625882
+   * @param y - the y component of the first point
+   * @param x - the x component of the first point
+   * @param y2 - the y component of the second point
+   * @param x2 - the x component of the second point
+   * @param callback - the callback to call on points on the line
+   */
+  protected _onBresenhamsLine(
+    y: number,
+    x: number,
+    y2: number,
+    x2: number,
+    callback: (y: number, x: number) => void,
+  ): void {
+
+    let w: number = x2 - x;
+    let h: number = y2 - y;
+    let dx1: number = 0;
+    let dy1: number = 0;
+    let dx2: number = 0;
+    let dy2: number = 0;
+    if (w < 0) dx1 = -1; else if (w > 0) dx1 = 1;
+    if (h < 0) dy1 = -1; else if (h > 0) dy1 = 1;
+    if (w < 0) dx2 = -1; else if (w > 0) dx2 = 1;
+    let longest: number = Math.abs(w);
+    let shortest: number = Math.abs(h);
+    if (longest <= shortest) {
+      longest = Math.abs(h);
+      shortest = Math.abs(w);
+      if (h < 0) dy2 = -1; else if (h > 0) dy2 = 1;
+      dx2 = 0;
+    }
+    let numerator: number = longest >> 1;
+    for (let i = 0; i <= longest; ++i) {
+      callback(y, x);
+      numerator += shortest;
+      if (numerator >= longest) {
+        numerator -= longest;
+        x += dx1;
+        y += dy1;
+      }
+      else {
+        x += dx2;
+        y += dy2;
+      }
+    }
+  }
 
 
   /**
@@ -144,59 +195,20 @@ class Rectangle extends Tool {
   ): void {
     // if not one space, draw the two anchors, then everything in between
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
-    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
-    let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
-    );
-    let width: number = Math.abs(
-      Math.max(this._startingSourceX, targetSourceX) -
-      Math.min(this._startingSourceX, targetSourceX)
-    );
-
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-
-    // top left (exclusive) to top right (inclusive)
-    for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // top right (exclusive) to bottom right (inclusive)
-    for (let sourceY = topLeftSourceY + 1; sourceY <= topLeftSourceY + height; ++sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX + width) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // bottom right (exclusive) to bottom left (inclusive)
-    for (let sourceX = topLeftSourceX + width - 1; sourceX >= topLeftSourceX; --sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY + height) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
-
-    // bottom left (exlusive) to top left (inclusive)
-    for (let sourceY = topLeftSourceY + height - 1; sourceY >= topLeftSourceY; --sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
-      );
-    }
+    this._onBresenhamsLine(
+      this._startingSourceY,
+      this._startingSourceX,
+      targetSourceY,
+      targetSourceX,
+      (sourceY, sourceX) => {
+        this.previewContext.fillRect(
+          (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
+          (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
+          this.measurements.pixelSize,
+          this.measurements.pixelSize,
+        );
+      }
+    )
   }
 
 
@@ -229,45 +241,15 @@ class Rectangle extends Tool {
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
-    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
-    let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
-    );
-    let width: number = Math.abs(
-      Math.max(this._startingSourceX, targetSourceX) -
-      Math.min(this._startingSourceX, targetSourceX)
-    );
-
-
-    // top left to top right
-    for (
-      let sourceX = topLeftSourceX;
-      sourceX <= topLeftSourceX + width;
-      ++sourceX
-    ) this.source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
-
-    // top right to bottom right
-    for (
-      let sourceY = topLeftSourceY;
-      sourceY <= topLeftSourceY + height;
-      ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
-
-    // bottom left to bottom right
-    for (
-      let sourceX = topLeftSourceX;
-      sourceX <= topLeftSourceX + width;
-      ++sourceX
-    ) this.source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
-
-    // top left to bottom left
-    for (
-      let sourceY = topLeftSourceY;
-      sourceY <= topLeftSourceY + height;
-      ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
+    this._onBresenhamsLine(
+      this._startingSourceY,
+      this._startingSourceX,
+      targetSourceY,
+      targetSourceX,
+      (sourceY, sourceX) => {
+        this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      }
+    )
 
     this.forceRefresh();
   }
@@ -379,4 +361,4 @@ class Rectangle extends Tool {
   }
 }
 
-export default Rectangle;
+export default Line;
