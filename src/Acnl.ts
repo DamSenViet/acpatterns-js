@@ -235,7 +235,8 @@ class AcnlTypes extends Enum {
     name: "Horned Hat",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
   });
   // no one uses this
@@ -243,7 +244,8 @@ class AcnlTypes extends Enum {
     name: "Knitted Hat",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
   });
   public static Standee: PatternType = Object.freeze({
@@ -251,7 +253,7 @@ class AcnlTypes extends Enum {
     size: 128,
     sections: {
       texture: standeeTextureMapping,
-      front: standeeFrontMapping,
+      default: standardTextureMapping,
     }
   });
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
@@ -260,7 +262,8 @@ class AcnlTypes extends Enum {
     name: "Standard",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
   });
 }

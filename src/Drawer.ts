@@ -391,7 +391,7 @@ class Drawer {
     this._pixelsContext.clearRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIndex = this._source[sourceY][sourceX];
+        const paletteIndex = this._source.unreactive[sourceY][sourceX];
         if (paletteIndex === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
@@ -524,7 +524,7 @@ class Drawer {
     // loop through entire source for i, replace all i values with new color
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        if (this._source[sourceY][sourceX] !== i) continue;
+        if (this._source.unreactive[sourceY][sourceX] !== i) continue;
         this._pixelsContext.fillStyle = color;
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
