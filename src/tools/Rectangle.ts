@@ -350,6 +350,10 @@ class Rectangle extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
+    this._lastPixelY = null;
+    this._lastPixelX = null;
+    this._lastSourceY = null;
+    this._lastSourceX = null;
     this._startingSourceY = null;
     this._startingSourceX = null;
     this.refreshPreview();

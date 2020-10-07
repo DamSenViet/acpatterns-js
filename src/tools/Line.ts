@@ -52,7 +52,7 @@ class Line extends Tool {
 
 
   /**
-   * Creates a Bucket instance.
+   * Creates a Line instance.
    * @param options - a config object
    */
   public constructor(options?: LineOptions) {
@@ -332,6 +332,10 @@ class Line extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
+    this._lastPixelY = null;
+    this._lastPixelX = null;
+    this._lastSourceY = null;
+    this._lastSourceX = null;
     this._startingSourceY = null;
     this._startingSourceX = null;
     this.refreshPreview();

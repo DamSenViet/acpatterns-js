@@ -144,6 +144,8 @@ class Fill extends Tool {
     targetSourceY: number,
     targetSourceX: number,
   ): void {
+    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    if (paletteIndexToReplace === this._paletteIndex) return;
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
@@ -267,7 +269,7 @@ class Fill extends Tool {
     if (
       !this._lastSourcePointJSONSet.has(JSON.stringify([
         targetSourceY,
-        targetSourceX
+        targetSourceX,
       ]))
     ) this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
 
@@ -308,6 +310,11 @@ class Fill extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
+    this._lastSourcePointJSONSet.clear();
+    this._lastPixelY = null;
+    this._lastPixelX = null;
+    this._lastSourceY = null;
+    this._lastSourceX = null;
     this.refreshPreview();
     requestAnimationFrame(this.redraw);
   };
