@@ -1,5 +1,6 @@
 import PixelsSource from "../PixelsSource";
 import Drawer, { DrawerMeasurements } from "../Drawer";
+import Drawable from "../Drawable";
 
 
 /**
@@ -11,6 +12,7 @@ class Tool {
    * Callback for after modifying an unreactive part of a PixelsSource.
    */
   private _drawer: Drawer = null;
+
 
   /**
    * Creates a Tool instance.
@@ -38,42 +40,56 @@ class Tool {
     }
   };
 
+
   protected get canvas(): HTMLCanvasElement {
     return this._drawer.canvas;
   }
+
+
+  protected get pattern(): Drawable {
+    return this._drawer.pattern;
+  }
+
 
   protected get measurements(): Readonly<DrawerMeasurements> {
     return this._drawer.measurements;
   }
 
+
   protected get source(): PixelsSource {
     return this._drawer.source;
   }
+
 
   protected get previewContext(): CanvasRenderingContext2D {
     // @ts-ignore
     return this._drawer._previewContext;
   }
 
+
   protected get refreshPreview(): () => void {
     // @ts-ignore
     return this._drawer._refreshPreview;
   }
+
 
   protected get forceRefresh(): () => void {
     // @ts-ignore
     return this._drawer._forceRefresh;
   }
 
+
   protected get preview(): boolean {
     // @ts-ignore
     return this._drawer._preview;
   }
 
+
   protected get redraw(): () => void {
     // @ts-ignore
     return this._drawer._redraw;
   };
+
 
   /**
    * Calculates pixel coordinates from pixel grid on canvas.

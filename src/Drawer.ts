@@ -361,9 +361,9 @@ class Drawer {
         this._measurements.xSize,
         this._measurements.ySize,
       );
-    if (this._grid)
+    if (this._preview)
       this._context.drawImage(
-        this._gridCanvas,
+        this._previewCanvas,
         0, 0,
         this._measurements.size,
         this._measurements.size,
@@ -371,9 +371,9 @@ class Drawer {
         this._measurements.size,
         this._measurements.size,
       );
-    if (this._preview)
+    if (this._grid)
       this._context.drawImage(
-        this._previewCanvas,
+        this._gridCanvas,
         0, 0,
         this._measurements.size,
         this._measurements.size,
@@ -403,8 +403,7 @@ class Drawer {
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
   }
 
@@ -507,8 +506,7 @@ class Drawer {
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
     requestAnimationFrame(this._redraw);
   };
@@ -535,8 +533,7 @@ class Drawer {
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
     requestAnimationFrame(this._redraw);
   };
@@ -591,6 +588,14 @@ class Drawer {
    */
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
+  }
+
+
+  /**
+   * Gets the pattern the Drawer is drawing.
+   */
+  public get pattern(): Drawable {
+    return this._pattern;
   }
 
 
@@ -692,8 +697,7 @@ class Drawer {
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
     requestAnimationFrame(this._redraw);
   }

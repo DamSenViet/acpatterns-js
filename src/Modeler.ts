@@ -91,7 +91,7 @@ enum ModelerStates {
  * Reacts to changes to the pattern by default.
  */
 class Modeler {
-  
+
   /**
    * The possible states the Modeler can be in.
    */
@@ -552,8 +552,7 @@ class Modeler {
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
     else
       this._textureContext.drawImage(
@@ -574,6 +573,14 @@ class Modeler {
    */
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
+  }
+
+
+  /**
+   * Gets the pattern the Modeler is drawing.
+   */
+  public get pattern(): Drawable {
+    return this._pattern;
   }
 
 

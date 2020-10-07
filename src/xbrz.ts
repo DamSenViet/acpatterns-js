@@ -2076,16 +2076,16 @@ const xbrz = (
   input: CanvasRenderingContext2D,
   inputWidth: number,
   inputHeight: number,
-  output: CanvasRenderingContext2D,
-  outputWidth: number,
-  outputHeight: number,
+	output: CanvasRenderingContext2D,
+	scale: 2 | 3 | 4 | 5 | 6 = 4,
 ): void => {
   //Apply filter
 	const inData = input.getImageData(0, 0, inputWidth, inputHeight);
-  filter.Apply(inData.data, inData.width, inData.height, 4, true);
+  filter.Apply(inData.data, inData.width, inData.height, scale, true);
   const newPreview = new ImageData(Common.SizeX, Common.SizeY);
-  newPreview.data.set(Common.ScaledImage);
-  output.putImageData(newPreview, 0, 0, 0, 0, outputWidth, outputHeight);
+	newPreview.data.set(Common.ScaledImage);
+	// THIS DOESN'T SCALE THE IMAGE AT ALL
+  output.putImageData(newPreview, 0, 0);
 };
 
 export default xbrz;
