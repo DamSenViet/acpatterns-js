@@ -149,8 +149,8 @@ class Pen extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source
-   * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - y coordinate in source
+   * @param targetSourceX - x coordinate in source
    */
   protected _pixels(
     targetSourceY: number,

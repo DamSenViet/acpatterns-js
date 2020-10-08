@@ -143,8 +143,6 @@ class Rectangle extends Tool {
     targetSourceX: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
-
     let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
     let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
     let height: number = (
@@ -156,7 +154,7 @@ class Rectangle extends Tool {
       Math.min(this._startingSourceX, targetSourceX)
     );
 
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
 
     // top left (exclusive) to top right (inclusive)
     for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {
@@ -202,8 +200,8 @@ class Rectangle extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
-   * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - y coordinate in source
+   * @param targetSourceX - x coordinate in source
    */
   protected _preview(
     targetSourceY: number,
@@ -221,25 +219,28 @@ class Rectangle extends Tool {
 
 
   /**
-   * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source target
-   * @param targetSourceX - the x coordinate of the source target
+   * Commits pixels from the rectangle and triggers a redraws when finished.
+   * @param startSourceY  - the y of the starting point on the source
+   * @param startSourceX - the x of the starting point on the source
+   * @param endSourceY - the y of the ending point on the source
+   * @param endSourceX - the x of the ending point on the source
    */
   protected _pixels(
-    targetSourceY: number,
-    targetSourceX: number,
+    startSourceY: number,
+    startSourceX: number,
+    endSourceY: number,
+    endSourceX: number,
   ): void {
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
-    let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
+    let topLeftSourceY: number = Math.min(endSourceY, startSourceY);
+    let topLeftSourceX: number = Math.min(endSourceX, startSourceX);
     let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
+      Math.max(endSourceY, startSourceY) -
+      Math.min(endSourceY, startSourceY)
     );
     let width: number = Math.abs(
-      Math.max(this._startingSourceX, targetSourceX) -
-      Math.min(this._startingSourceX, targetSourceX)
+      Math.max(endSourceX, startSourceX) -
+      Math.min(endSourceX, startSourceX)
     );
-
 
     // top left to top right
     for (
@@ -328,7 +329,12 @@ class Rectangle extends Tool {
     this._lastSourceX = targetSourceX;
 
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this._pixels(targetSourceY, targetSourceX);
+      this._pixels(
+        this._startingSourceY,
+        this._startingSourceX,
+        targetSourceY,
+        targetSourceX,
+      );
       this._startingSourceY = null;
       this._startingSourceX = null;
       this._didDrawOnLastSource = true;

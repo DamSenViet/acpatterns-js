@@ -194,7 +194,7 @@ class Line extends Tool {
     targetSourceX: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
     this._onBresenhamsLine(
       this._startingSourceY,
       this._startingSourceX,
@@ -233,19 +233,23 @@ class Line extends Tool {
 
 
   /**
-   * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source target
-   * @param targetSourceX - the x coordinate of the source target
+   * Commits pixels from the rectangle and triggers a redraws when finished.
+   * @param startSourceY  -  y of the starting point in source
+   * @param startSourceX - x of the starting point in source
+   * @param endSourceY - y of the ending point in source
+   * @param endSourceX - x of the ending point in source
    */
   protected _pixels(
-    targetSourceY: number,
-    targetSourceX: number,
+    startSourceY: number,
+    startSourceX: number,
+    endSourceY: number,
+    endSourceX: number,
   ): void {
     this._onBresenhamsLine(
-      this._startingSourceY,
-      this._startingSourceX,
-      targetSourceY,
-      targetSourceX,
+      startSourceY,
+      startSourceX,
+      endSourceY,
+      endSourceX,
       (sourceY, sourceX) => {
         this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
       }
@@ -310,8 +314,12 @@ class Line extends Tool {
     this._lastSourceX = targetSourceX;
 
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this._pixels(targetSourceY, targetSourceX);
-      this._startingSourceY = null;
+      this._pixels(
+        this._startingSourceY,
+        this._startingSourceX,
+        targetSourceY,
+        targetSourceX,
+      );      this._startingSourceY = null;
       this._startingSourceX = null;
       this._didDrawOnLastSource = true;
     }

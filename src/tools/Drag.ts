@@ -245,15 +245,13 @@ class Drag extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source target
-   * @param targetSourceX - the x coordinate of the source target
+   * @param sourceYChange - the amount of change in Y, can be negative
+   * @param sourceXChange - the amount of change in X, can be negative
    */
   protected _pixels(
-    targetSourceY: number,
-    targetSourceX: number,
+    sourceYChange: number,
+    sourceXChange: number,
   ): void {
-    const sourceYChange = targetSourceY - this._startingSourceY;
-    const sourceXChange = targetSourceX - this._startingSourceX;
     // need copy to alter
     const sourceCopy = new Array(this.measurements.sourceHeight)
       .fill(0)
@@ -336,7 +334,9 @@ class Drag extends Tool {
 
     if (this._startingSourceY != null && this._startingSourceX != null) {
       this.refreshPreview();
-      this._pixels(targetSourceY, targetSourceX);
+      const sourceYChange = targetSourceY - this._startingSourceY;
+      const sourceXChange = targetSourceX - this._startingSourceX;
+      this._pixels(sourceYChange, sourceXChange);
       this._startingSourceY = null;
       this._startingSourceX = null;
       this._didDrawOnLastSource = true;

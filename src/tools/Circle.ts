@@ -185,7 +185,7 @@ class Circle extends Tool {
     targetSourceX: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
     const radius = Math.max(
       Math.abs(this._startingSourceX - targetSourceX),
       Math.abs(this._startingSourceY - targetSourceY),
@@ -229,21 +229,19 @@ class Circle extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source target
-   * @param targetSourceX - the x coordinate of the source target
+   * @param centerSourceY - y coordinate of the center of the circle in source
+   * @param centerSourceX - x coordinate of the center of the circle in source
+   * @param sourceRadius - radius from the center of the circle in source
    */
   protected _pixels(
-    targetSourceY: number,
-    targetSourceX: number,
+    centerSourceY: number,
+    centerSourceX: number,
+    sourceRadius: number,
   ): void {
-    const radius = Math.max(
-      Math.abs(this._startingSourceX - targetSourceX),
-      Math.abs(this._startingSourceY - targetSourceY),
-    );
     this._onBresenhamsCircle(
-      this._startingSourceY,
-      this._startingSourceX,
-      radius,
+      centerSourceY,
+      centerSourceX,
+      sourceRadius,
       (sourceY, sourceX) => {
         if (this.isValidSourceYX(sourceY, sourceX))
           this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
@@ -309,7 +307,15 @@ class Circle extends Tool {
     this._lastSourceX = targetSourceX;
 
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this._pixels(targetSourceY, targetSourceX);
+      const radius = Math.max(
+        Math.abs(this._startingSourceX - targetSourceX),
+        Math.abs(this._startingSourceY - targetSourceY),
+      );
+      this._pixels(
+        this._startingSourceY,
+        this._startingSourceX,
+        radius
+      );
       this._startingSourceY = null;
       this._startingSourceX = null;
       this._didDrawOnLastSource = true;

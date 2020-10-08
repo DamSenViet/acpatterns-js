@@ -147,7 +147,7 @@ class Fill extends Tool {
     const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
     if (paletteIndexToReplace === this._paletteIndex) return;
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
     for (let i = 0; i < sourcePoints.length; ++i) {
       const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
       this.previewContext.fillRect(
@@ -216,13 +216,14 @@ class Fill extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - the y coordinate of the source target
-   * @param targetSourceX - the x coordinate of the source target
+   * @param targetSourceY - y coordinate in source
+   * @param targetSourceX - x coordinate in source
    */
   protected _pixels(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
+    this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
