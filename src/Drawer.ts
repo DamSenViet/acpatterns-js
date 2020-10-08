@@ -361,9 +361,9 @@ class Drawer {
         this._measurements.xSize,
         this._measurements.ySize,
       );
-    if (this._preview)
+    if (this._grid)
       this._context.drawImage(
-        this._previewCanvas,
+        this._gridCanvas,
         0, 0,
         this._measurements.size,
         this._measurements.size,
@@ -371,9 +371,9 @@ class Drawer {
         this._measurements.size,
         this._measurements.size,
       );
-    if (this._grid)
+    if (this._preview)
       this._context.drawImage(
-        this._gridCanvas,
+        this._previewCanvas,
         0, 0,
         this._measurements.size,
         this._measurements.size,

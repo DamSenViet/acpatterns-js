@@ -67,6 +67,18 @@ class Tool {
   }
 
 
+  protected get gridCanvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._gridCanvas;
+  }
+
+
+  protected get gridContext(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._gridContext;
+  }
+
+
   protected get refreshPreview(): () => void {
     // @ts-ignore
     return this._drawer._refreshPreview;

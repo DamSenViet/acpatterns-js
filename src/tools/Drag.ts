@@ -205,7 +205,7 @@ class Drag extends Tool {
         this._textureContext,
         4,
       );
-      
+
       // third drawing operation to scale
       this.previewContext.drawImage(
         this._textureCanvas,
@@ -216,8 +216,18 @@ class Drag extends Tool {
         this.measurements.yStart,
         this.measurements.xSize,
         this.measurements.ySize,
-      )
+      );
     }
+    if (this.drawer.grid)
+      this.previewContext.drawImage(
+        this.gridCanvas,
+        0, 0,
+        this.measurements.size,
+        this.measurements.size,
+        0, 0,
+        this.measurements.size,
+        this.measurements.size,
+      );
   }
 
 
