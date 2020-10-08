@@ -5,26 +5,117 @@ import Drawable from "../Drawable";
 
 /**
  * Base class for drawing Tools used by Drawer.
+ * Simulates a nested class since TypeScript doesn't allow.
  */
 class Tool {
-
-  /**
-   * Callback for after modifying an unreactive part of a PixelsSource.
-   */
   private _drawer: Drawer = null;
 
+  // access simulation of a nested class
+  protected get _canvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._canvas;
+  }
+
+  protected get _context(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._context;
+  }
+
+  protected get _pattern(): Drawable {
+    // @ts-ignore
+    return this._drawer._pattern;
+  }
+
+  protected get _measurements(): Readonly<DrawerMeasurements> {
+    // @ts-ignore
+    return this._drawer._measurements;
+  }
+
+  protected get _source(): PixelsSource {
+    // @ts-ignore
+    return this._drawer.source;
+  }
+
+  protected get _pixelsCanvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._pixelsCanvas;
+  }
+
+  protected get _pixelsContext(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._pixelsContext;
+  }
+
+  protected get _textureCanvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._textureCanvas;
+  }
+
+  protected get _textureContext(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._textureContext;
+  }
+
+  protected get _gridCanvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._gridCanvas;
+  }
+
+  protected get _gridContext(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._gridContext;
+  }
+
+  protected get _indicatorCanvas(): HTMLCanvasElement {
+    // @ts-ignore
+    return this._drawer._indicatorCanvas;
+  }
+
+  protected get _indicatorContext(): CanvasRenderingContext2D {
+    // @ts-ignore
+    return this._drawer._indicatorContext;
+  }
+
+  protected get _grid(): boolean {
+    // @ts-ignore
+    return this._drawer._grid;
+  }
+
+  protected get _indicator(): boolean {
+    // @ts-ignore
+    return this._drawer._indicator;
+  }
+
+  protected get _pixelFilter(): boolean {
+    // @ts-ignore
+    return this._drawer._pixelFilter;
+  }
+
+  protected get _refreshIndicator(): () => void {
+    // @ts-ignore
+    return this._drawer._refreshIndicator;
+  }
+
+  protected get _redraw(): () => void {
+    // @ts-ignore
+    return this._drawer._redraw;
+  };
 
   /**
    * Creates a Tool instance.
    */
   public constructor() { };
 
-
+  /**
+   * Gets the drawer.
+   */
   public get drawer(): Drawer {
     return this._drawer;
   }
 
-
+  /**
+   * Sets the drawer.
+   */
   public set drawer(drawer: Drawer) {
     if (drawer == null) {
       this.unmount();
@@ -41,84 +132,22 @@ class Tool {
   };
 
 
-  protected get canvas(): HTMLCanvasElement {
-    return this._drawer.canvas;
-  }
-
-
-  protected get pattern(): Drawable {
-    return this._drawer.pattern;
-  }
-
-
-  protected get measurements(): Readonly<DrawerMeasurements> {
-    return this._drawer.measurements;
-  }
-
-
-  protected get source(): PixelsSource {
-    return this._drawer.source;
-  }
-
-
-  protected get previewContext(): CanvasRenderingContext2D {
-    // @ts-ignore
-    return this._drawer._previewContext;
-  }
-
-
-  protected get gridCanvas(): HTMLCanvasElement {
-    // @ts-ignore
-    return this._drawer._gridCanvas;
-  }
-
-
-  protected get gridContext(): CanvasRenderingContext2D {
-    // @ts-ignore
-    return this._drawer._gridContext;
-  }
-
-
-  protected get refreshPreview(): () => void {
-    // @ts-ignore
-    return this._drawer._refreshPreview;
-  }
-
-
-  protected get forceRefresh(): () => void {
-    // @ts-ignore
-    return this._drawer._forceRefresh;
-  }
-
-
-  protected get preview(): boolean {
-    // @ts-ignore
-    return this._drawer._preview;
-  }
-
-
-  protected get redraw(): () => void {
-    // @ts-ignore
-    return this._drawer._redraw;
-  };
-
-
   /**
    * Calculates pixel coordinates from pixel grid on canvas.
    * @param mouseEvent - the mouse event to calculate from
    * @returns - an array containg [sourceY, sourceX]
    */
   protected mouseEventToPixelPoint(mouseEvent: MouseEvent): [number, number] {
-    const bdr = this.canvas.getBoundingClientRect();
+    const bdr = this._canvas.getBoundingClientRect();
 
     // need to convert pixelSize to POST-CSS value
     const pixelY = Math.floor(
       (mouseEvent.clientY - bdr.top) /
-      (bdr.height / this.measurements.pixelGridSize) // POST-CSS pixelSize
+      (bdr.height / this._measurements.pixelGridSize) // POST-CSS pixelSize
     );
     const pixelX = Math.floor(
       (mouseEvent.clientX - bdr.left) /
-      (bdr.width / this.measurements.pixelGridSize) // POST-CSS pixelSize
+      (bdr.width / this._measurements.pixelGridSize) // POST-CSS pixelSize
     );
 
     return [pixelY, pixelX];
@@ -133,17 +162,17 @@ class Tool {
     const pixelY = pixelPoint[0];
     const pixelX = pixelPoint[1];
     if (
-      pixelY < this.measurements.pixelYStart ||
-      pixelY > this.measurements.pixelYStop - 1
+      pixelY < this._measurements.pixelYStart ||
+      pixelY > this._measurements.pixelYStop - 1
     ) return null;
 
     if (
-      pixelX < this.measurements.pixelXStart ||
-      pixelX > this.measurements.pixelXStop - 1
+      pixelX < this._measurements.pixelXStart ||
+      pixelX > this._measurements.pixelXStop - 1
     ) return null;
 
-    const sourceY = pixelY - this.measurements.pixelYStart;
-    const sourceX = pixelX - this.measurements.pixelXStart;
+    const sourceY = pixelY - this._measurements.pixelYStart;
+    const sourceX = pixelX - this._measurements.pixelXStart;
     return [sourceY, sourceX];
   }
 
@@ -154,9 +183,9 @@ class Tool {
    * @param sourceX - the x component of the source coordinate to validate
    */
   protected isValidSourceYX(sourceY: number, sourceX: number): boolean {
-    if (sourceY >= this.measurements.sourceHeight || sourceY < 0)
+    if (sourceY >= this._measurements.sourceHeight || sourceY < 0)
       return false;
-    if (sourceX >= this.measurements.sourceWidth || sourceX < 0)
+    if (sourceX >= this._measurements.sourceWidth || sourceX < 0)
       return false;
     return true;
   }

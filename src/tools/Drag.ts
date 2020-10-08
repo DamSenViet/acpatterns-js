@@ -51,27 +51,6 @@ class Drag extends Tool {
    */
   protected _startingSourceX: number = null;
 
-  /**
-   * Canvas for pixel filtering of the drag preview.
-   */
-  protected _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
-
-  /**
-   * Cached context of _pixelsCanvas.
-   */
-  protected _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
-
-  /**
-   * Canvas for pixel filtering of the drag preview. Used to draw the post-filtered image.
-   */
-  protected _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
-
-
-  /**
-   * Cached context of _textureCanvas;
-   */
-  protected _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
-
 
   /**
    * Creates a Bucket instance.
@@ -107,13 +86,13 @@ class Drag extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _previewDefaultCursor(
+  protected _indicateDefaultCursor(
     targetSourceY: number,
     targetSourceX: number,
     size: number,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -125,108 +104,112 @@ class Drag extends Tool {
       topLeftSourceX = targetSourceX - Math.floor(size / 2);
       topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
-   * @param targetSourceX - the x coordinate of the source
+   * @param sourceYChange - the amount of change in Y, can be negative
+   * @param sourceXChange - the amount of change in X, can be negative
    */
-  protected _previewDrag(
-    yChange: number,
-    xChange: number,
+  protected _indicateDrag(
+    sourceYChange: number,
+    sourceXChange: number,
   ): void {
+    sourceYChange = (sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
+    sourceXChange = (sourceXChange + this._measurements.sourceWidth) % this._measurements.sourceWidth;
     // assumes no pixel filter
-    if (!this.drawer.pixelFilter)
-      for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-        for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-          const shiftedSourceY = (sourceY + yChange + this.measurements.sourceHeight) % this.measurements.sourceHeight;
-          const shiftedSourceX = (sourceX + xChange + this.measurements.sourceWidth) % this.measurements.sourceWidth;
-          const paletteIndex = this.source.unreactive[shiftedSourceY][shiftedSourceX];
-          this.previewContext.fillStyle = this.pattern.palette[paletteIndex];
-          this.previewContext.fillRect(
-            (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-            (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-            this.measurements.pixelSize,
-            this.measurements.pixelSize,
-          )
-        }
-      }
-    else {
-      this._pixelsCanvas.width = this.measurements.sourceWidth;
-      this._pixelsCanvas.height = this.measurements.sourceHeight;
-      this._textureCanvas.width = this.measurements.sourceWidth * 4;
-      this._textureCanvas.height = this.measurements.sourceHeight * 4;
-      this._pixelsContext.imageSmoothingEnabled = false;
-      this._textureContext.imageSmoothingEnabled = false;
-      for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-        for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-          const shiftedSourceY = (sourceY + yChange + this.measurements.sourceHeight) % this.measurements.sourceHeight;
-          const shiftedSourceX = (sourceX + xChange + this.measurements.sourceWidth) % this.measurements.sourceWidth;
-          const paletteIndex = this.source.unreactive[shiftedSourceY][shiftedSourceX];
-          this._pixelsContext.fillStyle = this.pattern.palette[paletteIndex];
-          this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
-        }
-      }
-
-      // xbrz is fixed, can't scale on its own
-      xbrz(
-        this._pixelsContext,
-        this.measurements.sourceWidth,
-        this.measurements.sourceHeight,
-        this._textureContext,
-        4,
-      );
-
-      // third drawing operation to scale
-      this.previewContext.drawImage(
-        this._textureCanvas,
-        0, 0,
-        this._textureCanvas.width,
-        this._textureCanvas.height,
-        this.measurements.xStart,
-        this.measurements.yStart,
-        this.measurements.xSize,
-        this.measurements.ySize,
-      );
+    let sourceCanvas: HTMLCanvasElement = null;
+    let scale: number = null;
+    if (!this._pixelFilter) {
+      sourceCanvas = this._pixelsCanvas;
+      scale = 1;
     }
-    if (this.drawer.grid)
-      this.previewContext.drawImage(
-        this.gridCanvas,
+    else {
+      sourceCanvas = this._textureCanvas;
+      scale = 4;
+    }
+    
+    this._indicatorContext.drawImage(
+      sourceCanvas,
+      sourceXChange * scale,
+      sourceYChange * scale,
+      (this._measurements.sourceWidth - sourceXChange) * scale,
+      (this._measurements.sourceHeight - sourceYChange) * scale,
+      this._measurements.xStart,
+      this._measurements.yStart,
+      (this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
+      (this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+    );
+    this._indicatorContext.drawImage(
+      sourceCanvas,
+      0 * scale,
+      sourceYChange * scale,
+      sourceXChange * scale,
+      (this._measurements.sourceHeight - sourceYChange) * scale,
+      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
+      this._measurements.yStart,
+      (this._measurements.pixelXStart + sourceXChange) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+    );
+    this._indicatorContext.drawImage(
+      sourceCanvas,
+      sourceXChange * scale,
+      0 * scale,
+      (this._measurements.sourceWidth - sourceXChange) * scale,
+      sourceYChange * scale,
+      this._measurements.xStart,
+      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceYChange) * this._measurements.pixelSize,
+    );
+    this._indicatorContext.drawImage(
+      sourceCanvas,
+      0 * scale,
+      0 * scale,
+      sourceXChange * scale,
+      sourceYChange * scale,
+      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+      (this._measurements.pixelXStart + sourceXChange) * this._measurements.pixelSize,
+      (this._measurements.pixelYStart + sourceYChange) * this._measurements.pixelSize,
+    );
+    if (this._grid)
+      this._indicatorContext.drawImage(
+        this._gridCanvas,
         0, 0,
-        this.measurements.size,
-        this.measurements.size,
+        this._measurements.size,
+        this._measurements.size,
         0, 0,
-        this.measurements.size,
-        this.measurements.size,
+        this._measurements.size,
+        this._measurements.size,
       );
   }
 
@@ -236,20 +219,20 @@ class Drag extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _preview(
+  protected _indicate(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
     if (this._startingSourceY != null && this._startingSourceX != null) {
       const sourceYChange = targetSourceY - this._startingSourceY;
       const sourceXChange = targetSourceX - this._startingSourceX;
-      this._previewDrag(
+      this._indicateDrag(
         sourceYChange,
         sourceXChange,
       );
-      this._previewDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
     }
-    this._previewDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
   }
 
 
@@ -263,28 +246,28 @@ class Drag extends Tool {
     sourceXChange: number,
   ): void {
     // need copy to alter
-    const sourceCopy = new Array(this.measurements.sourceHeight)
+    const sourceCopy = new Array(this._measurements.sourceHeight)
       .fill(0)
-      .map(v => new Array(this.measurements.sourceWidth).fill(0));
+      .map(v => new Array(this._measurements.sourceWidth).fill(0));
 
     // fill the copy
-    for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-      for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-        sourceCopy[sourceY][sourceX] = this.source.unreactive[sourceY][sourceX];
+    for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        sourceCopy[sourceY][sourceX] = this._source.unreactive[sourceY][sourceX];
       }
     }
 
 
-    for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-      for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-        const shiftedSourceY = (sourceY + sourceYChange + this.measurements.sourceHeight) % this.measurements.sourceHeight;
-        const shiftedSourceX = (sourceX + sourceXChange + this.measurements.sourceWidth) % this.measurements.sourceWidth;
+    for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        const shiftedSourceY = (sourceY + sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
+        const shiftedSourceX = (sourceX + sourceXChange + this._measurements.sourceWidth) % this._measurements.sourceWidth;
         const paletteIndex = sourceCopy[shiftedSourceY][shiftedSourceX];
-        this.source.unreactive[sourceY][sourceX] = paletteIndex;
+        this._source.unreactive[sourceY][sourceX] = paletteIndex;
       }
     }
 
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -320,10 +303,10 @@ class Drag extends Tool {
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._preview(targetSourceY, targetSourceX);
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicate(targetSourceY, targetSourceX);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -343,7 +326,7 @@ class Drag extends Tool {
     this._lastSourceX = targetSourceX;
 
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this.refreshPreview();
+      this._refreshIndicator();
       const sourceYChange = targetSourceY - this._startingSourceY;
       const sourceXChange = targetSourceX - this._startingSourceX;
       this._pixels(sourceYChange, sourceXChange);
@@ -352,13 +335,13 @@ class Drag extends Tool {
       this._didDrawOnLastSource = true;
     }
     else if (this._startingSourceY == null && this._startingSourceX == null) {
-      if (this.preview) {
-        this.refreshPreview();
-        this._preview(targetSourceY, targetSourceX);
+      if (this._indicator) {
+        this._refreshIndicator();
+        this._indicate(targetSourceY, targetSourceX);
       }
       this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
-      requestAnimationFrame(this.redraw);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -374,8 +357,8 @@ class Drag extends Tool {
     this._lastSourceX = null;
     this._startingSourceY = null;
     this._startingSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -384,9 +367,9 @@ class Drag extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mousemove", this._onMouseMove);
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mousemove", this._onMouseMove);
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -395,9 +378,9 @@ class Drag extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 

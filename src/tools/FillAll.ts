@@ -75,13 +75,13 @@ class FillAll extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _previewDefaultCursor(
+  protected _indicateDefaultCursor(
     targetSourceY: number,
     targetSourceX: number,
     size: number,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -93,85 +93,85 @@ class FillAll extends Tool {
       topLeftSourceX = targetSourceX - Math.floor(size / 2);
       topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
   /**
    * Draws the preview
    */
-  protected _preview(): void {
+  protected _indicate(): void {
     let isFilled = true;
-    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
-    for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-      for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-        if (this.source.unreactive[sourceY][sourceX] !== this._paletteIndex) {
+    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        if (this._source.unreactive[sourceY][sourceX] !== this._paletteIndex) {
           isFilled = false;
         }
       }
     }
     if (isFilled === true) return;
     
-    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
-    for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-      for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-        this.previewContext.fillRect(
-          (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-          (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-          this.measurements.pixelSize,
-          this.measurements.pixelSize,
+    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        this._indicatorContext.fillRect(
+          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+          this._measurements.pixelSize,
+          this._measurements.pixelSize,
         );
       }
     }
 
     if (this.drawer.grid)
-      this.previewContext.drawImage(
-        this.gridCanvas,
+      this._indicatorContext.drawImage(
+        this._gridCanvas,
         0, 0,
-        this.measurements.size,
-        this.measurements.size,
+        this._measurements.size,
+        this._measurements.size,
         0, 0,
-        this.measurements.size,
-        this.measurements.size,
+        this._measurements.size,
+        this._measurements.size,
       );
       
-    this.previewContext.fillRect(
-      (this.measurements.pixelXCenter - 2) * this.measurements.pixelSize,
-      (this.measurements.pixelYCenter - 2) * this.measurements.pixelSize,
-      this.measurements.pixelSize * 4,
-      this.measurements.pixelSize * 4,
+    this._indicatorContext.fillRect(
+      (this._measurements.pixelXCenter - 2) * this._measurements.pixelSize,
+      (this._measurements.pixelYCenter - 2) * this._measurements.pixelSize,
+      this._measurements.pixelSize * 4,
+      this._measurements.pixelSize * 4,
     );
       
     // draw square around center
-    this._previewDefaultCursor(
-      Math.floor(this.measurements.sourceHeight / 2) - 1,
-      Math.floor(this.measurements.sourceWidth / 2),
+    this._indicateDefaultCursor(
+      Math.floor(this._measurements.sourceHeight / 2) - 1,
+      Math.floor(this._measurements.sourceWidth / 2),
       4
     );
   }
@@ -181,12 +181,12 @@ class FillAll extends Tool {
    */
   protected _pixels(): void {
     // even
-    for (let sourceY = 0; sourceY < this.measurements.sourceHeight; ++sourceY) {
-      for (let sourceX = 0; sourceX < this.measurements.sourceWidth; ++sourceX) {
-        this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+    for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
       }
     }
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -197,10 +197,9 @@ class FillAll extends Tool {
   protected _onMouseOver = (mouseEvent: MouseEvent) => {
     // otherwise make sure to request it!!!
 
-    if (this.preview) {
-      console.log("previewing");
-      this._preview();
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._indicate();
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -237,10 +236,10 @@ class FillAll extends Tool {
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._preview();
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicate();
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -262,8 +261,8 @@ class FillAll extends Tool {
     this._lastPixelX = null;
     this._lastSourceY = null;
     this._lastSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
   /**
@@ -271,10 +270,10 @@ class FillAll extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mouseenter", this._onMouseOver);
-    this.canvas.addEventListener("mousemove", this._onMouseMove)
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mouseover", this._onMouseOver);
+    this._canvas.addEventListener("mousemove", this._onMouseMove)
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -283,10 +282,10 @@ class FillAll extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mouseenter", this._onMouseOver);
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mouseover", this._onMouseOver);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 

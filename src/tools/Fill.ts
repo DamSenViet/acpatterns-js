@@ -81,12 +81,12 @@ class Fill extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _preview(
+  protected _indicate(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    this._previewCursor(targetSourceY, targetSourceX);
-    this._previewFillArea(targetSourceY, targetSourceX);
+    this._indicateCursor(targetSourceY, targetSourceX);
+    this._indicateFillArea(targetSourceY, targetSourceX);
   }
 
 
@@ -95,43 +95,43 @@ class Fill extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _previewCursor(
+  protected _indicateCursor(
     sourceY: number,
     sourceX: number,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number = sourceX;
     let topLeftSourceY: number = sourceY;
 
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + 1) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + 1) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + 1) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + 1) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + 1) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + 1) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + 1) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + 1) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
@@ -140,21 +140,21 @@ class Fill extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX  - the x coordinate of the source
    */
-  protected _previewFillArea(
+  protected _indicateFillArea(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
-    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    const paletteIndexToReplace = this._source.unreactive[targetSourceY][targetSourceX];
     if (paletteIndexToReplace === this._paletteIndex) return;
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
-    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
+    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     for (let i = 0; i < sourcePoints.length; ++i) {
       const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
+      this._indicatorContext.fillRect(
+        (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+        (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+        this._measurements.pixelSize,
+        this._measurements.pixelSize,
       );
     }
   }
@@ -170,7 +170,7 @@ class Fill extends Tool {
     targetSourceX: number,
   ): void {
     this._lastSourcePointJSONSet.clear();
-    const paletteIndexToReplace = this.source.unreactive[targetSourceY][targetSourceX];
+    const paletteIndexToReplace = this._source.unreactive[targetSourceY][targetSourceX];
     this._computeLastSourcePointJSONSetHelper(targetSourceY, targetSourceX, paletteIndexToReplace);
   }
 
@@ -189,7 +189,7 @@ class Fill extends Tool {
     if (!this.isValidSourceYX(sourceY, sourceX)) return;
     const jsonSourcePoint = JSON.stringify([sourceY, sourceX]);
     if (this._lastSourcePointJSONSet.has(jsonSourcePoint)) return;
-    else if (this.source.unreactive[sourceY][sourceX] !== target) return;
+    else if (this._source.unreactive[sourceY][sourceX] !== target) return;
     this._lastSourcePointJSONSet.add(JSON.stringify([sourceY, sourceX]));
     this._computeLastSourcePointJSONSetHelper(
       sourceY - 1,
@@ -225,12 +225,12 @@ class Fill extends Tool {
   ): void {
     this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
-    this.previewContext.fillStyle = "rgba(50, 250, 234, 0.6)";
+    this._indicatorContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
       const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
-      this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
     }
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -274,10 +274,10 @@ class Fill extends Tool {
       ]))
     ) this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._preview(targetSourceY, targetSourceX);
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicate(targetSourceY, targetSourceX);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -296,9 +296,9 @@ class Fill extends Tool {
     this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._previewCursor(targetSourceY, targetSourceX);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicateCursor(targetSourceY, targetSourceX);
     }
 
     this._pixels(targetSourceY, targetSourceX);
@@ -316,8 +316,8 @@ class Fill extends Tool {
     this._lastPixelX = null;
     this._lastSourceY = null;
     this._lastSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -326,9 +326,9 @@ class Fill extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mousemove", this._onMouseMove);
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mousemove", this._onMouseMove);
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -337,9 +337,9 @@ class Fill extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 

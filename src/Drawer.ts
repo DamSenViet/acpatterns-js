@@ -104,6 +104,7 @@ class Drawer {
 
   /**
    * The canvas to render the post-processed pixelsCanvas onto.
+   * Muxed onto _canvas in the drawing process.
    */
   private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
 
@@ -124,20 +125,20 @@ class Drawer {
   private _gridContext: CanvasRenderingContext2D = this._gridCanvas.getContext("2d");
 
   /**
-   * The canvas responsible for drawing just the preview created by the preview.
+   * The canvas responsible for drawing just the indicator created by the tool.
    * Muxed onto _canvas in the drawing process.
    */
-  private _previewCanvas: HTMLCanvasElement = document.createElement("canvas");
+  private _indicatorCanvas: HTMLCanvasElement = document.createElement("canvas");
 
   /**
-   * Cached context of the _previewCanvas.
+   * Cached context of the _indicatorCanvas.
    */
-  private _previewContext: CanvasRenderingContext2D = this._previewCanvas.getContext("2d");
+  private _indicatorContext: CanvasRenderingContext2D = this._indicatorCanvas.getContext("2d");
 
   /**
    * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
    */
-  private _measurements: DrawerMeasurements = {
+  private _measurements: Readonly<DrawerMeasurements> = Object.freeze({
     // source meaasurements
     sourceHeight: null,
     sourceHalfHeight: null,
@@ -164,7 +165,7 @@ class Drawer {
     pixelXStart: null,
     pixelXCenter: null,
     pixelXStop: null,
-  };
+  });
 
   /**
    * The drawing tool to interact with the canvas.
@@ -172,21 +173,14 @@ class Drawer {
   private _tool: Tool = null;
 
   /**
-   * Tool uses this callback to force refresh everything.
-   * This callback propogates to any other connected Drawers
-   * or Modelers that are still in their reactive state.
-   */
-  private _forceRefresh: () => void = null;
-
-  /**
    * Whether or not to render the grid.
    */
   private _grid: boolean = false;
 
   /**
-   * Whether or not to render the tool preview.
+   * Whether or not to render the tool indicator.
    */
-  private _preview: boolean = false;
+  private _indicator: boolean = false;
 
   /**
    * Whether or not to apply pixel filtering.
@@ -215,7 +209,6 @@ class Drawer {
       !(canvas instanceof HTMLCanvasElement)
     ) throw new TypeError();
     this._pattern = pattern;
-    this._forceRefresh = this._pattern.hooks.refresh.trigger.bind(this._pattern.hooks.refresh);
     this._canvas = canvas;
     // validate canvas after-css size, must be square and 128xy
     this._source = pattern.pixels;
@@ -225,7 +218,7 @@ class Drawer {
     this._context.imageSmoothingEnabled = false;
     this._pixelsContext.imageSmoothingEnabled = false;
     this._gridContext.imageSmoothingEnabled = false;
-    this._previewContext.imageSmoothingEnabled = false;
+    this._indicatorContext.imageSmoothingEnabled = false;
 
     this._refresh(); // draw first round
     // initialize all hooks
@@ -256,9 +249,9 @@ class Drawer {
     this._gridCanvas.height = size;
     this._gridCanvas.width = size;
     this._gridContext.imageSmoothingEnabled = false;
-    this._previewCanvas.height = size;
-    this._previewCanvas.width = size;
-    this._previewContext.imageSmoothingEnabled = false;
+    this._indicatorCanvas.height = size;
+    this._indicatorCanvas.width = size;
+    this._indicatorContext.imageSmoothingEnabled = false;
 
 
     // determine pixel size based on source
@@ -305,7 +298,7 @@ class Drawer {
     const xSize = xStop - xStart;
 
     // overwrite, don't replace
-    Object.assign(this._measurements, Object.freeze<DrawerMeasurements>({
+    this._measurements = Object.freeze<DrawerMeasurements>({
       sourceHeight,
       sourceHalfHeight,
       sourceWidth,
@@ -329,7 +322,7 @@ class Drawer {
       pixelXStart,
       pixelXCenter,
       pixelXStop,
-    }));
+    });
   }
 
 
@@ -371,9 +364,9 @@ class Drawer {
         this._measurements.size,
         this._measurements.size,
       );
-    if (this._preview)
+    if (this._indicator)
       this._context.drawImage(
-        this._previewCanvas,
+        this._indicatorCanvas,
         0, 0,
         this._measurements.size,
         this._measurements.size,
@@ -473,16 +466,17 @@ class Drawer {
 
 
   /**
-   * Refreshes the _previewsCanvas.
+   * Refreshes the _indicatorCanvas.
    */
-  private _refreshPreview: () => void = (): void => {
-    this._previewContext.clearRect(
+  private _refreshIndicator: () => void = (): void => {
+    this._indicatorContext.clearRect(
       0,
       0,
       this._measurements.size,
       this._measurements.size,
     );
   };
+
 
   /**
    * Callback for when the _pixelCanvas source changes.
@@ -577,7 +571,7 @@ class Drawer {
     this._updateMeasurements();
     this._refreshPixels();
     this._refreshGrid();
-    this._refreshPreview();
+    this._refreshIndicator();
     // now drawImage in order to target canvas
     requestAnimationFrame(this._redraw);
   }
@@ -604,14 +598,6 @@ class Drawer {
    */
   public get source(): PixelsSource {
     return this._source;
-  }
-
-
-  /**
-   * Gets the drawer's cached measurements.
-   */
-  public get measurements(): Readonly<DrawerMeasurements> {
-    return this._measurements;
   }
 
 
@@ -723,20 +709,20 @@ class Drawer {
 
 
   /**
-   * Gets whether or not to render the tool preview.
+   * Gets whether or not to render the tool indicator.
    */
-  public get preview(): boolean {
-    return this._preview;
+  public get indicator(): boolean {
+    return this._indicator;
   }
 
 
   /**
-   * Sets whether or not to render the tool preview.
+   * Sets whether or not to render the tool indicator.
    */
-  public set preview(preview: boolean) {
-    if (typeof preview !== "boolean") throw new TypeError();
-    if (this._preview === preview) return;
-    this._preview = preview;
+  public set indicator(indicator: boolean) {
+    if (typeof indicator !== "boolean") throw new TypeError();
+    if (this._indicator === indicator) return;
+    this._indicator = indicator;
     requestAnimationFrame(this._redraw);
   };
 
@@ -779,6 +765,7 @@ class Drawer {
   public dispose(): void {
     if (this._state === DrawerStates.DISPOSED) return;
     this.pause();
+    this.tool = null;
     this._canvas = null;
     this._context = null;
     this._pattern = null;
@@ -789,10 +776,9 @@ class Drawer {
     this._textureContext = null;
     this._gridCanvas = null;
     this._gridContext = null;
-    this._previewCanvas = null;
-    this._previewContext = null;
+    this._indicatorCanvas = null;
+    this._indicatorContext = null;
     this._measurements = null;
-    this._tool = null;
     this._state = DrawerStates.DISPOSED;
   }
 }

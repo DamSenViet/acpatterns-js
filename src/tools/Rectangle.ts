@@ -85,13 +85,13 @@ class Rectangle extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _previewDefaultCursor(
+  protected _indicateDefaultCursor(
     targetSourceY: number,
     targetSourceX: number,
     size: number,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -103,33 +103,33 @@ class Rectangle extends Tool {
       topLeftSourceX = targetSourceX - Math.floor(size / 2);
       topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
@@ -138,7 +138,7 @@ class Rectangle extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _previewFillArea(
+  protected _indicateFillArea(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
@@ -154,45 +154,45 @@ class Rectangle extends Tool {
       Math.min(this._startingSourceX, targetSourceX)
     );
 
-    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
+    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
 
     // top left (exclusive) to top right (inclusive)
     for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
+      this._indicatorContext.fillRect(
+        (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+        (this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize,
+        this._measurements.pixelSize,
+        this._measurements.pixelSize,
       );
     }
 
     // top right (exclusive) to bottom right (inclusive)
     for (let sourceY = topLeftSourceY + 1; sourceY <= topLeftSourceY + height; ++sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX + width) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
+      this._indicatorContext.fillRect(
+        (this._measurements.pixelXStart + topLeftSourceX + width) * this._measurements.pixelSize,
+        (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+        this._measurements.pixelSize,
+        this._measurements.pixelSize,
       );
     }
 
     // bottom right (exclusive) to bottom left (inclusive)
     for (let sourceX = topLeftSourceX + width - 1; sourceX >= topLeftSourceX; --sourceX) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + topLeftSourceY + height) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
+      this._indicatorContext.fillRect(
+        (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+        (this._measurements.pixelYStart + topLeftSourceY + height) * this._measurements.pixelSize,
+        this._measurements.pixelSize,
+        this._measurements.pixelSize,
       );
     }
 
     // bottom left (exlusive) to top left (inclusive)
     for (let sourceY = topLeftSourceY + height - 1; sourceY >= topLeftSourceY; --sourceY) {
-      this.previewContext.fillRect(
-        (this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize,
-        (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-        this.measurements.pixelSize,
-        this.measurements.pixelSize,
+      this._indicatorContext.fillRect(
+        (this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize,
+        (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+        this._measurements.pixelSize,
+        this._measurements.pixelSize,
       );
     }
   }
@@ -203,18 +203,18 @@ class Rectangle extends Tool {
    * @param targetSourceY - y coordinate in source
    * @param targetSourceX - x coordinate in source
    */
-  protected _preview(
+  protected _indicate(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this._previewFillArea(
+      this._indicateFillArea(
         targetSourceY,
         targetSourceX,
       );
-      this._previewDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
     }
-    this._previewDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
   }
 
 
@@ -247,30 +247,30 @@ class Rectangle extends Tool {
       let sourceX = topLeftSourceX;
       sourceX <= topLeftSourceX + width;
       ++sourceX
-    ) this.source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
+    ) this._source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
 
     // top right to bottom right
     for (
       let sourceY = topLeftSourceY;
       sourceY <= topLeftSourceY + height;
       ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
+    ) this._source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
 
     // bottom left to bottom right
     for (
       let sourceX = topLeftSourceX;
       sourceX <= topLeftSourceX + width;
       ++sourceX
-    ) this.source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
+    ) this._source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
 
     // top left to bottom left
     for (
       let sourceY = topLeftSourceY;
       sourceY <= topLeftSourceY + height;
       ++sourceY
-    ) this.source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
+    ) this._source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
 
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -306,10 +306,10 @@ class Rectangle extends Tool {
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._preview(targetSourceY, targetSourceX);
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicate(targetSourceY, targetSourceX);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -340,13 +340,13 @@ class Rectangle extends Tool {
       this._didDrawOnLastSource = true;
     }
     else if (this._startingSourceY == null && this._startingSourceX == null) {
-      if (this.preview) {
-        this.refreshPreview();
-        this._preview(targetSourceY, targetSourceX);
+      if (this._indicator) {
+        this._refreshIndicator();
+        this._indicate(targetSourceY, targetSourceX);
       }
       this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
-      requestAnimationFrame(this.redraw);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -362,8 +362,8 @@ class Rectangle extends Tool {
     this._lastSourceX = null;
     this._startingSourceY = null;
     this._startingSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -372,9 +372,9 @@ class Rectangle extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mousemove", this._onMouseMove);
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mousemove", this._onMouseMove);
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -383,9 +383,9 @@ class Rectangle extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 

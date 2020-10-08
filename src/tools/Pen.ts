@@ -99,13 +99,13 @@ class Pen extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _previewCursor(
+  protected _indicateCursor(
     targetSourceY: number,
     targetSourceX: number,
     size: number = this._size,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -117,33 +117,33 @@ class Pen extends Tool {
       topLeftSourceX = targetSourceX - Math.floor(size / 2);
       topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
@@ -158,7 +158,7 @@ class Pen extends Tool {
   ): void {
     // even
     if (this._size === 1) {
-      this.source[targetSourceY][targetSourceX] = this._paletteIndex;
+      this._source[targetSourceY][targetSourceX] = this._paletteIndex;
       return;
     }
 
@@ -174,12 +174,12 @@ class Pen extends Tool {
     }
     for (let sourceY = topLeftY; sourceY < topLeftY + this._size; ++sourceY) {
       for (let sourceX = topLeftX; sourceX < topLeftX + this._size; ++sourceX) {
-        if (sourceY >= this.measurements.sourceHeight || sourceY < 0) continue;
-        if (sourceX >= this.measurements.sourceWidth || sourceX < 0) continue;
-        this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+        if (sourceY >= this._measurements.sourceHeight || sourceY < 0) continue;
+        if (sourceX >= this._measurements.sourceWidth || sourceX < 0) continue;
+        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
       }
     }
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -215,9 +215,9 @@ class Pen extends Tool {
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._previewCursor(targetSourceY, targetSourceX);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicateCursor(targetSourceY, targetSourceX);
     }
 
     // this will automatically trigger redraw if it fires
@@ -229,7 +229,7 @@ class Pen extends Tool {
       this._didDrawOnLastSource = true;
     }
     // otherwise make sure to request it!!!
-    else if (this.preview) requestAnimationFrame(this.redraw);
+    else if (this._indicator) requestAnimationFrame(this._redraw);
   };
 
 
@@ -247,9 +247,9 @@ class Pen extends Tool {
     this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._previewCursor(targetSourceY, targetSourceX);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicateCursor(targetSourceY, targetSourceX);
     }
 
     this._pixels(targetSourceY, targetSourceX);
@@ -266,8 +266,8 @@ class Pen extends Tool {
     this._lastPixelX = null;
     this._lastSourceY = null;
     this._lastSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
   /**
@@ -275,9 +275,9 @@ class Pen extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mousemove", this._onMouseMove);
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mousemove", this._onMouseMove);
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -286,9 +286,9 @@ class Pen extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 

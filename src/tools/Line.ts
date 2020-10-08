@@ -136,13 +136,13 @@ class Line extends Tool {
    * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
    */
-  protected _previewDefaultCursor(
+  protected _indicateDefaultCursor(
     targetSourceY: number,
     targetSourceX: number,
     size: number,
   ): void {
-    this.previewContext.strokeStyle = "#00d2c2";
-    this.previewContext.lineWidth = Math.ceil(this.measurements.pixelSize / 4);
+    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;
     let topLeftSourceY: number;
@@ -154,33 +154,33 @@ class Line extends Tool {
       topLeftSourceX = targetSourceX - Math.floor(size / 2);
       topLeftSourceY = targetSourceY - Math.floor(size / 2);
     }
-    this.previewContext.beginPath();
+    this._indicatorContext.beginPath();
     // top left
-    this.previewContext.moveTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.moveTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // top right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
     // bottom right
-    this.previewContext.lineTo(
-      Math.min((this.measurements.pixelXStart + topLeftSourceX + size) * this.measurements.pixelSize, this.measurements.xStop),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.min((this._measurements.pixelXStart + topLeftSourceX + size) * this._measurements.pixelSize, this._measurements.xStop),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // bottom left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.min((this.measurements.pixelYStart + topLeftSourceY + size) * this.measurements.pixelSize, this.measurements.yStop),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.min((this._measurements.pixelYStart + topLeftSourceY + size) * this._measurements.pixelSize, this._measurements.yStop),
     );
     // back to top left
-    this.previewContext.lineTo(
-      Math.max((this.measurements.pixelXStart + topLeftSourceX) * this.measurements.pixelSize, this.measurements.xStart),
-      Math.max((this.measurements.pixelYStart + topLeftSourceY) * this.measurements.pixelSize, this.measurements.yStart),
+    this._indicatorContext.lineTo(
+      Math.max((this._measurements.pixelXStart + topLeftSourceX) * this._measurements.pixelSize, this._measurements.xStart),
+      Math.max((this._measurements.pixelYStart + topLeftSourceY) * this._measurements.pixelSize, this._measurements.yStart),
     );
-    this.previewContext.stroke();
+    this._indicatorContext.stroke();
   }
 
 
@@ -189,23 +189,23 @@ class Line extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _previewFillArea(
+  protected _indicateFillArea(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this.previewContext.fillStyle = this.pattern.palette[this._paletteIndex];
+    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     this._onBresenhamsLine(
       this._startingSourceY,
       this._startingSourceX,
       targetSourceY,
       targetSourceX,
       (sourceY, sourceX) => {
-        this.previewContext.fillRect(
-          (this.measurements.pixelXStart + sourceX) * this.measurements.pixelSize,
-          (this.measurements.pixelYStart + sourceY) * this.measurements.pixelSize,
-          this.measurements.pixelSize,
-          this.measurements.pixelSize,
+        this._indicatorContext.fillRect(
+          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
+          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
+          this._measurements.pixelSize,
+          this._measurements.pixelSize,
         );
       }
     )
@@ -217,18 +217,18 @@ class Line extends Tool {
    * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
    */
-  protected _preview(
+  protected _indicate(
     targetSourceY: number,
     targetSourceX: number,
   ): void {
     if (this._startingSourceY != null && this._startingSourceX != null) {
-      this._previewFillArea(
+      this._indicateFillArea(
         targetSourceY,
         targetSourceX,
       );
-      this._previewDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
     }
-    this._previewDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
   }
 
 
@@ -251,11 +251,11 @@ class Line extends Tool {
       endSourceY,
       endSourceX,
       (sourceY, sourceX) => {
-        this.source.unreactive[sourceY][sourceX] = this._paletteIndex;
+        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
       }
     )
 
-    this.forceRefresh();
+    this._pattern.hooks.refresh.trigger();
   }
 
 
@@ -291,10 +291,10 @@ class Line extends Tool {
     this._lastSourceX = targetSourceX;
     this._didDrawOnLastSource = false;
 
-    if (this.preview) {
-      this.refreshPreview();
-      this._preview(targetSourceY, targetSourceX);
-      requestAnimationFrame(this.redraw);
+    if (this._indicator) {
+      this._refreshIndicator();
+      this._indicate(targetSourceY, targetSourceX);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -324,13 +324,13 @@ class Line extends Tool {
       this._didDrawOnLastSource = true;
     }
     else if (this._startingSourceY == null && this._startingSourceX == null) {
-      if (this.preview) {
-        this.refreshPreview();
-        this._preview(targetSourceY, targetSourceX);
+      if (this._indicator) {
+        this._refreshIndicator();
+        this._indicate(targetSourceY, targetSourceX);
       }
       this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
-      requestAnimationFrame(this.redraw);
+      requestAnimationFrame(this._redraw);
     }
   };
 
@@ -346,8 +346,8 @@ class Line extends Tool {
     this._lastSourceX = null;
     this._startingSourceY = null;
     this._startingSourceX = null;
-    this.refreshPreview();
-    requestAnimationFrame(this.redraw);
+    this._refreshIndicator();
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -356,9 +356,9 @@ class Line extends Tool {
    */
   public mount(): void {
     super.mount();
-    this.canvas.addEventListener("mousemove", this._onMouseMove);
-    this.canvas.addEventListener("mousedown", this._onMouseDown);
-    this.canvas.addEventListener("mouseout", this._onMouseOut);
+    this._canvas.addEventListener("mousemove", this._onMouseMove);
+    this._canvas.addEventListener("mousedown", this._onMouseDown);
+    this._canvas.addEventListener("mouseout", this._onMouseOut);
   }
 
 
@@ -367,9 +367,9 @@ class Line extends Tool {
    */
   public unmount(): void {
     super.unmount();
-    this.canvas.removeEventListener("mousemove", this._onMouseMove);
-    this.canvas.removeEventListener("mousedown", this._onMouseDown);
-    this.canvas.removeEventListener("mouseout", this._onMouseOut);
+    this._canvas.removeEventListener("mousemove", this._onMouseMove);
+    this._canvas.removeEventListener("mousedown", this._onMouseDown);
+    this._canvas.removeEventListener("mouseout", this._onMouseOut);
   }
 }
 
