@@ -8,6 +8,8 @@
   "browser": "build/umd/build.js",
   "scripts": {
     "clean": "node scripts/clean.js",
+    "dev:docs": "vuepress dev docs",
+    "build:docs": "vuepress build docs",
     "watch": "node scripts/watch.js",
     "watch:esm": "tsc -w",
     "build": "node scripts/build.js",
@@ -44,6 +46,8 @@
     "ts-custom-error": "^3.2.0",
     "ts-loader": "^7.0.4",
     "typescript": "^3.9.2",
+    "vuepress": "^1.6.0",
+    "vuepress-plugin-typescript": "^0.3.1",
     "webpack": "^4.43.0",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-format-messages": "^2.0.6",
