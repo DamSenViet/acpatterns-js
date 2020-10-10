@@ -657,7 +657,7 @@ class Modeler {
   /**
    * Puts the modeler into reactive state.
    */
-  public play(): void {
+  public async play(): Promise<void> {
     if (this._state !== ModelerStates.PAUSED) return;
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -666,7 +666,7 @@ class Modeler {
     this._source.hook.tap(this._onPixelUpdate);
 
     // assume everything changed
-    this._onLoad();
+    await this._onLoad();
     this._state = ModelerStates.PLAYING;
   }
 
@@ -674,7 +674,7 @@ class Modeler {
   /**
    * Puts the modeler into the non-reactive state.
    */
-  public pause(): void {
+  public async pause(): Promise<void> {
     if (this._state !== ModelerStates.PLAYING) return;
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
@@ -689,7 +689,7 @@ class Modeler {
    * Puts the modeler into stopped state and cleans up all resources expended.
    * Modeler cannot be used beyond this function call.
    */
-  public dispose(): void {
+  public async dispose(): Promise<void> {
     if (this._state === ModelerStates.DISPOSED) return;
     this.pause();
     this._canvas = null;
@@ -700,7 +700,6 @@ class Modeler {
     this._textureCanvas = null;
     this._textureContext = null;
     this._measurements = null;
-    this._loadedContainer.dispose();
     this._engine.dispose();
     this._engine = null;
     this._scene = null;
