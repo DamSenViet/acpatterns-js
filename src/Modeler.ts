@@ -182,6 +182,21 @@ class Modeler {
    */
   private _clothingStandContainer: AssetContainer = null;
 
+
+  /**
+   * To end the loading process.
+   */
+  private _endLoadingSignal: (value?: void) => void = null;
+
+  /**
+   * For queueing loading assets. Helps prevents resources from merging.
+   */
+  private _loadingSignal: Promise<void> = new Promise((resolve) => {
+    this._endLoadingSignal = resolve;
+  });
+
+  private _loadingQueue: Array<PatternType> = new Array<PatternType>();
+
   /**
    * Whether pixel filtering is used on the model texture.
    * If turned on, will incur a large performance cost.
@@ -299,6 +314,7 @@ class Modeler {
 
     await new Promise((resolve) => { this._scene.executeWhenReady(resolve); });
     this._engine.runRenderLoop(() => { this._scene.render(); });
+    this._endLoadingSignal();
   }
 
 
@@ -449,18 +465,49 @@ class Modeler {
 
 
   /**
-   * Callback for when the type of the pattern changes.
-   * Updates the measurements, pixels, and the model.
+   * Callback for when pattern type changes.
+   * Implements mutex locking to ensure assets are properly disposed.
    * @param type - the pattern type that it's changed to.
    */
   private _onTypeUpdate = async (type: PatternType): Promise<void> => {
+    if (this._loadingQueue.length <= 0) {
+      // console.log(`queuing`, type);
+      this._loadingQueue.push(type);
+      await this._exchangeAssets(type, true); // continues consuming until array is finished.
+    }
+    else {
+      // console.log(`queuing`, type);
+      this._loadingQueue.push(type);
+    }
+  };
+
+
+  /**
+   * Updates the measurements, pixels, and the model.
+   * Only one of the root call can be present at any time.
+   * @param type - the type that the pattern is switching to
+   * @param isRootCall - whether exchange is a root call
+   */
+  private async _exchangeAssets(type: PatternType, isRootCall: boolean): Promise<void> {
+    // setup lock
+    if (isRootCall) {
+      // need to wait for release
+      await this._loadingSignal;
+      this._loadingSignal = new Promise((resolve, reject) => {
+        this._endLoadingSignal = resolve;
+      });
+    }
+    // console.log(`processing`, type);
+
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.sections.texture;
     this._updateMeasurements();
     this._refreshPixels();
     this._source.hook.tap(this._onPixelUpdate);
 
-    let modelData = patternTypeToModelData.get(this._pattern.type);
+    let modelData: ModelData;
+    if (type == null) modelData = patternTypeToModelData.get(this._pattern.type);
+    else modelData = patternTypeToModelData.get(type);
 
     // exchange resources
     this._scene.unfreezeActiveMeshes();
@@ -502,6 +549,11 @@ class Modeler {
       if (material !== targetMaterial) material.freeze();
     }
     this._redraw();
+    this._loadingQueue.shift();
+    if (this._loadingQueue.length > 0)
+      await this._exchangeAssets(this._loadingQueue[0], false);
+    // release lock
+    if (isRootCall) this._endLoadingSignal();
   };
 
 
@@ -519,9 +571,9 @@ class Modeler {
    * Callback for when the pattern loads in new data.
    * Updates measurements, pixels, and model.
    */
-  private _onLoad = (): void => {
+  private _onLoad = async (): Promise<void> => {
     // assumes everything changed.
-    this._onTypeUpdate(null);
+    await this._onTypeUpdate(null);
   };
 
 
