@@ -1,6 +1,5 @@
 import Tool from "./Tool";
 import { paletteIndex } from "../utils";
-import xbrz from "../xbrz";
 
 export interface DragOptions {
 }
@@ -135,7 +134,8 @@ class Drag extends Tool {
 
 
   /**
-   * Draws the cursor preview/indicator.
+   * Draws the cursor preview/indicator of the drag (wrapping).
+   * https://stackoverflow.com/a/58110328/8625882
    * @param sourceYChange - the amount of change in Y, can be negative
    * @param sourceXChange - the amount of change in X, can be negative
    */
@@ -165,8 +165,8 @@ class Drag extends Tool {
       (this._measurements.sourceHeight - sourceYChange) * scale,
       this._measurements.xStart,
       this._measurements.yStart,
-      (this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
-      (this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+      this._measurements.xSize - (sourceXChange * this._measurements.pixelSize),
+      this._measurements.ySize - (sourceYChange * this._measurements.pixelSize),
     );
     this._indicatorContext.drawImage(
       sourceCanvas,
@@ -174,10 +174,11 @@ class Drag extends Tool {
       sourceYChange * scale,
       sourceXChange * scale,
       (this._measurements.sourceHeight - sourceYChange) * scale,
-      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
+      
+      this._measurements.xStop - (sourceXChange * this._measurements.pixelSize),
       this._measurements.yStart,
-      (this._measurements.pixelXStart + sourceXChange) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
+      sourceXChange * this._measurements.pixelSize,
+      this._measurements.ySize - (sourceYChange * this._measurements.pixelSize),
     );
     this._indicatorContext.drawImage(
       sourceCanvas,
@@ -186,9 +187,9 @@ class Drag extends Tool {
       (this._measurements.sourceWidth - sourceXChange) * scale,
       sourceYChange * scale,
       this._measurements.xStart,
-      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
-      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceYChange) * this._measurements.pixelSize,
+      this._measurements.yStop - (sourceYChange * this._measurements.pixelSize),
+      this._measurements.xSize - (sourceXChange * this._measurements.pixelSize),
+      sourceYChange * this._measurements.pixelSize,
     );
     this._indicatorContext.drawImage(
       sourceCanvas,
@@ -196,10 +197,10 @@ class Drag extends Tool {
       0 * scale,
       sourceXChange * scale,
       sourceYChange * scale,
-      (this._measurements.pixelXStart + this._measurements.sourceWidth - sourceXChange) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + this._measurements.sourceHeight - sourceYChange) * this._measurements.pixelSize,
-      (this._measurements.pixelXStart + sourceXChange) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceYChange) * this._measurements.pixelSize,
+      this._measurements.xStop - (sourceXChange * this._measurements.pixelSize),
+      this._measurements.yStop - (sourceYChange * this._measurements.pixelSize),
+      sourceXChange * this._measurements.pixelSize,
+      sourceYChange * this._measurements.pixelSize,
     );
     if (this._grid)
       this._indicatorContext.drawImage(
