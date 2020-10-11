@@ -1,3 +1,5 @@
+const base = "/acpatterns-js/";
+
 const title = "acpatterns-js";
 
 const head = [
@@ -57,6 +59,7 @@ const plugins = [
 ];
 
 module.exports = {
+  base,
   title,
   head,
   themeConfig,
