@@ -26,6 +26,9 @@
       "DOM",
     ],
     "moduleResolution": "node",
+    "types": [
+      "babylonjs",
+    ],
     // ### STRICT CHECKS
     // "alwaysStrict": true,
     // "noImplicitAny": true,
