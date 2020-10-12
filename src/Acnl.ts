@@ -1084,10 +1084,10 @@ class Acnl extends Drawable {
 
 
   /**
-   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in an image.
+   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in one image.
    * @param image - an image to scan for QR Codes
    */
-  public async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public async fromQRCode(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     if (!(image instanceof HTMLImageElement)) {
       const message = `Expected instanceof ${HTMLImageElement.name}`;
       throw new TypeError(message);
@@ -1098,9 +1098,7 @@ class Acnl extends Drawable {
     browserQRCodeReader.hints = hints;
 
     let results: Array<Result>;
-    try {
-      results = await browserQRCodeReader.decodeFromImage(image);
-    }
+    try { results = await browserQRCodeReader.decodeFromImage(image); }
     catch (error) {
       let message = `No valid QR codes could be scanned from the image.`;
       if (error instanceof ImageLoadingException) message = error.message;
@@ -1175,9 +1173,9 @@ class Acnl extends Drawable {
    * @param image - an image to scan for QR Codes
    * @returns - a promise containing the Acnl
    */
-  public static async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public static async fromQRCode(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     const acnl = new Acnl();
-    return acnl.fromImage(image);
+    return acnl.fromQRCode(image);
   }
 }
 
