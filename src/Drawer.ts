@@ -615,8 +615,8 @@ class Drawer {
       throw new TypeError(message);
     }
     let isFromPattern = false;
-    for (const sectionName in this._pattern.sections) {
-      if (source == this._pattern.sections[sectionName]) {
+    for (const section of Object.values(this._pattern.sections)) {
+      if (source === section) {
         isFromPattern = true;
         break;
       }

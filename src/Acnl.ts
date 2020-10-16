@@ -1,5 +1,4 @@
-import Drawable from "./Drawable";
-import Enum from "./Enum";
+import Convertable from "./Convertable";
 import Hook from "./Hook";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
@@ -27,6 +26,7 @@ import {
   ImageLoadingException,
 } from "./myZxing";
 import { QRScanningError } from "./errors";
+import chroma from "chroma-js";
 
 // ACNL binary data layout.
 //
@@ -168,8 +168,20 @@ const shortLeftArmMapping = createArmMapping(ClothLength.Short, ClothSide.Left);
 const longRightArmMappng = createArmMapping(ClothLength.Long, ClothSide.Right);
 const shortRightArmMapping = createArmMapping(ClothLength.Short, ClothSide.Right);
 
-class AcnlTypes extends Enum {
-  public static LongSleevedDress: PatternType = Object.freeze({
+interface AcnlTypes {
+  LongSleevedDress: Readonly<PatternType>;
+  ShortSleevedDress: Readonly<PatternType>;
+  NoSleevedDress: Readonly<PatternType>;
+  LongSleevedShirt: Readonly<PatternType>;
+  ShortSleevedShirt: Readonly<PatternType>;
+  NoSleevedShirt: Readonly<PatternType>;
+  HornedHat: Readonly<PatternType>;
+  KnittedHat: Readonly<PatternType>;
+  Standee: Readonly<PatternType>;
+  Standard: Readonly<PatternType>;
+};
+const AcnlTypes: AcnlTypes = {
+  LongSleevedDress: Object.freeze({
     name: "Long Sleeved Dress",
     size: 128,
     sections: {
@@ -179,8 +191,8 @@ class AcnlTypes extends Enum {
       leftArm: longLeftArmMapping,
       rightArm: longRightArmMappng,
     }
-  });
-  public static ShortSleevedDress: PatternType = Object.freeze({
+  }),
+  ShortSleevedDress: Object.freeze({
     name: "Short Sleeved Dress",
     size: 128,
     sections: {
@@ -190,8 +202,8 @@ class AcnlTypes extends Enum {
       leftArm: shortLeftArmMapping,
       rightArm: shortRightArmMapping,
     }
-  });
-  public static NoSleevedDress: PatternType = Object.freeze({
+  }),
+  NoSleevedDress: Object.freeze({
     name: "Sleeveless Dress",
     size: 128,
     sections: {
@@ -199,8 +211,8 @@ class AcnlTypes extends Enum {
       front: dressFrontMapping,
       back: dressBackMapping,
     }
-  });
-  public static LongSleevedShirt: PatternType = Object.freeze({
+  }),
+  LongSleevedShirt: Object.freeze({
     name: "Long Sleeved Shirt",
     size: 128,
     sections: {
@@ -210,8 +222,8 @@ class AcnlTypes extends Enum {
       leftArm: longLeftArmMapping,
       rightArm: longRightArmMappng,
     }
-  });
-  public static ShortSleevedShirt: PatternType = Object.freeze({
+  }),
+  ShortSleevedShirt: Object.freeze({
     name: "Short Sleeved Shirt",
     size: 128,
     sections: {
@@ -221,8 +233,8 @@ class AcnlTypes extends Enum {
       leftArm: shortLeftArmMapping,
       rightArm: shortRightArmMapping,
     }
-  });
-  public static NoSleevedShirt: PatternType = Object.freeze({
+  }),
+   NoSleevedShirt: Object.freeze({
     name: "Sleeveless Shirt",
     size: 128,
     sections: {
@@ -230,43 +242,43 @@ class AcnlTypes extends Enum {
       front: shirtFrontMapping,
       back: shirtBackMapping,
     }
-  });
-  public static HornedHat: PatternType = Object.freeze({
+  }),
+  HornedHat: Object.freeze({
     name: "Horned Hat",
     size: 32,
     sections: {
       texture: standardTextureMapping,
       default: standardTextureMapping,
     }
-  });
+  }),
   // no one uses this
-  public static KnittedHat: PatternType = Object.freeze({
+  KnittedHat: Object.freeze({
     name: "Knitted Hat",
     size: 32,
     sections: {
       texture: standardTextureMapping,
       default: standardTextureMapping,
     }
-  });
-  public static Standee: PatternType = Object.freeze({
+  }),
+  Standee: Object.freeze({
     name: "Standee",
     size: 128,
     sections: {
       texture: standeeTextureMapping,
-      default: standardTextureMapping,
+      default: standeeFrontMapping,
     }
-  });
+  }),
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
   // is pro === is not standard
-  public static Standard: PatternType = Object.freeze({
+  Standard: Object.freeze({
     name: "Standard",
     size: 32,
     sections: {
       texture: standardTextureMapping,
       default: standardTextureMapping,
     }
-  });
-}
+  }),
+};
 
 const byteToType: Map<number, PatternType> = new Map(
   [...[
@@ -375,35 +387,59 @@ const colorToByte: Map<color, byte> = new Map(
   [...byteToColor.entries()].map(([i, color]) => [color, i])
 );
 
+const colors = new Set(colorToByte.keys());
+
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends Drawable {
-  
+class Acnl extends Convertable {
+
   /**
    * An Enum of all possible PatternTypes.
    */
   public static types = AcnlTypes;
-  
+
+  /**
+   * A set of all colors available within the ACNL color space.
+   */
+  public static colors = colors;
+
   /**
    * A mapping of hex color strings to bytes.
    */
   public static colorToByte = colorToByte;
-  
+
   /**
    * A mapping of bytes to hex color strings.
    */
   public static byteToColor = byteToColor;
-  
+
+  /**
+   * Returns the closest color in the color palette of the pattern.
+   * @param color - the color to compare against
+   */
+  public static getClosestColor(inputColor: color): color {
+    let outputColor: color = null;
+    let outputColorDistance: number = null;
+    for (const color of Acnl.colors) {
+      const distance: number = chroma.distance(inputColor, color, "rgb");
+      // always pick the color with the minimum distance
+      if (outputColor != null && distance >= outputColorDistance) continue;
+      outputColor = color;
+      outputColorDistance = distance;
+    }
+    return outputColor;
+  }
+
   /**
    * Title of the Acnl pattern.
    */
   private _title: string = "Empty";
-  
+
   /**
    * The designer attributes.
    */
-  public _designer: Designer = {
+  private _designer: Designer = {
     id: 0,
     name: "Unknown",
     isFemale: false
@@ -412,7 +448,7 @@ class Acnl extends Drawable {
   /**
    * Controls access of the designer attributes.
    */
-  public _designerApi: Designer = null;
+  private _designerApi: Designer = null;
 
   /**
    * The town attributes.
@@ -789,18 +825,17 @@ class Acnl extends Drawable {
   /**
    * Gets the PatternType of the Acnl.
    */
-  public get type(): PatternType {
+  public get type(): AcnlTypes[keyof AcnlTypes] {
     return this._type;
   }
-
 
   /**
    * Sets the PatternType of the Acnl.
    */
-  public set type(type: PatternType) {
+  public set type(type: AcnlTypes[keyof AcnlTypes]) {
     const { _hooks, _type } = this;
     // must match from enum, no excuses
-    for (let acnlType of AcnlTypes) {
+    for (let acnlType of Object.values(AcnlTypes)) {
       if (type === acnlType && type !== _type) {
         this._type = type;
         // reset and clean up apis

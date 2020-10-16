@@ -7,6 +7,7 @@
     "./tests"
   ],
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
     "declaration": true,
     "declarationMap": true,
     // ### PROJECT OPTIONS
@@ -22,7 +23,7 @@
     "sourceMap": true,
     // "declaration": true,
     "lib": [
-      "ES6",
+      "ES2017",
       "DOM",
     ],
     "moduleResolution": "node",

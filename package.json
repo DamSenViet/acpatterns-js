@@ -26,16 +26,11 @@
   "homepage": "https://github.com/DamSenViet/acpattern-js#readme",
   "author": "DamSenViet",
   "license": "MIT",
-  "peerDependencies": {
-    "babylonjs": "^4.1.0",
-    "babylonjs-loaders": "^4.1.0"
-  },
   "devDependencies": {
     "@babel/core": "^7.9.6",
     "@babel/plugin-transform-runtime": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
     "@babel/runtime": "^7.9.6",
-    "@zxing/library": "^0.17.1",
     "babel-loader": "^8.1.0",
     "clear": "^0.1.0",
     "dotenv": "^8.2.0",
@@ -43,7 +38,6 @@
     "jest": "^26.0.1",
     "signale": "^1.4.0",
     "terser-webpack-plugin": "^4.2.2",
-    "ts-custom-error": "^3.2.0",
     "ts-loader": "^7.0.4",
     "typescript": "^3.9.2",
     "vuepress": "^1.6.0",
@@ -51,6 +45,16 @@
     "webpack": "^4.43.0",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-format-messages": "^2.0.6",
+    "worker-loader": "^3.0.4",
     "yargs": "^15.3.1"
+  },
+  "dependencies": {
+    "@types/chroma-js": "^2.1.0",
+    "@zxing/library": "^0.17.1",
+    "babylonjs": "^4.1.0",
+    "babylonjs-loaders": "^4.1.0",
+    "chroma-js": "^2.1.0",
+    "pnnquant": "git+https://github.com/DamSenViet/PnnQuant.js.git#20fea867d9a0dce4b0a0a0d865cb798c8731eb34",
+    "ts-custom-error": "^3.2.0"
   }
 }
