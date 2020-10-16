@@ -234,7 +234,7 @@ const AcnlTypes: AcnlTypes = {
       rightArm: shortRightArmMapping,
     }
   }),
-   NoSleevedShirt: Object.freeze({
+  NoSleevedShirt: Object.freeze({
     name: "Sleeveless Shirt",
     size: 128,
     sections: {
@@ -298,21 +298,6 @@ const byteToType: Map<number, PatternType> = new Map(
 const typeToByte: Map<PatternType, number> = new Map(
   [...byteToType.entries()].map(([i, type]) => [type, i])
 );
-
-// janked types with optional because
-// typescript getters & setters won't allow for different types
-// https://github.com/microsoft/TypeScript/issues/2521
-type Designer = {
-  id?: number;
-  name?: string;
-  isFemale?: boolean;
-};
-
-type Town = {
-  id?: number;
-  name?: string;
-};
-
 
 const byteToColor: Map<byte, color> = new Map(
   [...[
@@ -432,44 +417,44 @@ class Acnl extends Convertable {
   }
 
   /**
-   * Title of the Acnl pattern.
+   * Title, name of the pattern.
    */
-  private _title: string = "Empty";
+  private _title: string = "";
 
   /**
-   * The designer attributes.
+   * Id of the villager.
    */
-  private _designer: Designer = {
-    id: 0,
-    name: "Unknown",
-    isFemale: false
-  };
+  private _villagerId: number = 0;
 
   /**
-   * Controls access of the designer attributes.
+   * Name of the villager.
    */
-  private _designerApi: Designer = null;
+  private _villagerName: string = "";
 
   /**
-   * The town attributes.
+   * Gender of the villager.
    */
-  private _town: Town = {
-    id: 0,
-    name: "Unknown"
-  };
+  private _villagerIsFemale: boolean = false;
 
   /**
-   * Controls access of the town attributes.
+   * Id of the town.
    */
-  private _townApi: Town = null;
+  private _townId: number = 0;
+
+  /**
+   * Name of the town.
+   */
+  private _townName: string = "";
 
   /**
    * The PatternType (e.g. Standard, Shirt, Dress)
    */
   private _type: PatternType = Acnl.types.Standard;
 
-  // lookup table for rendering colors
-  // palette size is 15, 16th is always transparent but not included
+  /**
+   * Lookup table for rendering colors.
+   * Palette size is 15, 16 is always transparent but not included.
+   */
   private _palette: Array<color> = [
     "#FFFFFF",
     "#FFFFFF",
@@ -487,18 +472,37 @@ class Acnl extends Convertable {
     "#FFFFFF",
     "#FFFFFF",
   ];
+
+  /**
+   * The object through which the end-user accesses the palette.
+   */
   private _paletteApi: Array<color> = null;
 
-  // type size determines what to truncate down when converting to binary.
-  // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
+  /**
+   * The raw pixels representing the pixels of the pattern.
+   * 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
+   * Type size determines what to truncate down when converting to binary.
+   */
   private _pixels: paletteIndex[][] = new Array(128).fill(0).map(() => {
     return new Array(32).fill(0);
-  }); // start with entire transparent
+  });
+
+  /**
+   * The object through which the end-user accesses the pixels.
+   */
   private _pixelsApi: PixelsSource = null;
+
+  /**
+   * 
+   */
   private _sectionsApi: {
     texture: PixelsSource;
     [key: string]: PixelsSource;
   } = null;
+
+  /**
+   * The event hooks that the pattern can emit.
+   */
   private _hooks: HookSystem = null;
 
   // stuff no one should touch b/c actual mapped values are unknown
@@ -517,55 +521,11 @@ class Acnl extends Convertable {
     // proxies and apis here
     // setup on all apis
     this._refreshHooksApi();
-    this._refreshDesignerApi();
-    this._refreshTownApi();
     this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
+    Object.seal(this);
   };
-
-
-  /**
-   * Refreshes the town API.
-   */
-  private _refreshTownApi(): void {
-    const { _town } = this;
-    const api = new Proxy(_town, {
-      get: (target, property, receiver) => {
-        return Reflect.get(target, property, receiver);
-      },
-      set: (target, property, value, receiver) => {
-        // pass mutations to setter for validation
-        const mutations = new Object;
-        mutations[property] = value;
-        this.town = mutations;
-        return true;
-      },
-    });
-    this._townApi = api;
-  }
-
-
-  /**
-   * Refreshes the designer API.
-   */
-  private _refreshDesignerApi(): void {
-    const { _designer } = this;
-    // divert all sets back to setter
-    const api = new Proxy(_designer, {
-      get: (target, property, receiver) => {
-        return Reflect.get(target, property, receiver);
-      },
-      set: (target, property, value, receiver) => {
-        // pass mutations to setter for validation
-        const mutations = new Object();
-        mutations[property] = value;
-        this.designer = mutations;
-        return true;
-      },
-    });
-    this._designerApi = api;
-  }
 
 
   /**
@@ -584,20 +544,29 @@ class Acnl extends Convertable {
   /**
    * Refreshes the palette API.
    */
-  private _refreshPaletteApi(): void {
-    const { _palette } = this;
-    const api: Array<color> = new Array<color>(_palette.length);
-    for (let i = 0; i < _palette.length; ++i) {
+  private _refreshPaletteApi(palette?: Array<color>): void {
+    let api: Array<color>;
+    if (palette != null)
+      api = palette;
+    else
+      api = new Array<color>(this._palette.length);
+    Object.defineProperty(api, "length", {
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+    for (let i = 0; i < this._palette.length; ++i) {
       Object.defineProperty(api, i, {
         ...propertyConfig,
-        get: () => _palette[i],
+        get: () => this._palette[i],
         set: (color: color) => {
-          const mutations = _palette.slice();
+          const mutations = this._palette.slice();
           mutations[i] = color;
           this.palette = <Array<color>>mutations;
         }
       })
     }
+    Object.preventExtensions(api);
     this._paletteApi = <Array<color>>api;
   }
 
@@ -611,11 +580,31 @@ class Acnl extends Convertable {
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
     const api: PixelsSource = new PixelsSource(_pixels.length);
+    Object.defineProperty(api, "length", {
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
     const unreactiveApi: Array<Array<paletteIndex>>
       = new Array<Array<paletteIndex>>(_pixels.length);
+    Object.defineProperty(unreactiveApi, "length", {
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
     for (let y = 0; y < _pixels.length; ++y) {
       const rowApi = new Array(_pixels[y].length);
+      Object.defineProperty(rowApi, "length", {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      });
       const unreactiveRowApi = new Array(_pixels[y].length);
+      Object.defineProperty(unreactiveRowApi, "length", {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      });
       for (let x = 0; x < _pixels[y].length; ++x) {
         Object.defineProperty(rowApi, x, {
           ...propertyConfig,
@@ -638,25 +627,27 @@ class Acnl extends Convertable {
           }
         });
       }
+      Object.preventExtensions(rowApi);
+      Object.preventExtensions(unreactiveRowApi);
       Object.defineProperty(api, y, {
         ...propertyConfig,
         get: (): Array<paletteIndex> => rowApi,
         set: (row: Array<paletteIndex>) => {
-          for (let x = 0; x < rowApi.length; ++x) {
+          for (let x = 0; x < rowApi.length; ++x)
             rowApi[x] = row[x];
-          }
         }
       });
       Object.defineProperty(unreactiveApi, y, {
         ...propertyConfig,
         get: (): Array<paletteIndex> => unreactiveRowApi,
         set: (row: Array<paletteIndex>) => {
-          for (let x = 0; x < unreactiveRowApi.length; ++x) {
+          for (let x = 0; x < unreactiveRowApi.length; ++x)
             unreactiveRowApi[x] = row[x];
-          }
         }
       });
     }
+    Object.preventExtensions(api);
+    Object.preventExtensions(unreactiveApi);
     this._pixelsApi = api;
     api.unreactive = unreactiveApi;
   }
@@ -682,11 +673,31 @@ class Acnl extends Convertable {
       const mapping = _type.sections[sectionName];
       const sectionApi: PixelsSource =
         new PixelsSource(mapping.length).fill(null);
+      Object.defineProperty(sectionApi, "length", {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      });
       const unreactiveSectionApi: Array<Array<paletteIndex>>
         = new Array<Array<paletteIndex>>(mapping.length);
+      Object.defineProperty(unreactiveSectionApi, "length", {
+        enumerable: false,
+        configurable: false,
+        writable: false,
+      });
       for (let y: number = 0; y < mapping.length; ++y) {
         const rowApi = new Array<paletteIndex>(mapping[y].length);
+        Object.defineProperty(rowApi, "length", {
+          enumerable: false,
+          configurable: false,
+          writable: false,
+        });
         const unreactiveRowApi = new Array<paletteIndex>(mapping[y].length);
+        Object.defineProperty(unreactiveRowApi, "length", {
+          enumerable: false,
+          configurable: false,
+          writable: false,
+        });
         for (let x: number = 0; x < mapping[y].length; ++x) {
           const targetY = mapping[y][x][0];
           const targetX = mapping[y][x][1];
@@ -718,6 +729,8 @@ class Acnl extends Convertable {
             }
           });
         }
+        Object.preventExtensions(rowApi);
+        Object.preventExtensions(unreactiveRowApi);
         Object.defineProperty(sectionApi, y, {
           ...propertyConfig,
           get: (): Array<paletteIndex> => rowApi,
@@ -737,6 +750,8 @@ class Acnl extends Convertable {
           }
         });
       }
+      Object.preventExtensions(sectionApi);
+      Object.preventExtensions(unreactiveSectionApi)
       api[sectionName] = sectionApi;
       sectionApi.unreactive = unreactiveSectionApi;
     }
@@ -763,62 +778,112 @@ class Acnl extends Convertable {
 
 
   /**
-   * Gets the town attributes.
+   * Gets the town id of the Acnl.
    */
-  public get town(): Town {
-    return this._townApi;
+  public get townId(): number {
+    return this._townId;
   }
 
 
   /**
-   * Sets the town attributes.
+   * Sets the town id of the Acnl.
    */
-  public set town(town: Town) {
-    const { _town } = this;
-    // no undefined values (null still possible)
-    let {
-      id = this._town.id,
-      name = this._town.name,
-    } = town;
-    // truncate/transform/ensure valid values
-    if (typeof id === "number") {
-      if (id < 65536) _town.id = id;
+  public set townId(townId: number) {
+    if (
+      typeof townId !== "number" ||
+      !Number.isInteger(townId)
+    ) {
+
     }
-    if (typeof name === "string") {
-      if (name.length <= 8) _town.name = name;
+    if (townId < 0 || townId >= 65536) {
+
     }
+    this._townId = townId;
   }
 
 
   /**
-   * Gets the designer.
+   * Gets the town name of the Acnl.
    */
-  public get designer(): Designer {
-    return this._designerApi;
+  public get townName(): string {
+    return this._townName;
   }
 
 
   /**
-   * Sets the designer attributes.
+   * Sets the town name of the Acnl.
    */
-  public set designer(designer: Designer) {
-    // no undefined values (null still possible)
-    const { _designer } = this;
-    let {
-      id = _designer.id,
-      name = _designer.name,
-      isFemale = _designer.isFemale,
-    } = designer;
-    // truncate/transform/ensure valid values
-    if (typeof id === "number") {
-      if (id < 65536) _designer.id = id;
+  public set townName(townName: string) {
+    if (typeof townName !== "string") {
+
     }
-    if (typeof name === "string") {
-      if (name.length <= 8) _designer.name = name;
+    if (townName.length > 8) {
+
     }
-    if (typeof isFemale === "boolean") {
-      _designer.isFemale = isFemale;
+    this._townName = townName;
+  }
+
+
+  /**
+   * Gets the villager id of the Acnl.
+   */
+  public get villagerId(): number {
+    return this._villagerId;
+  }
+
+  /**
+   * Sets the villager id of the Acnl.
+   */
+  public set villagerId(villagerId: number) {
+    if (typeof villagerId !== "number") {
+
     }
+    if (villagerId >= 65536) {
+
+    }
+    this._villagerId = villagerId;
+  }
+
+
+  /**
+   * Gets the villager name of the Acnl.
+   */
+  public get villagerName(): string {
+    return this._villagerName;
+  }
+
+
+  /**
+   * Sets the villager name of the Acnl.
+   */
+  public set villagerName(villagerName: string) {
+    if (typeof villagerName !== "string") {
+
+    }
+    if (villagerName.length > 8) {
+
+    }
+    this._villagerName = villagerName;
+  }
+
+
+  /**
+   * Gets the villager gender.
+   */
+  public get villagerIsFemale(): boolean {
+    return this._villagerIsFemale;
+  }
+
+
+  /**
+   * Sets the villager gender.
+   */
+  public set villagerIsFemale(villagerIsFemale: boolean) {
+    if (typeof villagerIsFemale !== "boolean") {
+      const message = `Expected a boolean.`;
+      throw new TypeError(message);
+    }
+    this._villagerIsFemale = villagerIsFemale;
   }
 
 
@@ -828,6 +893,7 @@ class Acnl extends Convertable {
   public get type(): AcnlTypes[keyof AcnlTypes] {
     return this._type;
   }
+
 
   /**
    * Sets the PatternType of the Acnl.
@@ -857,22 +923,34 @@ class Acnl extends Convertable {
 
 
   /**
-   * Sets the palette of the Acnl.
+   * Sets the entire palette of the Acnl.
+   * Assimilates passed palette into the pattern.
    */
   public set palette(palette: Array<color>) {
+    // turns the passed palette into the new api object
     const { _palette, _hooks } = this;
-    if (typeof palette !== "object" || !(palette instanceof Array)) throw new TypeError();
-    if (palette.length > 15) throw new TypeError(); // too many
-    for (let color of palette)
-      if (!Acnl.colorToByte.has(color))
-        throw new TypeError();
+    if (!(palette instanceof Array)) {
+      const message = `Expected an Array of colors.`;
+      throw new TypeError(message);
+    }
+    if (palette.length !== this._palette.length) {
+      const message = `Palette size must be of size ${this._palette.length} for this format.`;
+      throw new RangeError(message); // too many
+    }
+    for (const color of palette)
+      if (!Acnl.colors.has(color)) {
+        const message = `Expected valid colors from the pattern's colorspace.`;
+        throw new TypeError(message);
+      }
     for (let i = 0; i < _palette.length; ++i) {
-      let color: color = palette[i];
+      const color: color = palette[i];
       // block all non-unique changes
       if (_palette[i] === color) continue;
       _palette[i] = color;
       _hooks.palette.trigger(i, color);
     }
+    // now use it to replace the palette api, allows for equality operator
+    if (palette !== this._paletteApi) this._refreshPaletteApi(palette);
   }
 
 
@@ -1009,12 +1087,12 @@ class Acnl extends Convertable {
     }
     // do a size check
     this._title = bytesToString(bytes.splice(0, 42));
-    this._designer.id = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._designer.name = bytesToString(bytes.splice(0, 18));
-    this._designer.isFemale = Boolean(bytes.splice(0, 1)[0]);
+    this._villagerId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._villagerName = bytesToString(bytes.splice(0, 18));
+    this._villagerIsFemale = Boolean(bytes.splice(0, 1)[0]);
     bytes.splice(0, 1); // zero padding
-    this._town.id = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._town.name = bytesToString(bytes.splice(0, 18));
+    this._townId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._townName = bytesToString(bytes.splice(0, 18));
     this._language = bytes.splice(0, 1)[0];
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
@@ -1064,8 +1142,11 @@ class Acnl extends Convertable {
     // encode everything into hex numbers
     const {
       _title,
-      _designer,
-      _town,
+      _villagerId,
+      _villagerName,
+      _villagerIsFemale,
+      _townId,
+      _townName,
       _language,
       _country,
       _region,
@@ -1079,15 +1160,15 @@ class Acnl extends Convertable {
     bytes.push(...stringToBytes(_title));
     bytes.push(...new Array((20 - _title.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
-    bytes.push(...Uint16ToBytes(_designer.id));
-    bytes.push(...stringToBytes(_designer.name));
-    bytes.push(...new Array((8 - _designer.name.length) * 2).fill(0)); // padding
+    bytes.push(...Uint16ToBytes(_villagerId));
+    bytes.push(...stringToBytes(_villagerName));
+    bytes.push(...new Array((8 - _villagerName.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
-    bytes.push(Number(_designer.isFemale));
+    bytes.push(Number(_villagerIsFemale));
     bytes.push(0); // zero padding
-    bytes.push(...Uint16ToBytes(_town.id));
-    bytes.push(...stringToBytes(_town.name));
-    bytes.push(...new Array((8 - _town.name.length) * 2).fill(0)); // padding
+    bytes.push(...Uint16ToBytes(_townId));
+    bytes.push(...stringToBytes(_townName));
+    bytes.push(...new Array((8 - _townName.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
     bytes.push(_language);
     bytes.push(0); // zero padding
