@@ -10,24 +10,24 @@ export interface DragOptions {
  */
 class Drag extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -41,18 +41,18 @@ class Drag extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Line.
-   */
-  protected _startingSourceY: number = null;
-
-  /**
    * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
 
+  /**
+   * The Y component of source anchor point for drawing the Line.
+   */
+  protected _startingSourceY: number = null;
+
 
   /**
-   * Creates a Bucket instance.
+   * Instantiates a Drag tool.
    * @param options - a config object
    */
   public constructor(options?: DragOptions) {
@@ -82,12 +82,12 @@ class Drag extends Tool {
 
   /**
    * Draws the default cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateDefaultCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -136,15 +136,15 @@ class Drag extends Tool {
   /**
    * Draws the cursor preview/indicator of the drag (wrapping).
    * https://stackoverflow.com/a/58110328/8625882
-   * @param sourceYChange - the amount of change in Y, can be negative
    * @param sourceXChange - the amount of change in X, can be negative
+   * @param sourceYChange - the amount of change in Y, can be negative
    */
   protected _indicateDrag(
-    sourceYChange: number,
     sourceXChange: number,
+    sourceYChange: number,
   ): void {
-    sourceYChange = (sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
     sourceXChange = (sourceXChange + this._measurements.sourceWidth) % this._measurements.sourceWidth;
+    sourceYChange = (sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
     // assumes no pixel filter
     let sourceCanvas: HTMLCanvasElement = null;
     let scale: number = null;
@@ -156,7 +156,7 @@ class Drag extends Tool {
       sourceCanvas = this._textureCanvas;
       scale = 4;
     }
-    
+
     this._indicatorContext.drawImage(
       sourceCanvas,
       sourceXChange * scale,
@@ -174,7 +174,7 @@ class Drag extends Tool {
       sourceYChange * scale,
       sourceXChange * scale,
       (this._measurements.sourceHeight - sourceYChange) * scale,
-      
+
       this._measurements.xStop - (sourceXChange * this._measurements.pixelSize),
       this._measurements.yStart,
       sourceXChange * this._measurements.pixelSize,
@@ -217,54 +217,54 @@ class Drag extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicate(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    if (this._startingSourceY != null && this._startingSourceX != null) {
-      const sourceYChange = targetSourceY - this._startingSourceY;
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       const sourceXChange = targetSourceX - this._startingSourceX;
+      const sourceYChange = targetSourceY - this._startingSourceY;
       this._indicateDrag(
-        sourceYChange,
         sourceXChange,
+        sourceYChange,
       );
-      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceX, this._startingSourceY, 1);
     }
-    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceX, targetSourceY, 1);
   }
 
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param sourceYChange - the amount of change in Y, can be negative
    * @param sourceXChange - the amount of change in X, can be negative
+   * @param sourceYChange - the amount of change in Y, can be negative
    */
   protected _pixels(
-    sourceYChange: number,
     sourceXChange: number,
+    sourceYChange: number,
   ): void {
     // need copy to alter
-    const sourceCopy = new Array(this._measurements.sourceHeight)
+    const sourceCopy = new Array(this._measurements.sourceWidth)
       .fill(0)
-      .map(v => new Array(this._measurements.sourceWidth).fill(0));
+      .map(v => new Array(this._measurements.sourceHeight).fill(0));
 
     // fill the copy
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        sourceCopy[sourceY][sourceX] = this._source.unreactive[sourceY][sourceX];
+        sourceCopy[sourceX][sourceY] = this._source.unreactive[sourceX][sourceY];
       }
     }
 
 
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const shiftedSourceY = (sourceY + sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
         const shiftedSourceX = (sourceX + sourceXChange + this._measurements.sourceWidth) % this._measurements.sourceWidth;
-        const paletteIndex = sourceCopy[shiftedSourceY][shiftedSourceX];
-        this._source.unreactive[sourceY][sourceX] = paletteIndex;
+        const shiftedSourceY = (sourceY + sourceYChange + this._measurements.sourceHeight) % this._measurements.sourceHeight;
+        const paletteIndex = sourceCopy[shiftedSourceX][shiftedSourceY];
+        this._source.unreactive[sourceX][sourceY] = paletteIndex;
       }
     }
 
@@ -278,35 +278,35 @@ class Drag extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicate(targetSourceY, targetSourceX);
+      this._indicate(targetSourceX, targetSourceY);
       requestAnimationFrame(this._redraw);
     }
   };
@@ -320,28 +320,28 @@ class Drag extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._refreshIndicator();
-      const sourceYChange = targetSourceY - this._startingSourceY;
       const sourceXChange = targetSourceX - this._startingSourceX;
-      this._pixels(sourceYChange, sourceXChange);
-      this._startingSourceY = null;
+      const sourceYChange = targetSourceY - this._startingSourceY;
+      this._pixels(sourceXChange, sourceYChange);
       this._startingSourceX = null;
+      this._startingSourceY = null;
       this._didDrawOnLastSource = true;
     }
-    else if (this._startingSourceY == null && this._startingSourceX == null) {
+    else if (this._startingSourceX == null && this._startingSourceY == null) {
       if (this._indicator) {
         this._refreshIndicator();
-        this._indicate(targetSourceY, targetSourceX);
+        this._indicate(targetSourceX, targetSourceY);
       }
-      this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
+      this._startingSourceY = targetSourceY;
       requestAnimationFrame(this._redraw);
     }
   };
@@ -352,12 +352,12 @@ class Drag extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
-    this._startingSourceY = null;
+    this._lastSourceY = null;
     this._startingSourceX = null;
+    this._startingSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

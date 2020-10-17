@@ -10,24 +10,24 @@ export interface CircleOptions {
  */
 class Circle extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -41,18 +41,18 @@ class Circle extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Line.
-   */
-  protected _startingSourceY: number = null;
-
-  /**
    * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
 
+  /**
+   * The Y component of source anchor point for drawing the Line.
+   */
+  protected _startingSourceY: number = null;
+
 
   /**
-   * Creates a Bucket instance.
+   * Instantiates a Circle tool.
    * @param options - a config object
    */
   public constructor(options?: CircleOptions) {
@@ -83,16 +83,16 @@ class Circle extends Tool {
   /**
    * Runs callback on a circular outline.
    * https://web.engr.oregonstate.edu/~sllu/bcircle.pdf
-   * @param y - the y component of the first point
-   * @param x - the x component of the first point
+   * @param cx - the x of the center point
+   * @param cy - the y of the center point
    * @param r - the radius of the circle
    * @param callback - the callback to call on points on the circle
    */
   protected _onBresenhamsCircle(
-    cy: number,
     cx: number,
+    cy: number,
     r: number,
-    callback: (y: number, x: number) => void,
+    callback: (x: number, y: number) => void,
   ): void {
     let x: number = r;
     let y: number = 0;
@@ -101,14 +101,14 @@ class Circle extends Tool {
     let radiusError = 0;
     while (x >= y) {
       // Plot8CirclePoints
-      callback(cy + y, cx + x);
-      callback(cy + y, cx - x);
-      callback(cy - y, cx - x);
-      callback(cy - y, cx + x);
-      callback(cy + x, cx + y);
-      callback(cy + x, cx - y);
-      callback(cy - x, cx - y);
-      callback(cy - x, cx + y);
+      callback(cx + x, cy + y);
+      callback(cx - x, cy + y);
+      callback(cx - x, cy - y);
+      callback(cx + x, cy - y);
+      callback(cx + y, cy + x);
+      callback(cx - y, cy + x);
+      callback(cx - y, cy - x);
+      callback(cx + y, cy - x);
 
       ++y;
       radiusError += yChange;
@@ -124,12 +124,12 @@ class Circle extends Tool {
 
   /**
    * Draws the default cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateDefaultCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -177,12 +177,12 @@ class Circle extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicateFillArea(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
     this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
@@ -191,11 +191,11 @@ class Circle extends Tool {
       Math.abs(this._startingSourceY - targetSourceY),
     );
     this._onBresenhamsCircle(
-      this._startingSourceY,
       this._startingSourceX,
+      this._startingSourceY,
       radius,
-      (sourceY, sourceX) => {
-        if (this.isValidSourceYX(sourceY, sourceX))
+      (sourceX, sourceY) => {
+        if (this.isValidSourceXY(sourceX, sourceY))
           this._indicatorContext.fillRect(
             (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
             (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
@@ -209,42 +209,42 @@ class Circle extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicate(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._indicateFillArea(
-        targetSourceY,
         targetSourceX,
+        targetSourceY,
       );
-      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceX, this._startingSourceY, 1);
     }
-    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceX, targetSourceY, 1);
   }
 
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param centerSourceY - y coordinate of the center of the circle in source
    * @param centerSourceX - x coordinate of the center of the circle in source
+   * @param centerSourceY - y coordinate of the center of the circle in source
    * @param sourceRadius - radius from the center of the circle in source
    */
   protected _pixels(
-    centerSourceY: number,
     centerSourceX: number,
+    centerSourceY: number,
     sourceRadius: number,
   ): void {
     this._onBresenhamsCircle(
-      centerSourceY,
       centerSourceX,
+      centerSourceY,
       sourceRadius,
-      (sourceY, sourceX) => {
-        if (this.isValidSourceYX(sourceY, sourceX))
-          this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      (sourceX, sourceY) => {
+        if (this.isValidSourceXY(sourceX, sourceY))
+          this._source.unreactive[sourceX][sourceY] = this._paletteIndex;
       }
     )
 
@@ -258,35 +258,35 @@ class Circle extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicate(targetSourceY, targetSourceX);
+      this._indicate(targetSourceX, targetSourceY);
       requestAnimationFrame(this._redraw);
     }
   };
@@ -300,33 +300,33 @@ class Circle extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       const radius = Math.max(
         Math.abs(this._startingSourceX - targetSourceX),
         Math.abs(this._startingSourceY - targetSourceY),
       );
       this._pixels(
-        this._startingSourceY,
         this._startingSourceX,
+        this._startingSourceY,
         radius
       );
-      this._startingSourceY = null;
       this._startingSourceX = null;
+      this._startingSourceY = null;
       this._didDrawOnLastSource = true;
     }
-    else if (this._startingSourceY == null && this._startingSourceX == null) {
+    else if (this._startingSourceX == null && this._startingSourceY == null) {
       if (this._indicator) {
         this._refreshIndicator();
-        this._indicate(targetSourceY, targetSourceX);
+        this._indicate(targetSourceX, targetSourceY);
       }
-      this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
+      this._startingSourceY = targetSourceY;
       requestAnimationFrame(this._redraw);
     }
   };
@@ -337,12 +337,12 @@ class Circle extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
-    this._startingSourceY = null;
+    this._lastSourceY = null;
     this._startingSourceX = null;
+    this._startingSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

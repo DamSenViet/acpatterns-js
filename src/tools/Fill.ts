@@ -10,24 +10,24 @@ export interface FillOptions {
  */
 class Fill extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -48,7 +48,7 @@ class Fill extends Tool {
 
 
   /**
-   * Creates a Fill instance.
+   * Instantiates a Fill tool.
    * @param options - a config object
    */
   public constructor(options?: FillOptions) {
@@ -78,26 +78,26 @@ class Fill extends Tool {
 
   /**
    * Draws the preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicate(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    this._indicateCursor(targetSourceY, targetSourceX);
-    this._indicateFillArea(targetSourceY, targetSourceX);
+    this._indicateCursor(targetSourceX, targetSourceY);
+    this._indicateFillArea(targetSourceX, targetSourceY);
   }
 
 
   /**
    * Draws the cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateCursor(
-    sourceY: number,
     sourceX: number,
+    sourceY: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
     this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
@@ -137,19 +137,19 @@ class Fill extends Tool {
 
   /**
    * Draws an overlay on the entire fill area.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX  - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicateFillArea(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    const paletteIndexToReplace = this._source.unreactive[targetSourceY][targetSourceX];
+    const paletteIndexToReplace = this._source.unreactive[targetSourceX][targetSourceY];
     if (paletteIndexToReplace === this._paletteIndex) return;
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     for (let i = 0; i < sourcePoints.length; ++i) {
-      const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
+      const [sourceX, sourceY] = <[number, number]>JSON.parse(sourcePoints[i]);
       this._indicatorContext.fillRect(
         (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
         (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
@@ -162,53 +162,53 @@ class Fill extends Tool {
 
   /**
    * Recomputes _lastSourcePointJSONSet.
-   * @param targetSourceY - the y component of the source coordinate
    * @param targetSourceX - the x component of the source coordinate
+   * @param targetSourceY - the y component of the source coordinate
    */
   protected _computeLastSourcePointJSONSet(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
     this._lastSourcePointJSONSet.clear();
-    const paletteIndexToReplace = this._source.unreactive[targetSourceY][targetSourceX];
-    this._computeLastSourcePointJSONSetHelper(targetSourceY, targetSourceX, paletteIndexToReplace);
+    const paletteIndexToReplace = this._source.unreactive[targetSourceX][targetSourceY];
+    this._computeLastSourcePointJSONSetHelper(targetSourceX, targetSourceY, paletteIndexToReplace);
   }
 
 
   /**
    * Helper for _computeLastSourcePointJSONSet. Flood-fill Algorithm.
-   * @param sourceY - the y component of the source coordinate
    * @param sourceX - the x component of the source coordinate
+   * @param sourceY - the y component of the source coordinate
    * @param target - the paletteIndex to replace
    */
   protected _computeLastSourcePointJSONSetHelper(
-    sourceY: number,
     sourceX: number,
+    sourceY: number,
     target: paletteIndex,
   ): void {
-    if (!this.isValidSourceYX(sourceY, sourceX)) return;
-    const jsonSourcePoint = JSON.stringify([sourceY, sourceX]);
+    if (!this.isValidSourceXY(sourceX, sourceY)) return;
+    const jsonSourcePoint = JSON.stringify([sourceX, sourceY]);
     if (this._lastSourcePointJSONSet.has(jsonSourcePoint)) return;
-    else if (this._source.unreactive[sourceY][sourceX] !== target) return;
-    this._lastSourcePointJSONSet.add(JSON.stringify([sourceY, sourceX]));
+    else if (this._source.unreactive[sourceX][sourceY] !== target) return;
+    this._lastSourcePointJSONSet.add(JSON.stringify([sourceX, sourceY]));
     this._computeLastSourcePointJSONSetHelper(
+      sourceX,
       sourceY - 1,
-      sourceX,
       target,
     );
     this._computeLastSourcePointJSONSetHelper(
+      sourceX,
       sourceY + 1,
-      sourceX,
       target,
     );
     this._computeLastSourcePointJSONSetHelper(
-      sourceY,
       sourceX - 1,
+      sourceY,
       target,
     );
     this._computeLastSourcePointJSONSetHelper(
-      sourceY,
       sourceX + 1,
+      sourceY,
       target,
     );
   }
@@ -216,19 +216,19 @@ class Fill extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - y coordinate in source
    * @param targetSourceX - x coordinate in source
+   * @param targetSourceY - y coordinate in source
    */
   protected _pixels(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
+    this._computeLastSourcePointJSONSet(targetSourceX, targetSourceY);
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
     this._indicatorContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
-      const [sourceY, sourceX] = <[number, number]>JSON.parse(sourcePoints[i]);
-      this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      const [sourceX, sourceY] = <[number, number]>JSON.parse(sourcePoints[i]);
+      this._source.unreactive[sourceX][sourceY] = this._paletteIndex;
     }
     this._pattern.hooks.refresh.trigger();
   }
@@ -240,43 +240,43 @@ class Fill extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     // coordinates have changed, recompute the cluster
     if (
       !this._lastSourcePointJSONSet.has(JSON.stringify([
-        targetSourceY,
         targetSourceX,
+        targetSourceY,
       ]))
-    ) this._computeLastSourcePointJSONSet(targetSourceY, targetSourceX);
+    ) this._computeLastSourcePointJSONSet(targetSourceX, targetSourceY);
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicate(targetSourceY, targetSourceX);
+      this._indicate(targetSourceX, targetSourceY);
       requestAnimationFrame(this._redraw);
     }
   };
@@ -290,18 +290,18 @@ class Fill extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicateCursor(targetSourceY, targetSourceX);
+      this._indicateCursor(targetSourceX, targetSourceY);
     }
 
-    this._pixels(targetSourceY, targetSourceX);
+    this._pixels(targetSourceX, targetSourceY);
     this._didDrawOnLastSource = true;
   };
 
@@ -312,10 +312,10 @@ class Fill extends Tool {
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
     this._lastSourcePointJSONSet.clear();
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
+    this._lastSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

@@ -8,6 +8,9 @@ import Drawable from "../Drawable";
  * Simulates a nested class since TypeScript doesn't allow.
  */
 class Tool {
+  /**
+   * The drawer that uses the tool.
+   */
   private _drawer: Drawer = null;
 
   // access simulation of a nested class
@@ -102,7 +105,7 @@ class Tool {
   };
 
   /**
-   * Creates a Tool instance.
+   * Instantiates a tool.
    */
   public constructor() { };
 
@@ -141,16 +144,17 @@ class Tool {
     const bdr = this._canvas.getBoundingClientRect();
 
     // need to convert pixelSize to POST-CSS value
-    const pixelY = Math.floor(
-      (mouseEvent.clientY - bdr.top) /
-      (bdr.height / this._measurements.pixelGridSize) // POST-CSS pixelSize
-    );
     const pixelX = Math.floor(
       (mouseEvent.clientX - bdr.left) /
       (bdr.width / this._measurements.pixelGridSize) // POST-CSS pixelSize
     );
 
-    return [pixelY, pixelX];
+    const pixelY = Math.floor(
+      (mouseEvent.clientY - bdr.top) /
+      (bdr.height / this._measurements.pixelGridSize) // POST-CSS pixelSize
+    );
+
+    return [pixelX, pixelY];
   }
 
 
@@ -159,33 +163,34 @@ class Tool {
    * @returns - null when pixelPoint not in range to be converted to a source point
    */
   protected pixelPointToSourcePoint(pixelPoint: [number, number]): [number, number] {
-    const pixelY = pixelPoint[0];
-    const pixelX = pixelPoint[1];
-    if (
-      pixelY < this._measurements.pixelYStart ||
-      pixelY > this._measurements.pixelYStop - 1
-    ) return null;
+    const pixelX = pixelPoint[0];
+    const pixelY = pixelPoint[1];
 
     if (
       pixelX < this._measurements.pixelXStart ||
       pixelX > this._measurements.pixelXStop - 1
     ) return null;
 
-    const sourceY = pixelY - this._measurements.pixelYStart;
+    if (
+      pixelY < this._measurements.pixelYStart ||
+      pixelY > this._measurements.pixelYStop - 1
+    ) return null;
+
     const sourceX = pixelX - this._measurements.pixelXStart;
-    return [sourceY, sourceX];
+    const sourceY = pixelY - this._measurements.pixelYStart;
+    return [sourceX, sourceY];
   }
 
 
   /**
    * Helper to determine whether or not the y, x values are valid to access.
-   * @param sourceY - the y component of the source coordinate to validate
    * @param sourceX - the x component of the source coordinate to validate
+   * @param sourceY - the y component of the source coordinate to validate
    */
-  protected isValidSourceYX(sourceY: number, sourceX: number): boolean {
-    if (sourceY >= this._measurements.sourceHeight || sourceY < 0)
-      return false;
+  protected isValidSourceXY(sourceX: number, sourceY: number): boolean {
     if (sourceX >= this._measurements.sourceWidth || sourceX < 0)
+      return false;
+    if (sourceY >= this._measurements.sourceHeight || sourceY < 0)
       return false;
     return true;
   }

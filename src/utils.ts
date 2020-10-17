@@ -1,3 +1,29 @@
+
+/**
+ * Name of array methods that can change an array length.
+ */
+type ArrayLengthMutationKeys = 'splice' | 'push' | 'pop' | 'shift' | 'unshift'
+
+/**
+ * Alias for fixed length array support.
+ */
+export type FixedLengthArray<T, TObj = [...Array<T>]> =
+  Pick<TObj, Exclude<keyof TObj, ArrayLengthMutationKeys>>
+  & {
+    readonly length;
+    [I: number]: T
+    [Symbol.iterator]: () => IterableIterator<T>
+  };
+
+/**
+ * Property configs to lock down length. Used w/ FixedLengthArray type.
+ */
+export const fixedLengthPropertyConfig = {
+  enumerable: false,
+  configurable: false,
+  writable: false,
+};
+
 /**
  * A valid byte value from 0 - 255.
  */

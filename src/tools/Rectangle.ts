@@ -10,24 +10,24 @@ export interface RectangleOptions {
  */
 class Rectangle extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -41,18 +41,18 @@ class Rectangle extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Rectangle.
-   */
-  protected _startingSourceY: number = null;
-
-  /**
    * The X component of source anchor point for drawing the Rectangle.
    */
   protected _startingSourceX: number = null;
 
+  /**
+   * The Y component of source anchor point for drawing the Rectangle.
+   */
+  protected _startingSourceY: number = null;
+
 
   /**
-   * Creates a Bucket instance.
+   * Instantiates a Bucket tool.
    * @param options - a config object
    */
   public constructor(options?: Rectangle) {
@@ -82,12 +82,12 @@ class Rectangle extends Tool {
 
   /**
    * Draws the default cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateDefaultCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -135,23 +135,23 @@ class Rectangle extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicateFillArea(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
     let topLeftSourceX: number = Math.min(this._startingSourceX, targetSourceX);
-    let height: number = (
-      Math.max(this._startingSourceY, targetSourceY) -
-      Math.min(this._startingSourceY, targetSourceY)
-    );
+    let topLeftSourceY: number = Math.min(this._startingSourceY, targetSourceY);
     let width: number = Math.abs(
       Math.max(this._startingSourceX, targetSourceX) -
       Math.min(this._startingSourceX, targetSourceX)
+    );
+    let height: number = (
+      Math.max(this._startingSourceY, targetSourceY) -
+      Math.min(this._startingSourceY, targetSourceY)
     );
 
     this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
@@ -200,46 +200,46 @@ class Rectangle extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - y coordinate in source
    * @param targetSourceX - x coordinate in source
+   * @param targetSourceY - y coordinate in source
    */
   protected _indicate(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._indicateFillArea(
-        targetSourceY,
         targetSourceX,
+        targetSourceY,
       );
-      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceX, this._startingSourceY, 1);
     }
-    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceX, targetSourceY, 1);
   }
 
 
   /**
    * Commits pixels from the rectangle and triggers a redraws when finished.
-   * @param startSourceY  - the y of the starting point on the source
    * @param startSourceX - the x of the starting point on the source
-   * @param endSourceY - the y of the ending point on the source
+   * @param startSourceY  - the y of the starting point on the source
    * @param endSourceX - the x of the ending point on the source
+   * @param endSourceY - the y of the ending point on the source
    */
   protected _pixels(
-    startSourceY: number,
     startSourceX: number,
-    endSourceY: number,
+    startSourceY: number,
     endSourceX: number,
+    endSourceY: number,
   ): void {
-    let topLeftSourceY: number = Math.min(endSourceY, startSourceY);
     let topLeftSourceX: number = Math.min(endSourceX, startSourceX);
-    let height: number = (
-      Math.max(endSourceY, startSourceY) -
-      Math.min(endSourceY, startSourceY)
-    );
+    let topLeftSourceY: number = Math.min(endSourceY, startSourceY);
     let width: number = Math.abs(
       Math.max(endSourceX, startSourceX) -
       Math.min(endSourceX, startSourceX)
+    );
+    let height: number = (
+      Math.max(endSourceY, startSourceY) -
+      Math.min(endSourceY, startSourceY)
     );
 
     // top left to top right
@@ -247,28 +247,28 @@ class Rectangle extends Tool {
       let sourceX = topLeftSourceX;
       sourceX <= topLeftSourceX + width;
       ++sourceX
-    ) this._source.unreactive[topLeftSourceY][sourceX] = this._paletteIndex;
+    ) this._source.unreactive[sourceX][topLeftSourceY] = this._paletteIndex;
 
     // top right to bottom right
     for (
       let sourceY = topLeftSourceY;
       sourceY <= topLeftSourceY + height;
       ++sourceY
-    ) this._source.unreactive[sourceY][topLeftSourceX + width] = this._paletteIndex;
+    ) this._source.unreactive[topLeftSourceX + width][sourceY] = this._paletteIndex;
 
     // bottom left to bottom right
     for (
       let sourceX = topLeftSourceX;
       sourceX <= topLeftSourceX + width;
       ++sourceX
-    ) this._source.unreactive[topLeftSourceY + height][sourceX] = this._paletteIndex;
+    ) this._source.unreactive[sourceX][topLeftSourceY + height] = this._paletteIndex;
 
     // top left to bottom left
     for (
       let sourceY = topLeftSourceY;
       sourceY <= topLeftSourceY + height;
       ++sourceY
-    ) this._source.unreactive[sourceY][topLeftSourceX] = this._paletteIndex;
+    ) this._source.unreactive[topLeftSourceX][sourceY] = this._paletteIndex;
 
     this._pattern.hooks.refresh.trigger();
   }
@@ -280,35 +280,35 @@ class Rectangle extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicate(targetSourceY, targetSourceX);
+      this._indicate(targetSourceX, targetSourceY);
       requestAnimationFrame(this._redraw);
     }
   };
@@ -322,30 +322,30 @@ class Rectangle extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._pixels(
-        this._startingSourceY,
         this._startingSourceX,
-        targetSourceY,
+        this._startingSourceY,
         targetSourceX,
+        targetSourceY,
       );
-      this._startingSourceY = null;
       this._startingSourceX = null;
+      this._startingSourceY = null;
       this._didDrawOnLastSource = true;
     }
-    else if (this._startingSourceY == null && this._startingSourceX == null) {
+    else if (this._startingSourceX == null && this._startingSourceY == null) {
       if (this._indicator) {
         this._refreshIndicator();
-        this._indicate(targetSourceY, targetSourceX);
+        this._indicate(targetSourceX, targetSourceY);
       }
-      this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
+      this._startingSourceY = targetSourceY;
       requestAnimationFrame(this._redraw);
     }
   };
@@ -356,12 +356,12 @@ class Rectangle extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
-    this._startingSourceY = null;
+    this._lastSourceY = null;
     this._startingSourceX = null;
+    this._startingSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

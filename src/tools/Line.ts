@@ -10,24 +10,24 @@ export interface LineOptions {
  */
 class Line extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -41,18 +41,18 @@ class Line extends Tool {
   protected _paletteIndex: paletteIndex = 0;
 
   /**
-   * The Y component of source anchor point for drawing the Line.
-   */
-  protected _startingSourceY: number = null;
-
-  /**
    * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
 
+  /**
+   * The Y component of source anchor point for drawing the Line.
+   */
+  protected _startingSourceY: number = null;
+
 
   /**
-   * Creates a Line instance.
+   * Instantiates a Line tool.
    * @param options - a config object
    */
   public constructor(options?: LineOptions) {
@@ -83,18 +83,18 @@ class Line extends Tool {
   /**
    * Runs callback on a line between two points.
    * https://stackoverflow.com/a/11683720/8625882
-   * @param y - the y component of the first point
    * @param x - the x component of the first point
-   * @param y2 - the y component of the second point
+   * @param y - the y component of the first point
    * @param x2 - the x component of the second point
+   * @param y2 - the y component of the second point
    * @param callback - the callback to call on points on the line
    */
   protected _onBresenhamsLine(
-    y: number,
     x: number,
-    y2: number,
+    y: number,
     x2: number,
-    callback: (y: number, x: number) => void,
+    y2: number,
+    callback: (x: number, y: number) => void,
   ): void {
 
     let w: number = x2 - x;
@@ -116,7 +116,7 @@ class Line extends Tool {
     }
     let numerator: number = longest >> 1;
     for (let i = 0; i <= longest; ++i) {
-      callback(y, x);
+      callback(x, y);
       numerator += shortest;
       if (numerator >= longest) {
         numerator -= longest;
@@ -133,12 +133,12 @@ class Line extends Tool {
 
   /**
    * Draws the default cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateDefaultCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -186,21 +186,21 @@ class Line extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicateFillArea(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
     this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     this._onBresenhamsLine(
-      this._startingSourceY,
       this._startingSourceX,
-      targetSourceY,
+      this._startingSourceY,
       targetSourceX,
-      (sourceY, sourceX) => {
+      targetSourceY,
+      (sourceX, sourceY) => {
         this._indicatorContext.fillRect(
           (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
           (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
@@ -214,44 +214,44 @@ class Line extends Tool {
 
   /**
    * Draws the cursor preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicate(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._indicateFillArea(
-        targetSourceY,
         targetSourceX,
+        targetSourceY,
       );
-      this._indicateDefaultCursor(this._startingSourceY, this._startingSourceX, 1);
+      this._indicateDefaultCursor(this._startingSourceX, this._startingSourceY, 1);
     }
-    this._indicateDefaultCursor(targetSourceY, targetSourceX, 1);
+    this._indicateDefaultCursor(targetSourceX, targetSourceY, 1);
   }
 
 
   /**
    * Commits pixels from the rectangle and triggers a redraws when finished.
-   * @param startSourceY  -  y of the starting point in source
    * @param startSourceX - x of the starting point in source
-   * @param endSourceY - y of the ending point in source
+   * @param startSourceY  -  y of the starting point in source
    * @param endSourceX - x of the ending point in source
+   * @param endSourceY - y of the ending point in source
    */
   protected _pixels(
-    startSourceY: number,
     startSourceX: number,
-    endSourceY: number,
+    startSourceY: number,
     endSourceX: number,
+    endSourceY: number,
   ): void {
     this._onBresenhamsLine(
-      startSourceY,
       startSourceX,
-      endSourceY,
+      startSourceY,
       endSourceX,
-      (sourceY, sourceX) => {
-        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
+      endSourceY,
+      (sourceX, sourceY) => {
+        this._source.unreactive[sourceX][sourceY] = this._paletteIndex;
       }
     )
 
@@ -265,35 +265,35 @@ class Line extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicate(targetSourceY, targetSourceX);
+      this._indicate(targetSourceX, targetSourceY);
       requestAnimationFrame(this._redraw);
     }
   };
@@ -307,29 +307,30 @@ class Line extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
-    if (this._startingSourceY != null && this._startingSourceX != null) {
+    if (this._startingSourceX != null && this._startingSourceY != null) {
       this._pixels(
-        this._startingSourceY,
         this._startingSourceX,
-        targetSourceY,
+        this._startingSourceY,
         targetSourceX,
-      );      this._startingSourceY = null;
+        targetSourceY,
+      );
       this._startingSourceX = null;
+      this._startingSourceY = null;
       this._didDrawOnLastSource = true;
     }
-    else if (this._startingSourceY == null && this._startingSourceX == null) {
+    else if (this._startingSourceX == null && this._startingSourceY == null) {
       if (this._indicator) {
         this._refreshIndicator();
-        this._indicate(targetSourceY, targetSourceX);
+        this._indicate(targetSourceX, targetSourceY);
       }
-      this._startingSourceY = targetSourceY;
       this._startingSourceX = targetSourceX;
+      this._startingSourceY = targetSourceY;
       requestAnimationFrame(this._redraw);
     }
   };
@@ -340,12 +341,12 @@ class Line extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
-    this._startingSourceY = null;
+    this._lastSourceY = null;
     this._startingSourceX = null;
+    this._startingSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

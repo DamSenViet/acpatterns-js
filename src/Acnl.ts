@@ -7,6 +7,8 @@ import {
   color,
   paletteIndex,
   byte,
+  FixedLengthArray,
+  fixedLengthPropertyConfig,
   mapping,
   Uint16ToBytes,
   bytesToUint16,
@@ -26,7 +28,7 @@ import {
   ImageLoadingException,
 } from "./myZxing";
 import { QRScanningError } from "./errors";
-import chroma from "chroma-js";
+import chroma, { valid } from "chroma-js";
 
 // ACNL binary data layout.
 //
@@ -74,10 +76,10 @@ const standardTextureMapping: mapping = (() => {
   const width = 32;
   const height = 32;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      mapping[y][x] = [y, x];
+      mapping[x][y] = [x, y];
     }
   }
   return mapping;
@@ -88,15 +90,15 @@ const clothingTextureMapping: mapping = (() => {
   const width = 64;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (x < 32 && y < 32) mapping[y][x] = [y - 0 + 32, x]; // front
-      else if (x < 64 && y < 32) mapping[y][x] = [y - 0, x - 32]; // back
-      else if (x < 32 && y < 48) mapping[y][x] = [y - 32 + (16 * 7), x]; // back skirt
-      else if (x < 32 && y < 64) mapping[y][x] = [y - 48 + (16 * 4), x]; // left arm
-      else if (x < 64 && y < 48) mapping[y][x] = [y - 32 + (16 * 6), x - 32]; // front skirt
-      else if (x < 64 && y < 64) mapping[y][x] = [y - 48 + (16 * 5), x - 32];
+      if (x < 32 && y < 32) mapping[x][y] = [x, y - 0 + 32]; // front
+      else if (x < 64 && y < 32) mapping[x][y] = [x - 32, y - 0]; // back
+      else if (x < 32 && y < 48) mapping[x][y] = [x, y - 32 + (16 * 7)]; // back skirt
+      else if (x < 32 && y < 64) mapping[x][y] = [x, y - 48 + (16 * 4)]; // left arm
+      else if (x < 64 && y < 48) mapping[x][y] = [x - 32, y - 32 + (16 * 6)]; // front skirt
+      else if (x < 64 && y < 64) mapping[x][y] = [x - 32, y - 48 + (16 * 5)];
     }
   }
   return mapping;
@@ -106,11 +108,11 @@ const createStandeeMapping = (isTextureMapping: boolean): mapping => {
   const width = isTextureMapping ? 64 : 52;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
-      else mapping[y][x] = [y, x];
+      if (x >= 32 && y < 64) mapping[x][y] = [x - 32, y - 0 + 64]
+      else mapping[x][y] = [x, y];
     }
   }
   return mapping;
@@ -136,11 +138,11 @@ const createTopMapping = (clothLength: ClothLength, clothSide: ClothSide.Front |
   const width = 32;
   const height = clothLength === ClothLength.Short ? 32 : 48;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (y < 32) mapping[y][x] = [y + (16 * (clothSide === ClothSide.Front ? 0 : 2)), x];
-      else if (y < 48) mapping[y][x] = [y - 32 + (16 * (clothSide === ClothSide.Front ? 6 : 7)), x];
+      if (y < 32) mapping[x][y] = [x, y + (16 * (clothSide === ClothSide.Front ? 0 : 2))];
+      else if (y < 48) mapping[x][y] = [x, y - 32 + (16 * (clothSide === ClothSide.Front ? 6 : 7))];
     }
   }
   return mapping;
@@ -150,10 +152,10 @@ const createArmMapping = (clothLength: ClothLength, clothSide: ClothSide.Left | 
   const width = clothLength === ClothLength.Short ? 16 : 32;
   const height = 16;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      mapping[y][x] = [y - 0 + (16 * (clothSide === ClothSide.Left ? 4 : 5)), x];
+      mapping[x][y] = [x, y - 0 + (16 * (clothSide === ClothSide.Left ? 4 : 5))];
     }
   }
   return mapping;
@@ -374,6 +376,11 @@ const colorToByte: Map<color, byte> = new Map(
 
 const colors = new Set(colorToByte.keys());
 
+
+const PIXELS_WIDTH = 32;
+const PIXELS_HEIGHT = 128;
+const PALETTE_SIZE = 15;
+
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
@@ -483,8 +490,8 @@ class Acnl extends Convertable {
    * 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
    * Type size determines what to truncate down when converting to binary.
    */
-  private _pixels: paletteIndex[][] = new Array(128).fill(0).map(() => {
-    return new Array(32).fill(0);
+  private _pixels: paletteIndex[][] = new Array(32).fill(0).map(() => {
+    return new Array(128).fill(0);
   });
 
   /**
@@ -493,7 +500,7 @@ class Acnl extends Convertable {
   private _pixelsApi: PixelsSource = null;
 
   /**
-   * 
+   * The object through which the user can access the pattern's sections.
    */
   private _sectionsApi: {
     texture: PixelsSource;
@@ -514,7 +521,7 @@ class Acnl extends Convertable {
 
 
   /**
-   * Creates an Acnl instance.
+   * Instantiates an Acnl.
    */
   public constructor() {
     super();
@@ -524,7 +531,6 @@ class Acnl extends Convertable {
     this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
-    Object.seal(this);
   };
 
 
@@ -579,77 +585,82 @@ class Acnl extends Convertable {
     if (_pixelsApi != null) _pixelsApi.hook.clear();
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
-    const api: PixelsSource = new PixelsSource(_pixels.length);
-    Object.defineProperty(api, "length", {
-      enumerable: false,
-      configurable: false,
-      writable: false,
-    });
-    const unreactiveApi: Array<Array<paletteIndex>>
-      = new Array<Array<paletteIndex>>(_pixels.length);
-    Object.defineProperty(unreactiveApi, "length", {
-      enumerable: false,
-      configurable: false,
-      writable: false,
-    });
-    for (let y = 0; y < _pixels.length; ++y) {
-      const rowApi = new Array(_pixels[y].length);
-      Object.defineProperty(rowApi, "length", {
-        enumerable: false,
-        configurable: false,
-        writable: false,
-      });
-      const unreactiveRowApi = new Array(_pixels[y].length);
-      Object.defineProperty(unreactiveRowApi, "length", {
-        enumerable: false,
-        configurable: false,
-        writable: false,
-      });
-      for (let x = 0; x < _pixels[y].length; ++x) {
-        Object.defineProperty(rowApi, x, {
+    const api: PixelsSource = new PixelsSource(PIXELS_WIDTH, PIXELS_HEIGHT);
+    const validatePaletteIndex = (paletteIndex: number) => {
+      if (typeof paletteIndex !== "number") {
+        const message = ``;
+        throw new TypeError(message);
+      }
+      if (paletteIndex < 0 && paletteIndex > PALETTE_SIZE) {
+        const message = ``;
+        throw new RangeError(message);
+      }
+    };
+    const validateColumn = (column: FixedLengthArray<paletteIndex>) => {
+      if (!(column instanceof Array)) {
+        const message = ``;
+        throw new TypeError(message);
+      };
+      if (column.length !== PIXELS_HEIGHT) {
+        const message = ``;
+        throw new RangeError(message);
+      };
+      for (let i = 0; i < column.length; ++i) {
+        validatePaletteIndex(column[i]);
+      };
+    };
+    for (let x = 0; x < PIXELS_WIDTH; ++x) {
+      const columnReactiveApi = api.reactive[x];
+      const columnUnreactiveApi = api.unreactive[x];
+      for (let y = 0; y < PIXELS_HEIGHT; ++y) {
+        Object.defineProperty(columnReactiveApi, y, {
           ...propertyConfig,
-          get: (): paletteIndex => _pixels[y][x],
+          get: (): paletteIndex => _pixels[x][y],
           set: (paletteIndex: paletteIndex) => {
-            if (paletteIndex < 0 && paletteIndex > 15)
-              throw new RangeError();
+            validatePaletteIndex(paletteIndex);
             // assignment hook
-            _pixels[y][x] = paletteIndex;
-            api.hook.trigger(y, x, paletteIndex);
+            _pixels[x][y] = paletteIndex;
+            api.hook.trigger(x, y, paletteIndex);
           }
         });
-        Object.defineProperty(unreactiveRowApi, x, {
+        Object.defineProperty(columnUnreactiveApi, y, {
           ...propertyConfig,
-          get: (): paletteIndex => _pixels[y][x],
+          get: (): paletteIndex => _pixels[x][y],
           set: (paletteIndex: paletteIndex) => {
-            if (paletteIndex < 0 && paletteIndex > 15)
-              throw new RangeError();
-            _pixels[y][x] = paletteIndex;
+            validatePaletteIndex(paletteIndex);
+            _pixels[x][y] = paletteIndex;
           }
         });
       }
-      Object.preventExtensions(rowApi);
-      Object.preventExtensions(unreactiveRowApi);
-      Object.defineProperty(api, y, {
+      Object.defineProperty(api.reactive, x, {
         ...propertyConfig,
-        get: (): Array<paletteIndex> => rowApi,
-        set: (row: Array<paletteIndex>) => {
-          for (let x = 0; x < rowApi.length; ++x)
-            rowApi[x] = row[x];
+        get: (): FixedLengthArray<paletteIndex> => columnReactiveApi,
+        set: (column: FixedLengthArray<paletteIndex>) => {
+          validateColumn(column);
+          for (let y = 0; y < api.height; ++y)
+            columnReactiveApi[y] = column[y];
+          Object.defineProperty(column, "length", {
+            ...fixedLengthPropertyConfig,
+          });
+          Object.preventExtensions(column);
         }
       });
-      Object.defineProperty(unreactiveApi, y, {
+      Object.defineProperty(api.unreactive, x, {
         ...propertyConfig,
-        get: (): Array<paletteIndex> => unreactiveRowApi,
-        set: (row: Array<paletteIndex>) => {
-          for (let x = 0; x < unreactiveRowApi.length; ++x)
-            unreactiveRowApi[x] = row[x];
+        get: (): FixedLengthArray<paletteIndex> => columnUnreactiveApi,
+        set: (column: FixedLengthArray<paletteIndex>) => {
+          validateColumn(column);
+          for (let y = 0; y < api.height; ++y)
+            columnUnreactiveApi[y] = column[y];
+          // lock down length
+          Object.defineProperty(column, "length", {
+            ...fixedLengthPropertyConfig,
+          });
+          Object.preventExtensions(column);
         }
       });
     }
-    Object.preventExtensions(api);
-    Object.preventExtensions(unreactiveApi);
     this._pixelsApi = api;
-    api.unreactive = unreactiveApi;
   }
 
 
@@ -672,88 +683,62 @@ class Acnl extends Convertable {
     for (const sectionName in _type.sections) {
       const mapping = _type.sections[sectionName];
       const sectionApi: PixelsSource =
-        new PixelsSource(mapping.length).fill(null);
-      Object.defineProperty(sectionApi, "length", {
-        enumerable: false,
-        configurable: false,
-        writable: false,
-      });
-      const unreactiveSectionApi: Array<Array<paletteIndex>>
-        = new Array<Array<paletteIndex>>(mapping.length);
-      Object.defineProperty(unreactiveSectionApi, "length", {
-        enumerable: false,
-        configurable: false,
-        writable: false,
-      });
-      for (let y: number = 0; y < mapping.length; ++y) {
-        const rowApi = new Array<paletteIndex>(mapping[y].length);
-        Object.defineProperty(rowApi, "length", {
-          enumerable: false,
-          configurable: false,
-          writable: false,
-        });
-        const unreactiveRowApi = new Array<paletteIndex>(mapping[y].length);
-        Object.defineProperty(unreactiveRowApi, "length", {
-          enumerable: false,
-          configurable: false,
-          writable: false,
-        });
-        for (let x: number = 0; x < mapping[y].length; ++x) {
-          const targetY = mapping[y][x][0];
-          const targetX = mapping[y][x][1];
+        new PixelsSource(mapping.length, mapping[0].length);
+      for (let x: number = 0; x < mapping.length; ++x) {
+        const columnReactiveApi = sectionApi.reactive[x];
+        const columnUnreactiveApi = sectionApi.unreactive[x];
+        for (let y: number = 0; y < mapping[x].length; ++y) {
+          const targetX = mapping[x][y][0];
+          const targetY = mapping[x][y][1];
           // wrapping existing setter at target
-          const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
-          Object.defineProperty(pixels[targetY], targetX, {
+          const { get, set } = Object.getOwnPropertyDescriptor(pixels.reactive[targetX], targetY);
+          Object.defineProperty(pixels.reactive[targetX], targetY, {
             ...propertyConfig,
             get: get,
             set: (pixel) => {
               // run the existing function, but now with hook call after it finishes
+              // creates a wrapping effect
               set(pixel);
               // console.log(`modifying at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
-              sectionApi.hook.trigger(y, x, pixel);
+              sectionApi.hook.trigger(x, y, pixel);
             }
           });
           // trigger setter at target
-          Object.defineProperty(rowApi, x, {
+          Object.defineProperty(columnReactiveApi, y, {
             ...propertyConfig,
-            get: (): paletteIndex => pixels[targetY][targetX],
-            set: (paletteIndex: paletteIndex) => { pixels[targetY][targetX] = paletteIndex; },
-          });
-          Object.defineProperty(unreactiveRowApi, x, {
-            ...propertyConfig,
-            get: (): paletteIndex => _pixels[targetY][targetX],
+            get: (): paletteIndex => _pixels[targetX][targetY],
             set: (paletteIndex: paletteIndex) => {
-              if (paletteIndex < 0 && paletteIndex > 15)
-                throw new RangeError();
-              _pixels[targetY][targetX] = paletteIndex;
+              pixels.reactive[targetX][targetY] = paletteIndex;
+            },
+          });
+          Object.defineProperty(columnUnreactiveApi, y, {
+            ...propertyConfig,
+            get: (): paletteIndex => _pixels[targetX][targetY],
+            set: (paletteIndex: paletteIndex) => {
+              pixels.unreactive[targetX][targetY] = paletteIndex;
             }
           });
         }
-        Object.preventExtensions(rowApi);
-        Object.preventExtensions(unreactiveRowApi);
-        Object.defineProperty(sectionApi, y, {
+        Object.defineProperty(sectionApi.reactive, x, {
           ...propertyConfig,
-          get: (): Array<paletteIndex> => rowApi,
-          set: (row: Array<paletteIndex>) => {
-            for (let x = 0; x < rowApi.length; ++x) {
-              rowApi[x] = row[x];
+          get: (): FixedLengthArray<paletteIndex> => columnReactiveApi,
+          set: (column: FixedLengthArray<paletteIndex>) => {
+            for (let y = 0; y < columnReactiveApi.length; ++y) {
+              columnReactiveApi[y] = column[y];
             }
           }
         });
-        Object.defineProperty(unreactiveSectionApi, y, {
+        Object.defineProperty(sectionApi.unreactive, x, {
           ...propertyConfig,
-          get: (): Array<paletteIndex> => unreactiveRowApi,
-          set: (row: Array<paletteIndex>) => {
-            for (let x = 0; x < unreactiveRowApi.length; ++x) {
-              unreactiveRowApi[x] = row[x];
+          get: (): FixedLengthArray<paletteIndex> => columnUnreactiveApi,
+          set: (column: FixedLengthArray<paletteIndex>) => {
+            for (let y = 0; y < columnUnreactiveApi.length; ++y) {
+              columnUnreactiveApi[y] = column[y];
             }
           }
         });
       }
-      Object.preventExtensions(sectionApi);
-      Object.preventExtensions(unreactiveSectionApi)
       api[sectionName] = sectionApi;
-      sectionApi.unreactive = unreactiveSectionApi;
     }
     this._sectionsApi = api;
   }
@@ -793,10 +778,12 @@ class Acnl extends Convertable {
       typeof townId !== "number" ||
       !Number.isInteger(townId)
     ) {
-
+      const message = `Expected a valid UInt16 number.`;
+      throw new TypeError(message);
     }
     if (townId < 0 || townId >= 65536) {
-
+      const message = `Expected a valid UInt16 number.`;
+      throw new RangeError(message);
     }
     this._townId = townId;
   }
@@ -815,10 +802,12 @@ class Acnl extends Convertable {
    */
   public set townName(townName: string) {
     if (typeof townName !== "string") {
-
+      const message = `Expected a string of length 8 or less.`;
+      throw new TypeError(message);
     }
     if (townName.length > 8) {
-
+      const message = `Expected a string of length 8 or less.`;
+      throw new RangeError(message);
     }
     this._townName = townName;
   }
@@ -831,15 +820,21 @@ class Acnl extends Convertable {
     return this._villagerId;
   }
 
+
   /**
    * Sets the villager id of the Acnl.
    */
   public set villagerId(villagerId: number) {
-    if (typeof villagerId !== "number") {
-
+    if (
+      typeof villagerId !== "number" ||
+      !Number.isInteger(villagerId)
+    ) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new TypeError(message);
     }
-    if (villagerId >= 65536) {
-
+    if (villagerId < 0 || villagerId >= 65536) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new RangeError(message);
     }
     this._villagerId = villagerId;
   }
@@ -858,10 +853,12 @@ class Acnl extends Convertable {
    */
   public set villagerName(villagerName: string) {
     if (typeof villagerName !== "string") {
-
+      const message = `Expected a string of length 8 or less.`;
+      throw new TypeError(message);
     }
     if (villagerName.length > 8) {
-
+      const message = `Expected a string of length 8 or less.`;
+      throw new RangeError(message);
     }
     this._villagerName = villagerName;
   }
@@ -971,6 +968,7 @@ class Acnl extends Convertable {
   public get pixels(): PixelsSource {
     return this._pixelsApi;
   }
+
 
   /**
    * Gets the hooks of the Acnl.
@@ -1114,8 +1112,8 @@ class Acnl extends Convertable {
         return accum;
       }, []);
     for (let y = 0; y < this._type.size; ++y) {
-      for (let x = 0; x < this.pixels[y].length; ++x) {
-        this._pixels[y][x] = pixelsFlattened[x + y * 32];
+      for (let x = 0; x < PIXELS_WIDTH; ++x) {
+        this._pixels[x][y] = pixelsFlattened[x + y * PIXELS_WIDTH];
       }
     }
     this._refreshPixelsApi();
@@ -1180,11 +1178,11 @@ class Acnl extends Convertable {
     bytes.push(typeToByte.get(_type));
     bytes.push(0, 0); // zero padding
     // pixel data bunched together
-    bytes.push(...new Array(_type.size * 32 / 2).fill(null)
+    bytes.push(...new Array(_type.size * PIXELS_WIDTH / 2).fill(null)
       .map((_, i) => {
-        const x = (i * 2) % 32;
-        const y = Math.floor((i * 2) / 32);
-        return ((_pixels[y][x] << 4) + (_pixels[y][x + 1] & 0xf));
+        const x = (i * 2) % PIXELS_WIDTH;
+        const y = Math.floor((i * 2) / PIXELS_WIDTH);
+        return ((_pixels[x][y] << 4) + (_pixels[x + 1][y] & 0xf));
       }));
     return bytesToBinaryString(bytes);
   }

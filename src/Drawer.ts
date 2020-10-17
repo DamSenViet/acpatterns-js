@@ -194,11 +194,10 @@ class Drawer {
   private _state: DrawerStates = DrawerStates.PLAYING;
 
 
-  // CENTERS NON SQUARE SOURCES INSIDE GRID
-  // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
   /**
    * Instantiates a Drawer.
-   * @param options - A configuration Object with a 'canvas' and 'pattern'
+   * Centers non-square sources inside the grid.
+   * @param options - A configuration Object with a 'canvas' and 'pattern'.
    */
   public constructor(options: DrawerOptions) {
     if (options == null) throw new TypeError();
@@ -255,9 +254,9 @@ class Drawer {
 
 
     // determine pixel size based on source
-    const sourceHeight: number = this._source.length;
+    const sourceHeight: number = this._source.height;
     const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
-    const sourceWidth: number = this._source[0].length;
+    const sourceWidth: number = this._source.width;
     const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
     const textureHeight = sourceHeight * 4;
     const textureWidth = sourceWidth * 4;
@@ -384,7 +383,7 @@ class Drawer {
     this._pixelsContext.clearRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIndex = this._source.unreactive[sourceY][sourceX];
+        const paletteIndex = this._source.unreactive[sourceX][sourceY];
         if (paletteIndex === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
@@ -481,11 +480,11 @@ class Drawer {
   /**
    * Callback for when the _pixelCanvas source changes.
    * Updates the pixel that changed.
-   * @param sourceY - the y coordinate of the changed pixel
    * @param sourceX - the x coordinate of the changed pixel
+   * @param sourceY - the y coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, paletteIndex: paletteIndex): void => {
+  private _onPixelUpdate = (sourceX: number, sourceY: number, paletteIndex: paletteIndex): void => {
     if (paletteIndex === 15) {
       this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
       return;
@@ -516,7 +515,7 @@ class Drawer {
     // loop through entire source for i, replace all i values with new color
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        if (this._source.unreactive[sourceY][sourceX] !== i) continue;
+        if (this._source.unreactive[sourceX][sourceY] !== i) continue;
         this._pixelsContext.fillStyle = color;
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }

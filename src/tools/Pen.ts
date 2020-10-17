@@ -10,24 +10,24 @@ export interface PenOptions {
  */
 class Pen extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -47,7 +47,7 @@ class Pen extends Tool {
 
 
   /**
-   * Creates a Brush instance.
+   * Instantiates a Brush tool.
    * @param options - a config object with 'size'.
    */
   public constructor(options?: PenOptions) {
@@ -96,12 +96,12 @@ class Pen extends Tool {
 
   /**
    * Draws the preview/indicator.
-   * @param targetSourceY - the y coordinate of the source
    * @param targetSourceX - the x coordinate of the source
+   * @param targetSourceY - the y coordinate of the source
    */
   protected _indicateCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number = this._size,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -149,16 +149,16 @@ class Pen extends Tool {
 
   /**
    * Commits pixels from the and triggers a redraws when fininished.
-   * @param targetSourceY - y coordinate in source
    * @param targetSourceX - x coordinate in source
+   * @param targetSourceY - y coordinate in source
    */
   protected _pixels(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
   ): void {
     // even
     if (this._size === 1) {
-      this._source[targetSourceY][targetSourceX] = this._paletteIndex;
+      this._source.reactive[targetSourceX][targetSourceY] = this._paletteIndex;
       return;
     }
 
@@ -176,7 +176,7 @@ class Pen extends Tool {
       for (let sourceX = topLeftX; sourceX < topLeftX + this._size; ++sourceX) {
         if (sourceY >= this._measurements.sourceHeight || sourceY < 0) continue;
         if (sourceX >= this._measurements.sourceWidth || sourceX < 0) continue;
-        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
+        this._source.unreactive[sourceX][sourceY] = this._paletteIndex;
       }
     }
     this._pattern.hooks.refresh.trigger();
@@ -189,35 +189,35 @@ class Pen extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicateCursor(targetSourceY, targetSourceX);
+      this._indicateCursor(targetSourceX, targetSourceY);
     }
 
     // this will automatically trigger redraw if it fires
@@ -225,7 +225,7 @@ class Pen extends Tool {
       mouseEvent.buttons === 1 &&
       !this._didDrawOnLastSource
     ) {
-      this._pixels(targetSourceY, targetSourceX);
+      this._pixels(targetSourceX, targetSourceY);
       this._didDrawOnLastSource = true;
     }
     // otherwise make sure to request it!!!
@@ -241,18 +241,18 @@ class Pen extends Tool {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) return;
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
 
     if (this._indicator) {
       this._refreshIndicator();
-      this._indicateCursor(targetSourceY, targetSourceX);
+      this._indicateCursor(targetSourceX, targetSourceY);
     }
 
-    this._pixels(targetSourceY, targetSourceX);
+    this._pixels(targetSourceX, targetSourceY);
     this._didDrawOnLastSource = true;
   };
 
@@ -262,10 +262,10 @@ class Pen extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
+    this._lastSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };

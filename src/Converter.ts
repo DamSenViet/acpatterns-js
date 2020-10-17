@@ -6,35 +6,39 @@ import { ConvertingError } from "./errors";
 import PnnQuant from "pnnquant";
 
 
-enum imageSmoothingQualities {
-  none = "none",
-  low = "low",
-  medium = "medium",
-  high = "high",
+enum ImageSmoothingQualities {
+  None = "none",
+  Low = "low",
+  Medium = "medium",
+  High = "high",
 };
 
-enum colorMatchingMethods {
-  rgb = "rgb",
-  lab = "lab",
-  cmyk = "cmyk",
-  gl = "gl",
+enum ColorMatchingMethods {
+  RGB = "rgb",
+  LAB = "lab",
+  CMYK = "cmyk",
+  GL = "gl",
 };
 
 /**
  * Converts an image onto a pattern.
  */
 class Converter {
-
   /**
    * All possible image smoothing quliaties.
    */
-  public static imageSmoothingQualities: typeof imageSmoothingQualities = imageSmoothingQualities;
+  public static ImageSmoothingQualities: typeof ImageSmoothingQualities = ImageSmoothingQualities;
 
   /**
    * All possible color selection methods.
    */
-  public static colorMatchingMethods: typeof colorMatchingMethods = colorMatchingMethods;
+  public static ColorMatchingMethods: typeof ColorMatchingMethods = ColorMatchingMethods;
 
+
+  /**
+   * Instantiates a Converter.
+   */
+  public constructor() { }
 
   /**
    * Converts an image onto a pattern.
@@ -68,11 +72,11 @@ class Converter {
     section: PixelsSource = pattern.sections.texture,
     sectionOffsetX: number = 0,
     sectionOffsetY: number = 0,
-    sectionOffsetWidth: number = section[0].length,
-    sectionOffsetHeight: number = section.length,
+    sectionOffsetWidth: number = section.width,
+    sectionOffsetHeight: number = section.height,
     opacityThreshold: number = 1,
-    imageSmoothingQuality: imageSmoothingQualities = imageSmoothingQualities.none,
-    colorMatchingMethod: colorMatchingMethods = colorMatchingMethods.rgb,
+    imageSmoothingQuality: ImageSmoothingQualities = ImageSmoothingQualities.None,
+    colorMatchingMethod: ColorMatchingMethods = ColorMatchingMethods.RGB,
   ): Promise<void> /* throws TypeError, RangeError, ConvertingError */ {
 
     if (!(image instanceof HTMLImageElement)) {
@@ -170,10 +174,10 @@ class Converter {
 
     // verify section measurements
     if (
-      sectionOffsetX < 0 || sectionOffsetX >= section[0].length ||
-      sectionOffsetY < 0 || sectionOffsetY >= section.length ||
-      sectionOffsetWidth < 0 || sectionOffsetWidth > section[0].length - sectionOffsetX ||
-      sectionOffsetHeight < 0 || sectionOffsetHeight > section.length - sectionOffsetY
+      sectionOffsetX < 0 || sectionOffsetX >= section.width ||
+      sectionOffsetY < 0 || sectionOffsetY >= section.height ||
+      sectionOffsetWidth < 0 || sectionOffsetWidth > section.width - sectionOffsetX ||
+      sectionOffsetHeight < 0 || sectionOffsetHeight > section.height - sectionOffsetY
     ) {
       const message = `Sub-section must be located inside the section.`;
       throw new RangeError(message);
@@ -190,7 +194,7 @@ class Converter {
     }
 
     if (
-      !Object.values(imageSmoothingQualities)
+      !Object.values(ImageSmoothingQualities)
         .includes(imageSmoothingQuality)
     ) {
       const message = `Expected a valid image smoothing quality.`;
@@ -198,7 +202,7 @@ class Converter {
     }
 
     if (
-      !Object.values(colorMatchingMethods)
+      !Object.values(ColorMatchingMethods)
         .includes(colorMatchingMethod)
     ) {
       const message = `Expected a valid color matching method.`;
@@ -246,7 +250,7 @@ class Converter {
     subSectionCanvas.height = sectionOffsetHeight;
 
     subSectionContext.imageSmoothingEnabled = false;
-    if (imageSmoothingQuality !== imageSmoothingQualities.none) {
+    if (imageSmoothingQuality !== ImageSmoothingQualities.None) {
       subSectionContext.imageSmoothingEnabled = true;
       subSectionContext.imageSmoothingQuality = imageSmoothingQuality;
     }
@@ -309,7 +313,7 @@ class Converter {
         const opacity = a / 255;
         // if a is not above or equal to alpha threshold, make that pixel transparent
         if (opacity < opacityThreshold) {
-          section.unreactive[sectionY][sectionX] = pattern.palette.length;
+          section.unreactive[sectionX][sectionY] = pattern.palette.length;
           continue;
         }
 
@@ -329,7 +333,7 @@ class Converter {
           ) continue;
           closestColorPaletteIndex = i;
           closestColorDistance = distance;
-          section.unreactive[sectionY][sectionX] = closestColorPaletteIndex;
+          section.unreactive[sectionX][sectionY] = closestColorPaletteIndex;
         }
       }
     }

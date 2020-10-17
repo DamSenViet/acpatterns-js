@@ -401,8 +401,8 @@ class Modeler {
    * Updates the measurements for the _pixelsCanvas to render the pattern.
    */
   private _updateMeasurements(): void {
-    const sourceHeight = this._source.length;
-    const sourceWidth = this._source[0].length;
+    const sourceHeight = this._source.height;
+    const sourceWidth = this._source.width;
     const textureHeight = sourceHeight * 4;
     const textureWidth = sourceWidth * 4;
 
@@ -431,7 +431,7 @@ class Modeler {
    * @param sourceX - the x coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, paletteIndex: paletteIndex): void => {
+  private _onPixelUpdate = (sourceX: number, sourceY: number, paletteIndex: paletteIndex): void => {
     if (paletteIndex === 15) this._pixelsContext.fillStyle = "#FFFFFF";
     else this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
@@ -581,11 +581,11 @@ class Modeler {
    * Refreshes the pixelsCanvas only, does not apply changes to model.
    */
   private _refreshPixels(): void {
-    this._pixelsContext.fillStyle = "rgba(255, 255, 255, 1)";
+    this._pixelsContext.fillStyle = "#FFFFFF";
     this._pixelsContext.fillRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIndex = this._source.unreactive[sourceY][sourceX];
+        const paletteIndex = this._source.unreactive[sourceX][sourceY];
         if (paletteIndex === 15) continue;
         this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);

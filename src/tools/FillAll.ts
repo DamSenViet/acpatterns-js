@@ -10,24 +10,24 @@ export interface FillAllOptions {
  */
 class FillAll extends Tool {
   /**
-   * The last pixelY pased over.
-   */
-  protected _lastPixelY: number = null;
-
-  /**
    * The last pixelX passed over.
    */
   protected _lastPixelX: number = null;
 
   /**
-   * The last sourceY passed over.
+   * The last pixelY pased over.
    */
-  protected _lastSourceY: number = null;
+  protected _lastPixelY: number = null;
 
   /**
    * The last sourceX passed over.
    */
   protected _lastSourceX: number = null;
+
+  /**
+   * The last sourceY passed over.
+   */
+  protected _lastSourceY: number = null;
 
   /**
    * Flag to reduce drawing operations.
@@ -42,7 +42,7 @@ class FillAll extends Tool {
 
 
   /**
-   * Creates a Brush instance.
+   * Instantiates a Brush tool.
    * @param options - a config object with 'size'.
    */
   public constructor(options?: FillAllOptions) {
@@ -72,12 +72,12 @@ class FillAll extends Tool {
 
   /**
    * Draws the default cursor preview/indicator.
-   * @param sourceY - the y coordinate of the source
    * @param sourceX - the x coordinate of the source
+   * @param sourceY - the y coordinate of the source
    */
   protected _indicateDefaultCursor(
-    targetSourceY: number,
     targetSourceX: number,
+    targetSourceY: number,
     size: number,
   ): void {
     this._indicatorContext.strokeStyle = "#00d2c2";
@@ -131,7 +131,7 @@ class FillAll extends Tool {
     this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        if (this._source.unreactive[sourceY][sourceX] !== this._paletteIndex) {
+        if (this._source.unreactive[sourceX][sourceY] !== this._paletteIndex) {
           isFilled = false;
         }
       }
@@ -170,8 +170,8 @@ class FillAll extends Tool {
       
     // draw square around center
     this._indicateDefaultCursor(
-      Math.floor(this._measurements.sourceHeight / 2) - 1,
       Math.floor(this._measurements.sourceWidth / 2),
+      Math.floor(this._measurements.sourceHeight / 2) - 1,
       4
     );
   }
@@ -183,7 +183,7 @@ class FillAll extends Tool {
     // even
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        this._source.unreactive[sourceY][sourceX] = this._paletteIndex;
+        this._source.unreactive[sourceX][sourceY] = this._paletteIndex;
       }
     }
     this._pattern.hooks.refresh.trigger();
@@ -196,7 +196,19 @@ class FillAll extends Tool {
    */
   protected _onMouseOver = (mouseEvent: MouseEvent) => {
     // otherwise make sure to request it!!!
+    const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
+    this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
+    const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
+    if (sourcePoint == null) {
+      this._onMouseOut();
+      return;
+    };
+    
+    // ONLY WHEN IM ON A VALID POINT
     if (this._indicator) {
       this._indicate();
       requestAnimationFrame(this._redraw);
@@ -210,30 +222,30 @@ class FillAll extends Tool {
    */
   protected _onMouseMove = (mouseEvent: MouseEvent) => {
     const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
-    const targetPixelY = pixelPoint[0];
-    const targetPixelX = pixelPoint[1];
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
     if (
-      this._lastPixelY === targetPixelY &&
-      this._lastPixelX === targetPixelX
+      this._lastPixelX === targetPixelX &&
+      this._lastPixelY === targetPixelY
     ) return;
-    this._lastPixelY = targetPixelY;
     this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
 
     const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
     if (sourcePoint == null) {
       this._onMouseOut();
       return;
     };
-    const targetSourceY = sourcePoint[0];
-    const targetSourceX = sourcePoint[1];
+    const targetSourceX = sourcePoint[0];
+    const targetSourceY = sourcePoint[1];
 
     if (
-      this._lastSourceY === targetSourceY &&
-      this._lastSourceX === targetSourceX
+      this._lastSourceX === targetSourceX &&
+      this._lastSourceY === targetSourceY
     ) return;
 
-    this._lastSourceY = targetSourceY;
     this._lastSourceX = targetSourceX;
+    this._lastSourceY = targetSourceY;
     this._didDrawOnLastSource = false;
 
     if (this._indicator) {
@@ -248,6 +260,18 @@ class FillAll extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   protected _onMouseDown = (mouseEvent: MouseEvent) => {
+    const pixelPoint = this.mouseEventToPixelPoint(mouseEvent);
+    const targetPixelX = pixelPoint[0];
+    const targetPixelY = pixelPoint[1];
+    this._lastPixelX = targetPixelX;
+    this._lastPixelY = targetPixelY;
+
+    const sourcePoint = this.pixelPointToSourcePoint(pixelPoint);
+    if (sourcePoint == null) {
+      this._onMouseOut();
+      return;
+    };
+    
     this._pixels();
   };
 
@@ -257,10 +281,10 @@ class FillAll extends Tool {
    * @param mouseEvent - mouse event passed to the callback
    */
   public _onMouseOut = (mouseEvent?: MouseEvent): void => {
-    this._lastPixelY = null;
     this._lastPixelX = null;
-    this._lastSourceY = null;
+    this._lastPixelY = null;
     this._lastSourceX = null;
+    this._lastSourceY = null;
     this._refreshIndicator();
     requestAnimationFrame(this._redraw);
   };
