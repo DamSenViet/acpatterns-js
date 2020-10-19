@@ -2,7 +2,7 @@ import PixelsSource from "./PixelsSource";
 import ImageProjectable from "./ImageProjectable";
 import { paletteIndex, } from "./utils";
 import chroma from "chroma-js";
-import { ConvertingError } from "./errors";
+import { ImageProjectingError } from "./errors";
 import PnnQuant from "pnnquant";
 
 
@@ -77,7 +77,7 @@ class ImageProjector {
     opacityThreshold: number = 1,
     imageSmoothingQuality: ImageSmoothingQualities = ImageSmoothingQualities.None,
     colorMatchingMethod: ColorMatchingMethods = ColorMatchingMethods.RGB,
-  ): Promise<void> /* throws TypeError, RangeError, ConvertingError */ {
+  ): Promise<void> /* throws TypeError, RangeError, ImageProjectingError */ {
 
     if (!(image instanceof HTMLImageElement)) {
       const message = `Expected an instance of a HTMLImageElement.`;
@@ -220,7 +220,7 @@ class ImageProjector {
       const onImageError = () => {
         imageCopy.removeEventListener("error", onImageError);
         const message = `The image at ${imageCopy.src} could not be loaded.`;
-        reject(new ConvertingError(message));
+        reject(new ImageProjectingError(message));
       };
       imageCopy.addEventListener("error", onImageError);
       imageCopy.src = image.src;

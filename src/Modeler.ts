@@ -6,6 +6,7 @@ import {
   color,
   paletteIndex,
 } from "./utils";
+import { IllegalStateError } from "./errors";
 import {
   Engine,
   Scene,
@@ -214,10 +215,25 @@ class Modeler {
    * @param options - A configuration Object with a 'canvas' and 'pattern'
    */
   public constructor(options: ModelerOptions) {
-    if (options == null) throw new TypeError();
+    if (options == null) {
+      const message = `Expected an configuration objects with required fields.`;
+      throw new TypeError(message);
+    }
     const { canvas, pattern } = options;
-    if (pattern == null) throw new TypeError();
-    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
+    if (
+      pattern == null ||
+      !(pattern instanceof Drawable)
+    ) {
+      const message = `Expected an instance of a Drawable pattern.`;
+      throw new TypeError(message);
+    }
+    if (
+      canvas == null ||
+      !(canvas instanceof HTMLCanvasElement)
+    ) {
+      const message = `Expected an instance of an HTMLCanvasElement.`;
+      throw new TypeError(message);
+    }
     this._canvas = canvas;
     this._pattern = pattern;
     this._source = pattern.sections.texture;
@@ -648,7 +664,14 @@ class Modeler {
    * Changes whether the pixel filtering is applied on the model.
    */
   public set pixelFilter(pixelFilter: boolean) {
-    if (typeof pixelFilter !== "boolean") throw new TypeError();
+    if (this._state === ModelerStates.DISPOSED) {
+      const message = `Modeler has been disposed. Cannot set pixelFilter.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof pixelFilter !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
     this._pixelFilter = pixelFilter;
     this._redraw();
   }

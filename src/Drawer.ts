@@ -200,13 +200,25 @@ class Drawer {
    * @param options - A configuration Object with a 'canvas' and 'pattern'.
    */
   public constructor(options: DrawerOptions) {
-    if (options == null) throw new TypeError();
+    if (options == null) {
+      const message = `Expected an configuration objects with required fields.`;
+      throw new TypeError(message);
+    }
     const { canvas, pattern } = options;
-    if (pattern == null) throw new TypeError();
+    if (
+      pattern == null ||
+      !(pattern instanceof Drawable)
+    ) {
+      const message = `Expected an instance of a Drawable pattern.`;
+      throw new TypeError(message);
+    }
     if (
       canvas == null ||
       !(canvas instanceof HTMLCanvasElement)
-    ) throw new TypeError();
+    ) {
+      const message = `Expected an instance of an HTMLCanvasElement.`;
+      throw new TypeError(message);
+    }
     this._pattern = pattern;
     this._canvas = canvas;
     // validate canvas after-css size, must be square and 128xy
@@ -673,7 +685,10 @@ class Drawer {
    * Sets whether or not the pixelFilter is applied.
    */
   public set pixelFilter(pixelFilter: boolean) {
-    if (typeof pixelFilter !== "boolean") throw new TypeError();
+    if (typeof pixelFilter !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
     if (this._pixelFilter === pixelFilter) return;
     this._pixelFilter = pixelFilter;
     if (this._pixelFilter)
@@ -700,7 +715,14 @@ class Drawer {
    * Sets whether or not to render the grid.
    */
   public set grid(grid: boolean) {
-    if (typeof grid !== "boolean") throw new TypeError();
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set grid.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof grid !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
     if (this._grid === grid) return;
     this._grid = grid;
     requestAnimationFrame(this._redraw);
@@ -719,7 +741,14 @@ class Drawer {
    * Sets whether or not to render the tool indicator.
    */
   public set indicator(indicator: boolean) {
-    if (typeof indicator !== "boolean") throw new TypeError();
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set indicator.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof indicator !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
     if (this._indicator === indicator) return;
     this._indicator = indicator;
     requestAnimationFrame(this._redraw);

@@ -1,3 +1,3 @@
 export { default as IllegalStateError } from "./IllegalStateError";
 export { default as QRScanningError } from "./QRScanningError";
-export { default as ConvertingError } from "./ConvertingError";
+export { default as ImageProjectingError } from "./ImageProjectingError";
