@@ -1,4 +1,4 @@
-import Convertable from "./Convertable";
+import ImageProjectable from "./ImageProjectable";
 import Hook from "./Hook";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
@@ -28,7 +28,7 @@ import {
   ImageLoadingException,
 } from "./myZxing";
 import { QRScanningError } from "./errors";
-import chroma, { valid } from "chroma-js";
+import chroma from "chroma-js";
 
 // ACNL binary data layout.
 //
@@ -384,7 +384,7 @@ const PALETTE_SIZE = 15;
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends Convertable {
+class Acnl extends ImageProjectable {
 
   /**
    * An Enum of all possible PatternTypes.
@@ -411,6 +411,15 @@ class Acnl extends Convertable {
    * @param color - the color to compare against
    */
   public static getClosestColor(inputColor: color): color {
+    if (typeof inputColor !== "string") {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
+    try { chroma(inputColor); }
+    catch (error) {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
     let outputColor: color = null;
     let outputColorDistance: number = null;
     for (const color of Acnl.colors) {
@@ -430,6 +439,7 @@ class Acnl extends Convertable {
 
   /**
    * Id of the villager.
+   * Must match in-game villager id (ACNL) to be editable.
    */
   private _villagerId: number = 0;
 
@@ -445,6 +455,7 @@ class Acnl extends Convertable {
 
   /**
    * Id of the town.
+   * Must match in-game town id (ACNL) to be editable.
    */
   private _townId: number = 0;
 
@@ -459,7 +470,7 @@ class Acnl extends Convertable {
   private _type: PatternType = Acnl.types.Standard;
 
   /**
-   * Lookup table for rendering colors.
+   * Mapping for rendering colors.
    * Palette size is 15, 16 is always transparent but not included.
    */
   private _palette: Array<color> = [
@@ -487,7 +498,7 @@ class Acnl extends Convertable {
 
   /**
    * The raw pixels representing the pixels of the pattern.
-   * 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
+   * 32 cols x 128 rows, accessed as pixels[col][row] or pixels[x][y].
    * Type size determines what to truncate down when converting to binary.
    */
   private _pixels: paletteIndex[][] = new Array(32).fill(0).map(() => {
@@ -566,11 +577,19 @@ class Acnl extends Convertable {
         ...propertyConfig,
         get: () => this._palette[i],
         set: (color: color) => {
-          const mutations = this._palette.slice();
-          mutations[i] = color;
-          this.palette = <Array<color>>mutations;
+          if (typeof color !== "string") {
+            const message = `Expected a valid color in the Acnl colorspace.`;
+            throw new TypeError(message);
+          }
+          const chromaColor = chroma(color);
+          if (!Acnl.colors.has(chromaColor.hex("rgb").toUpperCase())) {
+            const message = `Expected a valid color from the Acnl colorspace.`;
+            throw new RangeError(message);
+          }
+          this._palette[i] = chromaColor.hex("rgb");
+          this._hooks.palette.trigger(i, chromaColor.hex("rgb"));
         }
-      })
+      });
     }
     Object.preventExtensions(api);
     this._paletteApi = <Array<color>>api;
@@ -927,22 +946,29 @@ class Acnl extends Convertable {
     // turns the passed palette into the new api object
     const { _palette, _hooks } = this;
     if (!(palette instanceof Array)) {
-      const message = `Expected an Array of colors.`;
+      const message = `Expected an array of colors from the Acnl colorspace.`;
       throw new TypeError(message);
     }
     if (palette.length !== this._palette.length) {
-      const message = `Palette size must be of size ${this._palette.length} for this format.`;
+      const message = `Palette size must be of size ${this._palette.length} for Acnl.`;
       throw new RangeError(message); // too many
     }
-    for (const color of palette)
-      if (!Acnl.colors.has(color)) {
-        const message = `Expected valid colors from the pattern's colorspace.`;
+    for (const color of palette) {
+      if (typeof color !== "string") {
+        const message = `Expected valid colors from the Acnl colorspace.`;
         throw new TypeError(message);
       }
+      const chromaColor: chroma.Color = chroma(color);
+      if (!Acnl.colors.has(chromaColor.hex("rgb").toUpperCase())) {
+        const message = `Expected valid colors from the Acnl colorspace.`;
+        throw new RangeError(message);
+      }
+    }
     for (let i = 0; i < _palette.length; ++i) {
       const color: color = palette[i];
+      const chromaColor: chroma.Color = chroma(color);
       // block all non-unique changes
-      if (_palette[i] === color) continue;
+      if (_palette[i] === chromaColor.hex("rgb")) continue;
       _palette[i] = color;
       _hooks.palette.trigger(i, color);
     }
@@ -978,94 +1004,94 @@ class Acnl extends Convertable {
   }
 
 
-  /**
-   * Gets the language byte of the Acnl.
-   */
-  private get language(): number {
-    return this._language;
-  }
+  // /**
+  //  * Gets the language byte of the Acnl.
+  //  */
+  // private get language(): number {
+  //   return this._language;
+  // }
 
 
-  /**
-   * Sets the language byte of the Acnl.
-   */
-  private set language(language: number) {
-    if (language < 128) {
-      this._language = language;
-    }
-  }
+  // /**
+  //  * Sets the language byte of the Acnl.
+  //  */
+  // private set language(language: number) {
+  //   if (language < 128) {
+  //     this._language = language;
+  //   }
+  // }
 
 
-  /**
-   * Gets the country byte of the Acnl.
-   */
-  private get country(): number {
-    return this._country;
-  }
+  // /**
+  //  * Gets the country byte of the Acnl.
+  //  */
+  // private get country(): number {
+  //   return this._country;
+  // }
 
 
-  /**
-   * Sets the country byte of the Acnl.
-   */
-  private set country(country: number) {
-    if (country < 128) {
-      this._country = country;
-    }
-  }
+  // /**
+  //  * Sets the country byte of the Acnl.
+  //  */
+  // private set country(country: number) {
+  //   if (country < 128) {
+  //     this._country = country;
+  //   }
+  // }
 
 
-  /**
-   * Gets the region byte of the Acnl.
-   */
-  private get region(): number {
-    return this._region;
-  }
+  // /**
+  //  * Gets the region byte of the Acnl.
+  //  */
+  // private get region(): number {
+  //   return this._region;
+  // }
 
 
-  /**
-   * Sets the region byte of the Acnl.
-   */
-  private set region(region: number) {
-    if (region < 128) {
-      this._region = region;
-    }
-  }
+  // /**
+  //  * Sets the region byte of the Acnl.
+  //  */
+  // private set region(region: number) {
+  //   if (region < 128) {
+  //     this._region = region;
+  //   }
+  // }
 
 
-  /**
-   * Gets the color byte of the Acnl.
-   */
-  private get color(): number {
-    return this._color;
-  }
+  // /**
+  //  * Gets the color byte of the Acnl.
+  //  */
+  // private get color(): number {
+  //   return this._color;
+  // }
 
 
-  /**
-   * Sets the color byte of the Acnl.
-   */
-  private set color(color: number) {
-    if (color < 15) {
-      this._color = color;
-    }
-  }
+  // /**
+  //  * Sets the color byte of the Acnl.
+  //  */
+  // private set color(color: number) {
+  //   if (color < 15) {
+  //     this._color = color;
+  //   }
+  // }
 
 
-  /**
-   * Gets looks byte of the Acnl.
-   */
-  private get looks(): number {
-    return this._looks;
-  }
+  // /**
+  //  * Gets looks byte of the Acnl.
+  //  */
+  // private get looks(): number {
+  //   return this._looks;
+  // }
 
 
-  /**
-   * Sets looks byte of the Acnl.
-   */
-  private set looks(looks: number) {
-    if (looks < 128) {
-      this._looks = looks;
-    }
-  }
+  // /**
+  //  * Sets looks byte of the Acnl.
+  //  */
+  // private set looks(looks: number) {
+  //   if (looks < 128) {
+  //     this._looks = looks;
+  //   }
+  // }
 
 
   /**

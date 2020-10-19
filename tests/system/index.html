@@ -205,12 +205,12 @@
   <div class="converter-options-container">
     <div>Converter Tests</div>
     <div class="converter-options">
-      <button onclick="convertImage('./converter/hd-img.jpg')">hd-img</button>
-      <button onclick="convertImage('./converter/complex.jpg')">complex</button>
-      <button onclick="convertImage('./converter/non-square.jpg')">non-square</button>
-      <button onclick="convertImage('./converter/square-and-close-colors.png')">square-and-close-colors</button>
-      <button onclick="convertImage('./converter/saturated.jpg')">saturated</button>
-      <button onclick="convertImage('./converter/transparent.png')">transparent</button>
+      <button onclick="projectImage('./converter/hd-img.jpg')">hd-img</button>
+      <button onclick="projectImage('./converter/complex.jpg')">complex</button>
+      <button onclick="projectImage('./converter/non-square.jpg')">non-square</button>
+      <button onclick="projectImage('./converter/square-and-close-colors.png')">square-and-close-colors</button>
+      <button onclick="projectImage('./converter/saturated.jpg')">saturated</button>
+      <button onclick="projectImage('./converter/transparent.png')">transparent</button>
     </div>
   </div>
   <div>
@@ -240,9 +240,9 @@
       pattern: acnl,
       canvas: modelCanvas,
     });
-    let converter = new acpatterns.Converter();
+    let imageProjector = new acpatterns.ImageProjector();
 
-    const convertImage = (async (src) => {
+    const projectImage = (async (src) => {
       const img = new Image();
       await new Promise((resolve, reject) => {
         img.addEventListener("load", () => {
@@ -250,7 +250,7 @@
         });
         img.src = src;
       });
-      await converter.convert(
+      await imageProjector.project(
         img,
         0, 0,
         img.width,
@@ -262,8 +262,8 @@
         0, 0,
         32, 32,
         1,
-        acpatterns.Converter.ImageSmoothingQualities.None,
-        acpatterns.Converter.ColorMatchingMethods.RGB,
+        acpatterns.ImageProjector.ImageSmoothingQualities.None,
+        acpatterns.ImageProjector.ColorMatchingMethods.RGB,
       );
     });
 
@@ -324,7 +324,7 @@
       fillSectionElement();
     });
 
-    input.onchange = (async (event) => {
+    input.onchange = async (event) => {
       const fileReader = new FileReader();
       const binaryString = await new Promise((resolve) => {
         fileReader.onload = event => resolve(event.target.result);
@@ -332,17 +332,17 @@
       });
 
       acnl.fromBinaryString(binaryString);
-      console.log(acnl);
-    });
+      console.log(acnl.toBinaryString() === binaryString);
+    };
 
-    toBinaryStr.onchange = (async (event) => {
+    toBinaryStr.onchange = async (event) => {
       const fileReader = new FileReader();
       const binaryString = await new Promise((resolve) => {
         fileReader.onload = event => resolve(event.target.result);
         fileReader.readAsBinaryString(event.target.files[0]);
       });
       console.log(binaryString);
-    });
+    };
 
 
   </script>

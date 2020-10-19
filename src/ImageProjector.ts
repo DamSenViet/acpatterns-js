@@ -1,5 +1,5 @@
 import PixelsSource from "./PixelsSource";
-import Convertable from "./Convertable";
+import ImageProjectable from "./ImageProjectable";
 import { paletteIndex, } from "./utils";
 import chroma from "chroma-js";
 import { ConvertingError } from "./errors";
@@ -23,7 +23,7 @@ enum ColorMatchingMethods {
 /**
  * Converts an image onto a pattern.
  */
-class Converter {
+class ImageProjector {
   /**
    * All possible image smoothing quliaties.
    */
@@ -41,7 +41,7 @@ class Converter {
   public constructor() { }
 
   /**
-   * Converts an image onto a pattern.
+   * Projects an image onto a pattern.
    * @param image - the imge to convert
    * @param imageOffsetX -the x of the top left corner of the sub-rectangle in the image
    * @param imageOffsetY - the y  of the top left corner of the sub-rectangle in the image
@@ -59,14 +59,14 @@ class Converter {
    * @param imageSmoothingQuality - the image smoothing quality performed during downscaling
    * @param colorMatchingMethod - the color matching method from pixel to palette
    */
-  public async convert(
+  public async project(
     image: HTMLImageElement,
     imageOffsetX: number = 0,
     imageOffsetY: number = 0,
     // do not need to check aspect ratios, auto stretching to match
     imageOffsetWidth: number = image.width,
     imageOffsetHeight: number = image.height,
-    pattern: Convertable,
+    pattern: ImageProjectable,
     paletteOffset: number = 0,
     paletteSize: number = pattern.palette.length - paletteOffset,
     section: PixelsSource = pattern.sections.texture,
@@ -110,8 +110,11 @@ class Converter {
     }
 
     // verify pattern
-    if (!(pattern instanceof Convertable && pattern.constructor !== Convertable)) {
-      const message = `Expected an instance of a convertable pattern.`;
+    if (
+      !(pattern instanceof ImageProjectable &&
+        pattern.constructor !== ImageProjectable)
+    ) {
+      const message = `Expected an instance of a image projectable pattern.`;
       throw new TypeError(message);
     }
 
@@ -292,11 +295,11 @@ class Converter {
     }
 
     // assign colors to the palette
-    pattern.palette = imageChromaColors
-      .map((chromaColor: chroma.Color) => {
-        const patternClass = (pattern.constructor as typeof Convertable);
-        return patternClass.getClosestColor(chromaColor.hex("rgb"));
-      });
+    for (let i = paletteOffset; i < paletteOffset + paletteSize; ++i) {
+      const chromaColor: chroma.Color = imageChromaColors[i];
+      const patternClass = (pattern.constructor as typeof ImageProjectable);
+      pattern.palette[i] = patternClass.getClosestColor(chromaColor.hex("rgb"));
+    }
 
     // select paletteIndex closest to the one in the palette for every pixel
     for (let x = 0; x < imageData.width; ++x) {
@@ -341,4 +344,4 @@ class Converter {
   }
 }
 
-export default Converter;
+export default ImageProjector;
