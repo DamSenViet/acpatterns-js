@@ -42,7 +42,7 @@ class ImageProjector {
 
   /**
    * Projects an image onto a pattern.
-   * @param image - the imge to convert
+   * @param image - the image to convert
    * @param imageOffsetX -the x of the top left corner of the sub-rectangle in the image
    * @param imageOffsetY - the y  of the top left corner of the sub-rectangle in the image
    * @param imageOffsetWidth - the width of the sub-rectangle in the image
@@ -192,7 +192,7 @@ class ImageProjector {
       opacityThreshold < 0 ||
       opacityThreshold > 1
     ) {
-      const message = `Expected opacity threshold to be a value from 0 to 1`;
+      const message = `Expected opacity threshold to be a value from 0 to 1.`;
       throw new RangeError(message);
     }
 

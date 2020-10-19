@@ -201,7 +201,7 @@ class Drawer {
    */
   public constructor(options: DrawerOptions) {
     if (options == null) {
-      const message = `Expected an configuration objects with required fields.`;
+      const message = `Expected a configuration object with required fields.`;
       throw new TypeError(message);
     }
     const { canvas, pattern } = options;
