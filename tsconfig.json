@@ -3,12 +3,12 @@
     "./src/index.ts",
   ],
   "exclude": [
-    "./node_modules",
     "./tests"
   ],
   "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
     "declaration": true,
-    "declarationMap": true,
+    // "declarationMap": true,
     // ### PROJECT OPTIONS
     //  module type to compile into
     "module": "ES6",
@@ -22,7 +22,7 @@
     "sourceMap": true,
     // "declaration": true,
     "lib": [
-      "ES6",
+      "ES2017",
       "DOM",
     ],
     "moduleResolution": "node",

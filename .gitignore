@@ -2,10 +2,10 @@
 **/node_modules
 
 # Ignore build
-/build
-/dist
-/stats
-/.env
+**/build
+**/dist
+**/stats
+**/.env
 
 # Ignore OS Metadata
 **/.DS_Store

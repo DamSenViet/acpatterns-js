@@ -1,10 +1,26 @@
-import Enum from "./Enum";
+import ImageProjectable from "./ImageProjectable";
 import Hook from "./Hook";
+import PixelsSource from "./PixelsSource";
+import PatternType from "./PatternType";
+import HookSystem from "./HookSystem";
 import {
-  byte,
   color,
-  pixel,
+  paletteIndex,
+  byte,
+  FixedLengthArray,
+  fixedLengthPropertyConfig,
+  mapping,
+  UintToBytes,
+  bytesToUint,
+  Uint16ToBytes,
+  bytesToUint16,
+  stringToBytes,
+  bytesToString,
+  binaryStringToBytes,
+  bytesToBinaryString,
+  propertyConfig,
 } from "./utils";
+import chroma from "chroma-js";
 
 //ACNH data layout.
 //Blocks of 680 or 2216 bytes each, providing this data in sequence:
@@ -78,29 +94,67 @@ const Vinc = 5.85;
 
 // everything else is some kind of sectioned transform
 // Brimmed hat
-// Tip, Band, Brim
+// Crown, Band, Brim
 // Brimmed cap
 // FrontCrown, BackCrown, Brim
 
-type Designer = {
-  id?: number;
-  name?: string;
-  isFemale?: boolean;
-};
+/**
+ * Class representing an Animal Crossing New Horizons in-game pattern.
+ */
+class Acnh extends ImageProjectable {
+  /**
+   * 4 bytes checksum at 0x000 byte address.
+   * Stored at 0x000. 4 bytes.
+   */
+  private _checksum: number = 0;
 
-type Island = {
-  id?: number;
-  name?: string;
-};
+  /**
+   * Unknown value.
+   * Stored at 0x004. 1 byte.
+   */
+  private _unknown0x004: number = 9;
 
-class ACNH {
+  /**
+   * Title, name of the pattern.
+   * Stored at 0x010. 40 bytes.
+   */
   private _title: string = "Empty";
-  private _island: Island = {
-    id: 0,
-    name: "Unknown"
-  };
-  private _islandApi: Island = null;
 
+  /**
+   * Id of the town.
+   * Stored at 0x038. 4 bytes.
+   */
+  private _townId: number = 0;
+
+  /**
+   * Name of the town.
+   * Stored at 0x03C. 20 bytes.
+   */
+  private _townName: string = "";
+
+  /**
+   * Id of the villager.
+   * Stored at 0x054. 4 bytes.
+   */
+  private _villagerId: number = 0;
+
+  /**
+   * Name of the villager.
+   * Stored at 0x058. 20 bytes.
+   */
+  private villagerName: string = "";
+
+  /**
+   * Unknown value.
+   * Stored at 0x070. 2 bytes.
+   */
+  private _unknown0x070: number = 0;
+
+  /**
+   * Lookup table for rendering colors.
+   * Palette size is 15, 16 is always transparent but not included.
+   * Stored at 0x078. 15x3 bytes, 24 bit RGB palette colors.
+   */
   private _palette: color[] = [
     "#FFFFFF",
     "#FFFFFF",
@@ -118,16 +172,91 @@ class ACNH {
     "#FFFFFF",
     "#FFFFFF",
   ];
+
+  /**
+   * The object through which the end user accesses the palette.
+   */
   private _paletteApi: color[][] = null;
 
-  private _pixels: pixel[][] = new Array(15).fill(15).map(() => {
-    return new Array(32).fill(15);
+  private _type: PatternType = null;
+
+
+  /**
+   * The raw pixels representing the pixels of the pattern.
+   * 32 cols x 128 rows, accessed as pixels[col][row] or pixels[x][y].
+   * Type size determines what to truncate down when converting to binary.
+   */
+  private _pixels: paletteIndex[][] = new Array(32).fill(0).map(() => {
+    return new Array(128).fill(0);
   });
 
+  /**
+   * The object through which the end-user accesses the pixels.
+   */
+  private _pixelsApi: PixelsSource = null;
 
+  /**
+   * The object through which the user can access the pattern's sections.
+   */
+  private _sectionsApi: {
+    texture: PixelsSource;
+    [key: string]: PixelsSource;
+  } = null;
+
+  /**
+   * The event hooks that the pattern can emit.
+   */
+  private _hooks: Readonly<HookSystem> = null;
+
+  /**
+   * Instantiates an Acnh.
+   */
   public constructor() {
+    super();
+    // setup on all public apis
+    this._refreshHooksApi();
+  }
+
+  /**
+   * Refreshes the hooks API.
+   */
+  private _refreshHooksApi(): void {
+    this._hooks = Object.seal(
+      Object.freeze({
+        type: new Hook<[PatternType]>(),
+        palette: new Hook<[number, color]>(),
+        load: new Hook<[]>(),
+        refresh: new Hook<[]>(),
+      })
+    );
+  }
 
 
+  public get type(): PatternType {
+    return this._type;
+  }
+
+  public get palette(): Array<color> {
+    return this._palette;
+  }
+
+  public get pixels(): PixelsSource {
+    return
+  }
+
+
+  public get sections(): {
+    texture: PixelsSource;
+    [key: string]: PixelsSource;
+  } {
+    return this._sectionsApi;
+  }
+
+  /**
+   * Gets the hooks of the Acnh.
+   */
+  public get hooks(): HookSystem {
+    return this._hooks;
   }
 }
 

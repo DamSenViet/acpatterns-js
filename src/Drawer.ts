@@ -1,13 +1,13 @@
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
 import Drawable from "./Drawable";
-import { Tool, Brush } from "./tools";
+import { Tool } from "./tools";
 import {
   color,
-  pixel,
-  debounce,
+  paletteIndex,
 } from "./utils";
 import { IllegalStateError } from "./errors";
+import xbrz from "./xbrz";
 
 export interface DrawerOptions {
   canvas: HTMLCanvasElement,
@@ -15,21 +15,33 @@ export interface DrawerOptions {
 };
 
 export interface DrawerMeasurements {
-  // source meaasurements
+  /**
+   * Pattern source measurements.
+   */
   sourceHeight: number;
   sourceHalfHeight: number;
   sourceWidth: number;
   sourceHalfWidth: number;
-  // raw canvas measurements
+  textureHeight: number;
+  textureWidth: number;
+
+  /**
+   * Raw canvas measurements.
+   */
   size: number;
   pixelSize: number,
   yStart: number;
   yCenter: number;
   yStop: number;
+  ySize: number;
   xStart: number;
   xCenter: number;
   xStop: number;
-  // canvas pixel measurements
+  xSize: number;
+
+  /**
+   * Canvas pixel grid measurements.
+   */
   pixelGridSize: number;
   pixelYStart: number;
   pixelYCenter: number;
@@ -52,84 +64,99 @@ enum DrawerStates {
  * Reacts to changes to the pattern by default.
  */
 class Drawer {
-  
+
   /**
    * The possible states the Drawer can be in.
    */
   public static states = DrawerStates;
-  
+
   /**
    * The final canvas to render the pattern on.
    */
   private _canvas: HTMLCanvasElement = null;
-  
+
   /**
    * Cached context of the _canvas.
    */
   private _context: CanvasRenderingContext2D = null;
-  
+
   /**
    * The pattern to draw.
    */
   private _pattern: Drawable = null;
-  
+
   /**
    * The source of the pattern to be drawn.
    */
   private _source: PixelsSource = null;
 
-  
+
   /**
    * The canvas responsible for drawing just the pixels of the pattern.
    * Muxed onto _canvas in the drawing process.
    */
   private _pixelsCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+
   /**
    * Cached context of _pixelsCanvas.
    */
   private _pixelsContext: CanvasRenderingContext2D = this._pixelsCanvas.getContext("2d");
-  
+
+  /**
+   * The canvas to render the post-processed pixelsCanvas onto.
+   * Muxed onto _canvas in the drawing process.
+   */
+  private _textureCanvas: HTMLCanvasElement = document.createElement("canvas");
+
+  /**
+   * Cached context of the _textureCanvas.
+   */
+  private _textureContext: CanvasRenderingContext2D = this._textureCanvas.getContext("2d");
+
   /**
    * The canvas responsible for drawing just the grid.
    * Muxed onto _canvas in the drawing process.
    */
   private _gridCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+
   /**
    * Cached context of _gridCanvas.
    */
   private _gridContext: CanvasRenderingContext2D = this._gridCanvas.getContext("2d");
-  
+
   /**
-   * The canvas responsible for drawing just the preview created by the preview.
+   * The canvas responsible for drawing just the indicator created by the tool.
    * Muxed onto _canvas in the drawing process.
    */
-  private _previewCanvas: HTMLCanvasElement = document.createElement("canvas");
-  
+  private _indicatorCanvas: HTMLCanvasElement = document.createElement("canvas");
+
   /**
-   * Cached context of the _previewCanvas.
+   * Cached context of the _indicatorCanvas.
    */
-  private _previewContext: CanvasRenderingContext2D = this._previewCanvas.getContext("2d");
+  private _indicatorContext: CanvasRenderingContext2D = this._indicatorCanvas.getContext("2d");
 
   /**
    * Cached measurements needed to speed up rendering and calculations for _pixelsCanvas.
    */
-  private _measurements: DrawerMeasurements = {
+  private _measurements: Readonly<DrawerMeasurements> = Object.freeze({
     // source meaasurements
     sourceHeight: null,
     sourceHalfHeight: null,
     sourceWidth: null,
     sourceHalfWidth: null,
+    textureHeight: null,
+    textureWidth: null,
     // raw canvas measurements
     size: null,
     pixelSize: null,
     yStart: null,
     yCenter: null,
     yStop: null,
+    ySize: null,
     xStart: null,
     xCenter: null,
     xStop: null,
+    xSize: null,
     // canvas pixel measurements
     pixelGridSize: null,
     pixelYStart: null,
@@ -138,56 +165,61 @@ class Drawer {
     pixelXStart: null,
     pixelXCenter: null,
     pixelXStop: null,
-  };
-
-  /**
-   * The last sourceY drawn on.
-   */
-  private _lastSourceY: number = null;
-
-  /**
-   * The last sourceX drawn on.
-   */
-  private _lastSourceX: number = null;
-
-  /**
-   * Flag to reduce drawing operations.
-   */
-  private _didDrawOnLastSource: boolean = false;
+  });
 
   /**
    * The drawing tool to interact with the canvas.
    */
-  private _tool: Tool = new Brush({ size: 10 });
+  private _tool: Tool = null;
 
   /**
-   * Tool uses this callback to force refresh everything.
-   * This callback propogates to any other connected Drawers
-   * or Modelers that are still in their reactive state.
+   * Whether or not to render the grid.
    */
-  private _forceRefresh: () => void = null;
-  
+  private _grid: boolean = false;
+
+  /**
+   * Whether or not to render the tool indicator.
+   */
+  private _indicator: boolean = false;
+
+  /**
+   * Whether or not to apply pixel filtering.
+   * If turned on, will incur a large performance cost.
+   */
+  private _pixelFilter: boolean = false;
+
   /**
    * Drawer reactive state.
    */
   private _state: DrawerStates = DrawerStates.PLAYING;
-  
-  // CENTERS NON SQUARE SOURCES INSIDE GRID
-  // CANVAS SIZE MUST BE SQUARE AND WIDTH/HEIGHT MUST BE A MULTIPLE OF 128
+
+
   /**
    * Instantiates a Drawer.
-   * @param options - A configuration Object with a 'canvas' and 'pattern'
+   * Centers non-square sources inside the grid.
+   * @param options - A configuration Object with a 'canvas' and 'pattern'.
    */
   public constructor(options: DrawerOptions) {
-    if (options == null) throw new TypeError();
+    if (options == null) {
+      const message = `Expected a configuration object with required fields.`;
+      throw new TypeError(message);
+    }
     const { canvas, pattern } = options;
-    if (pattern == null) throw new TypeError();
+    if (
+      pattern == null ||
+      !(pattern instanceof Drawable)
+    ) {
+      const message = `Expected an instance of a Drawable pattern.`;
+      throw new TypeError(message);
+    }
     if (
       canvas == null ||
       !(canvas instanceof HTMLCanvasElement)
-    ) throw new TypeError();
+    ) {
+      const message = `Expected an instance of an HTMLCanvasElement.`;
+      throw new TypeError(message);
+    }
     this._pattern = pattern;
-    this._forceRefresh = this._pattern.hooks.refresh.trigger.bind(this._pattern.hooks.refresh);
     this._canvas = canvas;
     // validate canvas after-css size, must be square and 128xy
     this._source = pattern.pixels;
@@ -197,7 +229,7 @@ class Drawer {
     this._context.imageSmoothingEnabled = false;
     this._pixelsContext.imageSmoothingEnabled = false;
     this._gridContext.imageSmoothingEnabled = false;
-    this._previewContext.imageSmoothingEnabled = false;
+    this._indicatorContext.imageSmoothingEnabled = false;
 
     this._refresh(); // draw first round
     // initialize all hooks
@@ -206,44 +238,53 @@ class Drawer {
     this._pattern.hooks.refresh.tap(this._onRefresh);
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
-
-    this._canvas.addEventListener("mousemove", this._onMouse);
-    this._canvas.addEventListener("mousedown", this._onMouse);
   }
 
-  
+
   /**
    * Updates the measurements for the _pixelsCanvas to render the pattern.
    */
   private _updateMeasurements(): void {
+    // NOTE: USING NON-CSS MEASUREMENTS
+    // BASE VALUES OFF OF ATTRIBUTE VALUES WHICH ARE NOT AFFECTED BY CSS
     if (
-      this._canvas.offsetHeight !== this._canvas.offsetWidth ||
-      this._canvas.offsetHeight % 128 !== 0
+      this._canvas.height !== this._canvas.width ||
+      this._canvas.height % 128 !== 0
     ) throw new TypeError();
 
-    const size = this._canvas.offsetHeight;
-    // sync all sizes together
-    this._pixelsCanvas.height = size;
-    this._pixelsCanvas.width = size;
-    this._pixelsContext.imageSmoothingEnabled = false;
+    const size = this._canvas.height;
+    this._context.imageSmoothingEnabled = false;
+
+    // sync necessary sizes together
+    // imageSmoothingEnabled auto reset to true after size changes, force false
     this._gridCanvas.height = size;
     this._gridCanvas.width = size;
     this._gridContext.imageSmoothingEnabled = false;
-    this._previewCanvas.height = size;
-    this._previewCanvas.width = size;
-    this._previewContext.imageSmoothingEnabled = false;
+    this._indicatorCanvas.height = size;
+    this._indicatorCanvas.width = size;
+    this._indicatorContext.imageSmoothingEnabled = false;
 
 
     // determine pixel size based on source
-    // if pattern is <= 64, scale up size is scaled up, double pixel size
-    const sourceHeight: number = this._source.length;
+    const sourceHeight: number = this._source.height;
     const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
-    const sourceWidth: number = this._source[0].length;
+    const sourceWidth: number = this._source.width;
     const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
-    let pixelGridSize: number = 1;
-    while (pixelGridSize < sourceHeight || pixelGridSize < sourceWidth)
-      pixelGridSize = pixelGridSize * 2;
-    const pixelSize = this._canvas.offsetHeight / pixelGridSize;
+    const textureHeight = sourceHeight * 4;
+    const textureWidth = sourceWidth * 4;
+
+    this._pixelsCanvas.height = sourceHeight;
+    this._pixelsCanvas.width = sourceWidth;
+    this._pixelsContext.imageSmoothingEnabled = false;
+    this._textureCanvas.height = textureHeight;
+    this._textureCanvas.width = textureWidth;
+    this._textureContext.imageSmoothingEnabled = false;
+
+    // the number of pixels the canvas can fit
+    // expand to fit
+    let pixelGridSize: number = sourceHeight > sourceWidth ? sourceHeight : sourceWidth;
+    // figure out how many canvas (NOT CSS) pixels each pixel will be
+    const pixelSize = this._canvas.height / pixelGridSize;
 
     const top: number = Math.floor(pixelGridSize / 2);
     const left: number = Math.floor(pixelGridSize / 2);
@@ -260,22 +301,30 @@ class Drawer {
     const yStart = pixelYStart * pixelSize;
     const yCenter = pixelYCenter * pixelSize;
     const yStop = pixelYStop * pixelSize;
+    const ySize = yStop - yStart;
+
     const xStart = pixelXStart * pixelSize;
     const xCenter = pixelXCenter * pixelSize;
     const xStop = pixelXStop * pixelSize;
+    const xSize = xStop - xStart;
 
+    // overwrite, don't replace
     this._measurements = Object.freeze<DrawerMeasurements>({
       sourceHeight,
       sourceHalfHeight,
       sourceWidth,
       sourceHalfWidth,
+      textureHeight,
+      textureWidth,
       size,
       pixelSize,
       yStart,
       yCenter,
       yStop,
+      ySize,
       xStart,
       xCenter,
+      xSize,
       xStop,
       pixelGridSize,
       pixelYStart,
@@ -287,17 +336,55 @@ class Drawer {
     });
   }
 
+
   /**
    * Redraws the _canvas.
    */
-  private _redraw = (): void  => {
-      this._context.clearRect(
-        0, 0,
+  private _redraw = (): void => {
+    this._context.clearRect(
+      0, 0,
       this._measurements.size, this._measurements.size
     );
-    this._context.drawImage(this._pixelsCanvas, 0, 0);
-    this._context.drawImage(this._gridCanvas, 0, 0);
-    this._context.drawImage(this._previewCanvas, 0, 0);
+    if (this._pixelFilter)
+      this._context.drawImage(
+        this._textureCanvas,
+        0, 0,
+        this._measurements.textureWidth,
+        this._measurements.textureHeight,
+        this._measurements.xStart, this._measurements.yStart,
+        this._measurements.xSize,
+        this._measurements.ySize,
+      );
+    else
+      this._context.drawImage(
+        this._pixelsCanvas,
+        0, 0,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._measurements.xStart, this._measurements.yStart,
+        this._measurements.xSize,
+        this._measurements.ySize,
+      );
+    if (this._grid)
+      this._context.drawImage(
+        this._gridCanvas,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+      );
+    if (this._indicator)
+      this._context.drawImage(
+        this._indicatorCanvas,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+        0, 0,
+        this._measurements.size,
+        this._measurements.size,
+      );
   };
 
 
@@ -305,21 +392,25 @@ class Drawer {
    * Refreshes the _pixelsCanvas.
    */
   private _refreshPixels(): void {
-    this._pixelsContext.clearRect(0, 0, this._measurements.size, this._measurements.size);
+    this._pixelsContext.clearRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
     for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
-        const paletteIdx = this._source[sourceY][sourceX];
-        if (paletteIdx === 15) continue;
-        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
-        this._pixelsContext.fillRect(
-          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-          this._measurements.pixelSize,
-          this._measurements.pixelSize,
-        );
+        const paletteIndex = this._source.unreactive[sourceX][sourceY];
+        if (paletteIndex === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
+        this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        4,
+      );
   }
+
 
   /**
    * Refreshes the _gridCanvas.
@@ -332,7 +423,7 @@ class Drawer {
       this._measurements.size
     );
 
-    this._gridContext.strokeStyle = "#E2E2E2";
+    this._gridContext.strokeStyle = "rgba(226, 226, 226, 1)";
     this._gridContext.lineWidth = 1;
 
     // vertical pixel grid lines
@@ -358,8 +449,8 @@ class Drawer {
       this._gridContext.stroke();
     }
     // guide lines
-    this._gridContext.strokeStyle = "#624C37";
-    this._gridContext.lineWidth = 2;
+    this._gridContext.strokeStyle = "rgba(0, 0, 0, 1)";
+    this._gridContext.lineWidth = 1;
     // vertical guide
     this._gridContext.beginPath();
     this._gridContext.moveTo(
@@ -386,100 +477,43 @@ class Drawer {
 
 
   /**
-   * Refreshes the _previewsCanvas.
+   * Refreshes the _indicatorCanvas.
    */
-  private _refreshPreview(): void {
-    this._previewContext.clearRect(
+  private _refreshIndicator: () => void = (): void => {
+    this._indicatorContext.clearRect(
       0,
       0,
       this._measurements.size,
       this._measurements.size,
     );
-  }
-
-  // private _onWindowResize = debounce(() => {
-  //   this._refresh();
-  // }, 200);
-
-
-  /**
-   * Callback for the mouse interaction with the canvas.
-   * @param event - the passed event
-   */
-  private _onMouse = (event: MouseEvent) => {
-    // need - 1 to use zero indexed values
-    const bdr = this._canvas.getBoundingClientRect();
-    const pixelY = Math.floor((event.clientY - bdr.top) / this._measurements.pixelSize);
-    const pixelX = Math.floor((event.clientX - bdr.left) / this._measurements.pixelSize);
-
-    if (
-      pixelY < this._measurements.pixelYStart ||
-      pixelY > this._measurements.pixelYStop - 1
-    ) return;
-    if (
-      pixelX < this._measurements.pixelXStart ||
-      pixelX > this._measurements.pixelXStop - 1
-    ) return;
-
-    const sourceY = pixelY - this._measurements.pixelYStart;
-    const sourceX = pixelX - this._measurements.pixelXStart;
-    // draw on main canvas
-    if (event.buttons === 1 && this._didDrawOnLastSource === false) {
-      this._tool.draw(
-        this._source,
-        sourceY,
-        sourceX,
-        this._previewContext,
-        this._measurements,
-        this._forceRefresh,
-      );
-      this._didDrawOnLastSource = true;
-    }
-    // draw on overlay
-    if (
-      this._lastSourceY === sourceY &&
-      this._lastSourceX === sourceX
-    ) return;
-    this._lastSourceY = sourceY;
-    this._lastSourceX = sourceX;
-    this._didDrawOnLastSource = false;
-
-    // redraw preview
-    this._refreshPreview();
-    this._tool.preview(
-      this._source,
-      sourceY,
-      sourceX,
-      this._previewContext,
-      this._measurements,
-    );
-    requestAnimationFrame(this._redraw);
-  }
+  };
 
 
   /**
    * Callback for when the _pixelCanvas source changes.
    * Updates the pixel that changed.
-   * @param sourceY - the y coordinate of the changed pixel
    * @param sourceX - the x coordinate of the changed pixel
+   * @param sourceY - the y coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    this._pixelsContext.clearRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
-    if (pixel === 15) return;
-    this._pixelsContext.fillStyle = this._pattern.palette[pixel];
-    this._pixelsContext.fillRect(
-      (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-      (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-      this._measurements.pixelSize,
-      this._measurements.pixelSize,
-    );
-    this._redraw();
+  private _onPixelUpdate = (sourceX: number, sourceY: number, paletteIndex: paletteIndex): void => {
+    if (paletteIndex === 15) {
+      this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
+      return;
+    }
+    this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
+    this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
+
+
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        4,
+      );
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -489,29 +523,24 @@ class Drawer {
    * @param i - the idx of the palette that changed
    * @param color - the hex color that it changed to
    */
-  private _onPaletteUpdate = (i: pixel, color: color): void => {
+  private _onPaletteUpdate = (i: paletteIndex, color: color): void => {
     // loop through entire source for i, replace all i values with new color
-    for (
-      let sourceY: number = 0;
-      sourceY < this._measurements.sourceHeight;
-      ++sourceY
-    ) {
-      for (
-        let sourceX: number = 0;
-        sourceX < this._measurements.sourceWidth;
-        ++sourceX
-      ) {
-        if (this._source[sourceY][sourceX] !== i) continue;
+    for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        if (this._source.unreactive[sourceX][sourceY] !== i) continue;
         this._pixelsContext.fillStyle = color;
-        this._pixelsContext.fillRect(
-          (this._measurements.pixelXStart + sourceX) * this._measurements.pixelSize,
-          (this._measurements.pixelYStart + sourceY) * this._measurements.pixelSize,
-          this._measurements.pixelSize,
-          this._measurements.pixelSize,
-        );
+        this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
-    this._redraw();
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        4,
+      );
+    requestAnimationFrame(this._redraw);
   };
 
 
@@ -530,12 +559,11 @@ class Drawer {
 
   /**
    * Callback for when the pattern's pixels need to be updated forcefully.
-   * Updates the pixels and the model.
    */
   private _onRefresh = (): void => {
     this._refreshPixels();
     requestAnimationFrame(this._redraw);
-  }
+  };
 
 
   /**
@@ -548,10 +576,31 @@ class Drawer {
 
 
   /**
+   * Does the refreshes the canvas with all changes.
+   */
+  private _refresh(): void {
+    this._updateMeasurements();
+    this._refreshPixels();
+    this._refreshGrid();
+    this._refreshIndicator();
+    // now drawImage in order to target canvas
+    requestAnimationFrame(this._redraw);
+  }
+
+
+  /**
    * Gets the canvas the pattern is rendered on.
    */
   public get canvas(): HTMLCanvasElement {
     return this._canvas;
+  }
+
+
+  /**
+   * Gets the pattern the Drawer is drawing.
+   */
+  public get pattern(): Drawable {
+    return this._pattern;
   }
 
 
@@ -577,8 +626,8 @@ class Drawer {
       throw new TypeError(message);
     }
     let isFromPattern = false;
-    for (const sectionName in this._pattern.sections) {
-      if (source == this._pattern.sections[sectionName]) {
+    for (const section of Object.values(this._pattern.sections)) {
+      if (source === section) {
         isFromPattern = true;
         break;
       }
@@ -613,26 +662,97 @@ class Drawer {
       const message = `Drawer has been disposed. Cannot set tool.`;
       throw new IllegalStateError(message);
     }
-    if (!(tool instanceof Tool)) {
+    if (!(tool instanceof Tool) && tool != null) {
       const message = `Expected an instance of Tool.`;
       throw new TypeError(message);
     }
     if (this._tool === tool) return;
+    if (this._tool != null) this._tool.drawer = null;
+    if (tool != null) tool.drawer = this;
     this._tool = tool;
   }
 
 
   /**
-   * Does the refreshes the canvas with all changes.
+   * Gets whether or not the pixel filtering is applied.
    */
-  private _refresh(): void {
-    this._updateMeasurements();
-    this._refreshPixels();
-    this._refreshGrid();
-    this._refreshPreview();
-    // now drawImage in order to target canvas
+  public get pixelFilter(): boolean {
+    return this._pixelFilter;
+  }
+
+
+  /**
+   * Sets whether or not the pixelFilter is applied.
+   */
+  public set pixelFilter(pixelFilter: boolean) {
+    if (typeof pixelFilter !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
+    if (this._pixelFilter === pixelFilter) return;
+    this._pixelFilter = pixelFilter;
+    if (this._pixelFilter)
+      xbrz(
+        this._pixelsContext,
+        this._measurements.sourceWidth,
+        this._measurements.sourceHeight,
+        this._textureContext,
+        4,
+      );
     requestAnimationFrame(this._redraw);
   }
+
+
+  /**
+   * Gets whether or not to render the grid.
+   */
+  public get grid(): boolean {
+    return this._grid;
+  }
+
+
+  /**
+   * Sets whether or not to render the grid.
+   */
+  public set grid(grid: boolean) {
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set grid.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof grid !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
+    if (this._grid === grid) return;
+    this._grid = grid;
+    requestAnimationFrame(this._redraw);
+  }
+
+
+  /**
+   * Gets whether or not to render the tool indicator.
+   */
+  public get indicator(): boolean {
+    return this._indicator;
+  }
+
+
+  /**
+   * Sets whether or not to render the tool indicator.
+   */
+  public set indicator(indicator: boolean) {
+    if (this._state === DrawerStates.DISPOSED) {
+      const message = `Drawer has been disposed. Cannot set indicator.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof indicator !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
+    if (this._indicator === indicator) return;
+    this._indicator = indicator;
+    requestAnimationFrame(this._redraw);
+  };
 
 
   /**
@@ -646,9 +766,7 @@ class Drawer {
     this._pattern.hooks.load.tap(this._onLoad);
     this._source.hook.tap(this._onPixelUpdate);
 
-    this._canvas.addEventListener("mousemove", this._onMouse);
-    this._canvas.addEventListener("mousedown", this._onMouse);
-
+    this._tool.mount();
     // assume everything changed
     this._onLoad();
   }
@@ -664,9 +782,6 @@ class Drawer {
     this._pattern.hooks.refresh.untap(this._onRefresh);
     this._pattern.hooks.load.untap(this._onLoad);
     this._source.hook.untap(this._onPixelUpdate);
-
-    this._canvas.removeEventListener("mousemove", this._onMouse);
-    this._canvas.removeEventListener("mousedown", this._onMouse);
     this._state = DrawerStates.PAUSED;
   }
 
@@ -678,18 +793,20 @@ class Drawer {
   public dispose(): void {
     if (this._state === DrawerStates.DISPOSED) return;
     this.pause();
+    this.tool = null;
     this._canvas = null;
     this._context = null;
     this._pattern = null;
     this._source = null;
     this._pixelsCanvas = null;
     this._pixelsContext = null;
+    this._textureCanvas = null;
+    this._textureContext = null;
     this._gridCanvas = null;
     this._gridContext = null;
-    this._previewCanvas = null;
-    this._previewContext = null;
+    this._indicatorCanvas = null;
+    this._indicatorContext = null;
     this._measurements = null;
-    this._tool = null;
     this._state = DrawerStates.DISPOSED;
   }
 }

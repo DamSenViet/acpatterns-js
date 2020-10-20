@@ -4,8 +4,9 @@ import PatternType from "./PatternType";
 import Drawable from "./Drawable";
 import {
   color,
-  pixel,
+  paletteIndex,
 } from "./utils";
+import { IllegalStateError } from "./errors";
 import {
   Engine,
   Scene,
@@ -65,8 +66,6 @@ patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
 export interface ModelerOptions {
   pattern: Drawable;
   canvas: HTMLCanvasElement;
-  textureCanvas: HTMLCanvasElement;
-  pixelsCanvas: HTMLCanvasElement;
 };
 
 /**
@@ -91,7 +90,7 @@ enum ModelerStates {
  * Reacts to changes to the pattern by default.
  */
 class Modeler {
-  
+
   /**
    * The possible states the Modeler can be in.
    */
@@ -182,10 +181,26 @@ class Modeler {
    */
   private _clothingStandContainer: AssetContainer = null;
 
+
+  /**
+   * To end the loading process.
+   */
+  private _endLoadingSignal: (value?: void) => void = null;
+
+  /**
+   * For queueing loading assets. Helps prevents resources from merging.
+   */
+  private _loadingSignal: Promise<void> = new Promise((resolve) => {
+    this._endLoadingSignal = resolve;
+  });
+
+  private _loadingQueue: Array<PatternType> = new Array<PatternType>();
+
   /**
    * Whether pixel filtering is used on the model texture.
+   * If turned on, will incur a large performance cost.
    */
-  private _isPixelFiltering = true;
+  private _pixelFilter = false;
 
   /**
    * Modeler reactive state.
@@ -198,10 +213,25 @@ class Modeler {
    * @param options - A configuration Object with a 'canvas' and 'pattern'
    */
   public constructor(options: ModelerOptions) {
-    if (options == null) throw new TypeError();
+    if (options == null) {
+      const message = `Expected a configuration object with required fields.`;
+      throw new TypeError(message);
+    }
     const { canvas, pattern } = options;
-    if (pattern == null) throw new TypeError();
-    if (!(canvas instanceof HTMLCanvasElement)) throw new TypeError();
+    if (
+      pattern == null ||
+      !(pattern instanceof Drawable)
+    ) {
+      const message = `Expected an instance of a Drawable pattern.`;
+      throw new TypeError(message);
+    }
+    if (
+      canvas == null ||
+      !(canvas instanceof HTMLCanvasElement)
+    ) {
+      const message = `Expected an instance of an HTMLCanvasElement.`;
+      throw new TypeError(message);
+    }
     this._canvas = canvas;
     this._pattern = pattern;
     this._source = pattern.sections.texture;
@@ -298,6 +328,7 @@ class Modeler {
 
     await new Promise((resolve) => { this._scene.executeWhenReady(resolve); });
     this._engine.runRenderLoop(() => { this._scene.render(); });
+    this._endLoadingSignal();
   }
 
 
@@ -384,8 +415,8 @@ class Modeler {
    * Updates the measurements for the _pixelsCanvas to render the pattern.
    */
   private _updateMeasurements(): void {
-    const sourceHeight = this._source.length;
-    const sourceWidth = this._source[0].length;
+    const sourceHeight = this._source.height;
+    const sourceWidth = this._source.width;
     const textureHeight = sourceHeight * 4;
     const textureWidth = sourceWidth * 4;
 
@@ -414,9 +445,9 @@ class Modeler {
    * @param sourceX - the x coordinate of the changed pixel
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
-  private _onPixelUpdate = (sourceY: number, sourceX: number, pixel: pixel): void => {
-    if (pixel === 15) this._pixelsContext.fillStyle = "#FFFFFF";
-    else this._pixelsContext.fillStyle = this._pattern.palette[pixel];
+  private _onPixelUpdate = (sourceX: number, sourceY: number, paletteIndex: paletteIndex): void => {
+    if (paletteIndex === 15) this._pixelsContext.fillStyle = "#FFFFFF";
+    else this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
     this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
     this._redraw();
   }
@@ -427,7 +458,7 @@ class Modeler {
    * @param i - the idx of the palette that changed
    * @param color - the hex color that it changed to
    */
-  private _onPaletteUpdate = (i: pixel, color: color): void => {
+  private _onPaletteUpdate = (i: paletteIndex, color: color): void => {
     for (
       let sourceY: number = 0;
       sourceY < this._measurements.sourceHeight;
@@ -438,7 +469,7 @@ class Modeler {
         sourceX < this._measurements.sourceWidth;
         ++sourceX
       ) {
-        if (this._source[sourceY][sourceX] !== i) continue;
+        if (this._source.unreactive[sourceY][sourceX] !== i) continue;
         this._pixelsContext.fillStyle = color;
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
@@ -448,18 +479,49 @@ class Modeler {
 
 
   /**
-   * Callback for when the type of the pattern changes.
-   * Updates the measurements, pixels, and the model.
+   * Callback for when pattern type changes.
+   * Implements mutex locking to ensure assets are properly disposed.
    * @param type - the pattern type that it's changed to.
    */
   private _onTypeUpdate = async (type: PatternType): Promise<void> => {
+    if (this._loadingQueue.length <= 0) {
+      // console.log(`queuing`, type);
+      this._loadingQueue.push(type);
+      await this._exchangeAssets(type, true); // continues consuming until array is finished.
+    }
+    else {
+      // console.log(`queuing`, type);
+      this._loadingQueue.push(type);
+    }
+  };
+
+
+  /**
+   * Updates the measurements, pixels, and the model.
+   * Only one of the root call can be present at any time.
+   * @param type - the type that the pattern is switching to
+   * @param isRootCall - whether exchange is a root call
+   */
+  private async _exchangeAssets(type: PatternType, isRootCall: boolean): Promise<void> {
+    // setup lock
+    if (isRootCall) {
+      // need to wait for release
+      await this._loadingSignal;
+      this._loadingSignal = new Promise((resolve, reject) => {
+        this._endLoadingSignal = resolve;
+      });
+    }
+    // console.log(`processing`, type);
+
     this._source.hook.untap(this._onPixelUpdate);
     this._source = this._pattern.sections.texture;
     this._updateMeasurements();
     this._refreshPixels();
     this._source.hook.tap(this._onPixelUpdate);
 
-    let modelData = patternTypeToModelData.get(this._pattern.type);
+    let modelData: ModelData;
+    if (type == null) modelData = patternTypeToModelData.get(this._pattern.type);
+    else modelData = patternTypeToModelData.get(type);
 
     // exchange resources
     this._scene.unfreezeActiveMeshes();
@@ -501,6 +563,11 @@ class Modeler {
       if (material !== targetMaterial) material.freeze();
     }
     this._redraw();
+    this._loadingQueue.shift();
+    if (this._loadingQueue.length > 0)
+      await this._exchangeAssets(this._loadingQueue[0], false);
+    // release lock
+    if (isRootCall) this._endLoadingSignal();
   };
 
 
@@ -518,9 +585,9 @@ class Modeler {
    * Callback for when the pattern loads in new data.
    * Updates measurements, pixels, and model.
    */
-  private _onLoad = (): void => {
+  private _onLoad = async (): Promise<void> => {
     // assumes everything changed.
-    this._onTypeUpdate(null);
+    await this._onTypeUpdate(null);
   };
 
 
@@ -528,13 +595,13 @@ class Modeler {
    * Refreshes the pixelsCanvas only, does not apply changes to model.
    */
   private _refreshPixels(): void {
-    this._pixelsContext.fillStyle = "rgba(255, 255, 255, 1)";
-    this._pixelsContext.fillRect(0, 0, this._source[0].length, this._source.length);
-    for (let sourceY: number = 0; sourceY < this._source.length; ++sourceY) {
-      for (let sourceX: number = 0; sourceX < this._source[sourceY].length; ++sourceX) {
-        const paletteIdx = this._source[sourceY][sourceX];
-        if (paletteIdx === 15) continue;
-        this._pixelsContext.fillStyle = this._pattern.palette[paletteIdx];
+    this._pixelsContext.fillStyle = "#FFFFFF";
+    this._pixelsContext.fillRect(0, 0, this._measurements.sourceWidth, this._measurements.sourceHeight);
+    for (let sourceY: number = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
+      for (let sourceX: number = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
+        const paletteIndex = this._source.unreactive[sourceX][sourceY];
+        if (paletteIndex === 15) continue;
+        this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
         this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
       }
     }
@@ -545,14 +612,13 @@ class Modeler {
    * Draws the _pixelsCanvas onto after the _textureCanvas after processing.
    */
   private _redraw(): void {
-    if (this._isPixelFiltering)
+    if (this._pixelFilter)
       xbrz(
         this._pixelsContext,
         this._measurements.sourceWidth,
         this._measurements.sourceHeight,
         this._textureContext,
-        this._measurements.textureWidth,
-        this._measurements.textureHeight,
+        4,
       );
     else
       this._textureContext.drawImage(
@@ -577,27 +643,43 @@ class Modeler {
 
 
   /**
+   * Gets the pattern the Modeler is drawing.
+   */
+  public get pattern(): Drawable {
+    return this._pattern;
+  }
+
+
+  /**
    * Gets whether the pixel filtering is applied on the model.
    */
-  public get isPixelFiltering(): boolean {
-    return this._isPixelFiltering;
+  public get pixelFilter(): boolean {
+    return this._pixelFilter;
   }
 
 
   /**
    * Changes whether the pixel filtering is applied on the model.
    */
-  public set isPixelFiltering(isPixelFiltering: boolean) {
-    if (typeof isPixelFiltering !== "boolean") throw new TypeError();
-    this._isPixelFiltering = isPixelFiltering;
+  public set pixelFilter(pixelFilter: boolean) {
+    if (this._state === ModelerStates.DISPOSED) {
+      const message = `Modeler has been disposed. Cannot set pixelFilter.`;
+      throw new IllegalStateError(message);
+    }
+    if (typeof pixelFilter !== "boolean") {
+      const message = `Expected a boolean value`;
+      throw new TypeError(message);
+    }
+    this._pixelFilter = pixelFilter;
     this._redraw();
   }
 
 
   /**
    * Puts the modeler into reactive state.
+   * @returns - a Promise resolving to void
    */
-  public play(): void {
+  public async play(): Promise<void> {
     if (this._state !== ModelerStates.PAUSED) return;
     this._pattern.hooks.palette.tap(this._onPaletteUpdate);
     this._pattern.hooks.type.tap(this._onTypeUpdate);
@@ -606,15 +688,16 @@ class Modeler {
     this._source.hook.tap(this._onPixelUpdate);
 
     // assume everything changed
-    this._onLoad();
+    await this._onLoad();
     this._state = ModelerStates.PLAYING;
   }
 
 
   /**
    * Puts the modeler into the non-reactive state.
+   * @returns - a Promise resolving to void
    */
-  public pause(): void {
+  public async pause(): Promise<void> {
     if (this._state !== ModelerStates.PLAYING) return;
     this._pattern.hooks.palette.untap(this._onPaletteUpdate);
     this._pattern.hooks.type.untap(this._onTypeUpdate);
@@ -628,8 +711,9 @@ class Modeler {
   /**
    * Puts the modeler into stopped state and cleans up all resources expended.
    * Modeler cannot be used beyond this function call.
+   * @returns - a Promise resolving to void
    */
-  public dispose(): void {
+  public async dispose(): Promise<void> {
     if (this._state === ModelerStates.DISPOSED) return;
     this.pause();
     this._canvas = null;
@@ -640,7 +724,6 @@ class Modeler {
     this._textureCanvas = null;
     this._textureContext = null;
     this._measurements = null;
-    this._loadedContainer.dispose();
     this._engine.dispose();
     this._engine = null;
     this._scene = null;

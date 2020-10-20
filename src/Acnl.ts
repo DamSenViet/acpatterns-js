@@ -1,13 +1,14 @@
-import Drawable from "./Drawable";
-import Enum from "./Enum";
+import ImageProjectable from "./ImageProjectable";
 import Hook from "./Hook";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
 import HookSystem from "./HookSystem";
 import {
   color,
-  pixel,
+  paletteIndex,
   byte,
+  FixedLengthArray,
+  fixedLengthPropertyConfig,
   mapping,
   Uint16ToBytes,
   bytesToUint16,
@@ -21,12 +22,17 @@ import {
   DecodeHintType,
   ResultMetadataType,
   Result,
+  QRCodeDecoderErrorCorrectionLevel,
 } from '@zxing/library/esm';
+import QRCode from "@zxing/library/esm/core/qrcode/encoder/QRCode";
+import ByteMatrix from "@zxing/library/esm/core/qrcode/encoder/ByteMatrix";
 import {
   MyBrowserQRCodeReader,
   ImageLoadingException,
+  MyEncoder,
 } from "./myZxing";
 import { QRScanningError } from "./errors";
+import chroma from "chroma-js";
 
 // ACNL binary data layout.
 //
@@ -74,10 +80,10 @@ const standardTextureMapping: mapping = (() => {
   const width = 32;
   const height = 32;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      mapping[y][x] = [y, x];
+      mapping[x][y] = [x, y];
     }
   }
   return mapping;
@@ -88,15 +94,15 @@ const clothingTextureMapping: mapping = (() => {
   const width = 64;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (x < 32 && y < 32) mapping[y][x] = [y - 0 + 32, x]; // front
-      else if (x < 64 && y < 32) mapping[y][x] = [y - 0, x - 32]; // back
-      else if (x < 32 && y < 48) mapping[y][x] = [y - 32 + (16 * 7), x]; // back skirt
-      else if (x < 32 && y < 64) mapping[y][x] = [y - 48 + (16 * 4), x]; // left arm
-      else if (x < 64 && y < 48) mapping[y][x] = [y - 32 + (16 * 6), x - 32]; // front skirt
-      else if (x < 64 && y < 64) mapping[y][x] = [y - 48 + (16 * 5), x - 32];
+      if (x < 32 && y < 32) mapping[x][y] = [x, y - 0 + 32]; // front
+      else if (x < 64 && y < 32) mapping[x][y] = [x - 32, y - 0]; // back
+      else if (x < 32 && y < 48) mapping[x][y] = [x, y - 32 + (16 * 7)]; // back skirt
+      else if (x < 32 && y < 64) mapping[x][y] = [x, y - 48 + (16 * 4)]; // left arm
+      else if (x < 64 && y < 48) mapping[x][y] = [x - 32, y - 32 + (16 * 6)]; // front skirt
+      else if (x < 64 && y < 64) mapping[x][y] = [x - 32, y - 48 + (16 * 5)];
     }
   }
   return mapping;
@@ -106,11 +112,11 @@ const createStandeeMapping = (isTextureMapping: boolean): mapping => {
   const width = isTextureMapping ? 64 : 52;
   const height = 64;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (x >= 32 && y < 64) mapping[y][x] = [y - 0 + 64, x - 32]
-      else mapping[y][x] = [y, x];
+      if (x >= 32 && y < 64) mapping[x][y] = [x - 32, y - 0 + 64]
+      else mapping[x][y] = [x, y];
     }
   }
   return mapping;
@@ -136,11 +142,11 @@ const createTopMapping = (clothLength: ClothLength, clothSide: ClothSide.Front |
   const width = 32;
   const height = clothLength === ClothLength.Short ? 32 : 48;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      if (y < 32) mapping[y][x] = [y + (16 * (clothSide === ClothSide.Front ? 0 : 2)), x];
-      else if (y < 48) mapping[y][x] = [y - 32 + (16 * (clothSide === ClothSide.Front ? 6 : 7)), x];
+      if (y < 32) mapping[x][y] = [x, y + (16 * (clothSide === ClothSide.Front ? 0 : 2))];
+      else if (y < 48) mapping[x][y] = [x, y - 32 + (16 * (clothSide === ClothSide.Front ? 6 : 7))];
     }
   }
   return mapping;
@@ -150,10 +156,10 @@ const createArmMapping = (clothLength: ClothLength, clothSide: ClothSide.Left | 
   const width = clothLength === ClothLength.Short ? 16 : 32;
   const height = 16;
   const mapping: Array<Array<[number, number]>> =
-    new Array(height).fill(null).map(i => new Array(width).fill(null));
+    new Array(width).fill(null).map(i => new Array(height).fill(null));
   for (let y: number = 0; y < height; ++y) {
     for (let x: number = 0; x < width; ++x) {
-      mapping[y][x] = [y - 0 + (16 * (clothSide === ClothSide.Left ? 4 : 5)), x];
+      mapping[x][y] = [x, y - 0 + (16 * (clothSide === ClothSide.Left ? 4 : 5))];
     }
   }
   return mapping;
@@ -168,8 +174,20 @@ const shortLeftArmMapping = createArmMapping(ClothLength.Short, ClothSide.Left);
 const longRightArmMappng = createArmMapping(ClothLength.Long, ClothSide.Right);
 const shortRightArmMapping = createArmMapping(ClothLength.Short, ClothSide.Right);
 
-class AcnlTypes extends Enum {
-  public static LongSleevedDress: PatternType = Object.freeze({
+interface AcnlTypes {
+  LongSleevedDress: Readonly<PatternType>;
+  ShortSleevedDress: Readonly<PatternType>;
+  NoSleevedDress: Readonly<PatternType>;
+  LongSleevedShirt: Readonly<PatternType>;
+  ShortSleevedShirt: Readonly<PatternType>;
+  NoSleevedShirt: Readonly<PatternType>;
+  HornedHat: Readonly<PatternType>;
+  KnittedHat: Readonly<PatternType>;
+  Standee: Readonly<PatternType>;
+  Standard: Readonly<PatternType>;
+};
+const AcnlTypes: AcnlTypes = {
+  LongSleevedDress: Object.freeze({
     name: "Long Sleeved Dress",
     size: 128,
     sections: {
@@ -179,8 +197,8 @@ class AcnlTypes extends Enum {
       leftArm: longLeftArmMapping,
       rightArm: longRightArmMappng,
     }
-  });
-  public static ShortSleevedDress: PatternType = Object.freeze({
+  }),
+  ShortSleevedDress: Object.freeze({
     name: "Short Sleeved Dress",
     size: 128,
     sections: {
@@ -190,8 +208,8 @@ class AcnlTypes extends Enum {
       leftArm: shortLeftArmMapping,
       rightArm: shortRightArmMapping,
     }
-  });
-  public static NoSleevedDress: PatternType = Object.freeze({
+  }),
+  NoSleevedDress: Object.freeze({
     name: "Sleeveless Dress",
     size: 128,
     sections: {
@@ -199,8 +217,8 @@ class AcnlTypes extends Enum {
       front: dressFrontMapping,
       back: dressBackMapping,
     }
-  });
-  public static LongSleevedShirt: PatternType = Object.freeze({
+  }),
+  LongSleevedShirt: Object.freeze({
     name: "Long Sleeved Shirt",
     size: 128,
     sections: {
@@ -210,8 +228,8 @@ class AcnlTypes extends Enum {
       leftArm: longLeftArmMapping,
       rightArm: longRightArmMappng,
     }
-  });
-  public static ShortSleevedShirt: PatternType = Object.freeze({
+  }),
+  ShortSleevedShirt: Object.freeze({
     name: "Short Sleeved Shirt",
     size: 128,
     sections: {
@@ -221,8 +239,8 @@ class AcnlTypes extends Enum {
       leftArm: shortLeftArmMapping,
       rightArm: shortRightArmMapping,
     }
-  });
-  public static NoSleevedShirt: PatternType = Object.freeze({
+  }),
+  NoSleevedShirt: Object.freeze({
     name: "Sleeveless Shirt",
     size: 128,
     sections: {
@@ -230,40 +248,43 @@ class AcnlTypes extends Enum {
       front: shirtFrontMapping,
       back: shirtBackMapping,
     }
-  });
-  public static HornedHat: PatternType = Object.freeze({
+  }),
+  HornedHat: Object.freeze({
     name: "Horned Hat",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
-  });
+  }),
   // no one uses this
-  public static KnittedHat: PatternType = Object.freeze({
+  KnittedHat: Object.freeze({
     name: "Knitted Hat",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
-  });
-  public static Standee: PatternType = Object.freeze({
+  }),
+  Standee: Object.freeze({
     name: "Standee",
     size: 128,
     sections: {
       texture: standeeTextureMapping,
-      front: standeeFrontMapping,
+      default: standeeFrontMapping,
     }
-  });
+  }),
   // basic hat, short sleeved shirt, short sleeved dress, umbrella
   // is pro === is not standard
-  public static Standard: PatternType = Object.freeze({
+  Standard: Object.freeze({
     name: "Standard",
     size: 32,
     sections: {
-      texture: standardTextureMapping
+      texture: standardTextureMapping,
+      default: standardTextureMapping,
     }
-  });
-}
+  }),
+};
 
 const byteToType: Map<number, PatternType> = new Map(
   [...[
@@ -283,21 +304,6 @@ const byteToType: Map<number, PatternType> = new Map(
 const typeToByte: Map<PatternType, number> = new Map(
   [...byteToType.entries()].map(([i, type]) => [type, i])
 );
-
-// janked types with optional because
-// typescript getters & setters won't allow for different types
-// https://github.com/microsoft/TypeScript/issues/2521
-type Designer = {
-  id?: number;
-  name?: string;
-  isFemale?: boolean;
-};
-
-type Town = {
-  id?: number;
-  name?: string;
-};
-
 
 const byteToColor: Map<byte, color> = new Map(
   [...[
@@ -372,65 +378,105 @@ const colorToByte: Map<color, byte> = new Map(
   [...byteToColor.entries()].map(([i, color]) => [color, i])
 );
 
+const colors = new Set(colorToByte.keys());
+
+
+const PIXELS_WIDTH = 32;
+const PIXELS_HEIGHT = 128;
+const PALETTE_SIZE = 15;
+
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends Drawable {
-  
+class Acnl extends ImageProjectable {
+
   /**
    * An Enum of all possible PatternTypes.
    */
   public static types = AcnlTypes;
-  
+
+  /**
+   * A set of all colors available within the ACNL color space.
+   */
+  public static colors = colors;
+
   /**
    * A mapping of hex color strings to bytes.
    */
   public static colorToByte = colorToByte;
-  
+
   /**
    * A mapping of bytes to hex color strings.
    */
   public static byteToColor = byteToColor;
-  
-  /**
-   * Title of the Acnl pattern.
-   */
-  private _title: string = "Empty";
-  
-  /**
-   * The designer attributes.
-   */
-  public _designer: Designer = {
-    id: 0,
-    name: "Unknown",
-    isFemale: false
-  };
 
   /**
-   * Controls access of the designer attributes.
+   * Returns the closest color in the color palette of the pattern.
+   * @param color - the color to compare against
    */
-  public _designerApi: Designer = null;
+  public static getClosestColor(inputColor: color): color {
+    if (typeof inputColor !== "string") {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
+    try { chroma(inputColor); }
+    catch (error) {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
+    let outputColor: color = null;
+    let outputColorDistance: number = null;
+    for (const color of Acnl.colors) {
+      const distance: number = chroma.distance(inputColor, color, "rgb");
+      // always pick the color with the minimum distance
+      if (outputColor != null && distance >= outputColorDistance) continue;
+      outputColor = color;
+      outputColorDistance = distance;
+    }
+    return outputColor;
+  }
 
   /**
-   * The town attributes.
+   * Title, name of the pattern.
    */
-  private _town: Town = {
-    id: 0,
-    name: "Unknown"
-  };
+  private _title: string = "";
 
   /**
-   * Controls access of the town attributes.
+   * Id of the villager.
+   * Must match in-game villager id (ACNL) to be editable.
    */
-  private _townApi: Town = null;
+  private _villagerId: number = 0;
+
+  /**
+   * Name of the villager.
+   */
+  private _villagerName: string = "";
+
+  /**
+   * Gender of the villager.
+   */
+  private _villagerIsFemale: boolean = false;
+
+  /**
+   * Id of the town.
+   * Must match in-game town id (ACNL) to be editable.
+   */
+  private _townId: number = 0;
+
+  /**
+   * Name of the town.
+   */
+  private _townName: string = "";
 
   /**
    * The PatternType (e.g. Standard, Shirt, Dress)
    */
   private _type: PatternType = Acnl.types.Standard;
 
-  // lookup table for rendering colors
-  // palette size is 15, 16th is always transparent but not included
+  /**
+   * Mapping for rendering colors.
+   * Palette size is 15, 16 is always transparent but not included.
+   */
   private _palette: Array<color> = [
     "#FFFFFF",
     "#FFFFFF",
@@ -448,19 +494,38 @@ class Acnl extends Drawable {
     "#FFFFFF",
     "#FFFFFF",
   ];
+
+  /**
+   * The object through which the end-user accesses the palette.
+   */
   private _paletteApi: Array<color> = null;
 
-  // type size determines what to truncate down when converting to binary.
-  // 32 cols x 128 rows, accessed as pixels[row][col] or pixels[y][x];
-  private _pixels: pixel[][] = new Array(128).fill(0).map(() => {
-    return new Array(32).fill(0);
-  }); // start with entire transparent
+  /**
+   * The raw pixels representing the pixels of the pattern.
+   * 32 cols x 128 rows, accessed as pixels[col][row] or pixels[x][y].
+   * Type size determines what to truncate down when converting to binary.
+   */
+  private _pixels: paletteIndex[][] = new Array(32).fill(0).map(() => {
+    return new Array(128).fill(0);
+  });
+
+  /**
+   * The object through which the end-user accesses the pixels.
+   */
   private _pixelsApi: PixelsSource = null;
+
+  /**
+   * The object through which the user can access the pattern's sections.
+   */
   private _sectionsApi: {
     texture: PixelsSource;
     [key: string]: PixelsSource;
   } = null;
-  private _hooks: HookSystem = null;
+
+  /**
+   * The event hooks that the pattern can emit.
+   */
+  private _hooks: Readonly<HookSystem> = null;
 
   // stuff no one should touch b/c actual mapped values are unknown
   private _language: number = 0;
@@ -471,15 +536,12 @@ class Acnl extends Drawable {
 
 
   /**
-   * Creates an Acnl instance.
+   * Instantiates an Acnl.
    */
   public constructor() {
     super();
-    // proxies and apis here
-    // setup on all apis
+    // setup on all public apis
     this._refreshHooksApi();
-    this._refreshDesignerApi();
-    this._refreshTownApi();
     this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
@@ -487,78 +549,54 @@ class Acnl extends Drawable {
 
 
   /**
-   * Refreshes the town API.
-   */
-  private _refreshTownApi(): void {
-    const { _town } = this;
-    const api = new Proxy(_town, {
-      get: (target, property, receiver) => {
-        return Reflect.get(target, property, receiver);
-      },
-      set: (target, property, value, receiver) => {
-        // pass mutations to setter for validation
-        const mutations = new Object;
-        mutations[property] = value;
-        this.town = mutations;
-        return true;
-      },
-    });
-    this._townApi = api;
-  }
-
-
-  /**
-   * Refreshes the designer API.
-   */
-  private _refreshDesignerApi(): void {
-    const { _designer } = this;
-    // divert all sets back to setter
-    const api = new Proxy(_designer, {
-      get: (target, property, receiver) => {
-        return Reflect.get(target, property, receiver);
-      },
-      set: (target, property, value, receiver) => {
-        // pass mutations to setter for validation
-        const mutations = new Object();
-        mutations[property] = value;
-        this.designer = mutations;
-        return true;
-      },
-    });
-    this._designerApi = api;
-  }
-
-
-  /**
    * Refreshes the hooks API.
    */
   private _refreshHooksApi(): void {
-    this._hooks = {
-      type: new Hook<[PatternType]>(),
-      palette: new Hook<[number, color]>(),
-      load: new Hook<[]>(),
-      refresh: new Hook<[]>(),
-    };
+    this._hooks = Object.seal(
+      Object.freeze({
+        type: new Hook<[PatternType]>(),
+        palette: new Hook<[number, color]>(),
+        load: new Hook<[]>(),
+        refresh: new Hook<[]>(),
+      })
+    );
   }
 
 
   /**
    * Refreshes the palette API.
    */
-  private _refreshPaletteApi(): void {
-    const { _palette } = this;
-    const api: Array<color> = new Array<color>(_palette.length);
-    for (let i = 0; i < _palette.length; ++i) {
+  private _refreshPaletteApi(palette?: Array<color>): void {
+    let api: Array<color>;
+    if (palette != null)
+      api = palette;
+    else
+      api = new Array<color>(this._palette.length);
+    Object.defineProperty(api, "length", {
+      enumerable: false,
+      configurable: false,
+      writable: false,
+    });
+    for (let i = 0; i < this._palette.length; ++i) {
       Object.defineProperty(api, i, {
         ...propertyConfig,
-        get: () => _palette[i],
+        get: () => this._palette[i],
         set: (color: color) => {
-          const mutations = _palette.slice();
-          mutations[i] = color;
-          this.palette = <Array<color>>mutations;
+          if (typeof color !== "string") {
+            const message = `Expected a valid color in the Acnl colorspace.`;
+            throw new TypeError(message);
+          }
+          const chromaColor = chroma(color);
+          if (!Acnl.colors.has(chromaColor.hex("rgb").toUpperCase())) {
+            const message = `Expected a valid color from the Acnl colorspace.`;
+            throw new RangeError(message);
+          }
+          this._palette[i] = chromaColor.hex("rgb").toUpperCase();
+          this._hooks.palette.trigger(i, chromaColor.hex("rgb"));
         }
-      })
+      });
     }
+    Object.preventExtensions(api);
     this._paletteApi = <Array<color>>api;
   }
 
@@ -571,56 +609,82 @@ class Acnl extends Drawable {
     if (_pixelsApi != null) _pixelsApi.hook.clear();
     // simulate fixed array size
     // need this api to "subscribe" to change type event, when pixels change lengths, make it look like a true array
-    const api: PixelsSource = new PixelsSource(_pixels.length);
-    const unreactiveApi: Array<Array<pixel>>
-      = new Array<Array<pixel>>(_pixels.length);
-    for (let y = 0; y < _pixels.length; ++y) {
-      const rowApi = new Array(_pixels[y].length);
-      const unreactiveRowApi = new Array(_pixels[y].length);
-      for (let x = 0; x < _pixels[y].length; ++x) {
-        Object.defineProperty(rowApi, x, {
+    const api: PixelsSource = new PixelsSource(PIXELS_WIDTH, PIXELS_HEIGHT);
+    const validatePaletteIndex = (paletteIndex: number) => {
+      if (typeof paletteIndex !== "number") {
+        const message = ``;
+        throw new TypeError(message);
+      }
+      if (paletteIndex < 0 && paletteIndex > PALETTE_SIZE) {
+        const message = ``;
+        throw new RangeError(message);
+      }
+    };
+    const validateColumn = (column: FixedLengthArray<paletteIndex>) => {
+      if (!(column instanceof Array)) {
+        const message = ``;
+        throw new TypeError(message);
+      };
+      if (column.length !== PIXELS_HEIGHT) {
+        const message = ``;
+        throw new RangeError(message);
+      };
+      for (let i = 0; i < column.length; ++i) {
+        validatePaletteIndex(column[i]);
+      };
+    };
+    for (let x = 0; x < PIXELS_WIDTH; ++x) {
+      const columnReactiveApi = api.reactive[x];
+      const columnUnreactiveApi = api.unreactive[x];
+      for (let y = 0; y < PIXELS_HEIGHT; ++y) {
+        Object.defineProperty(columnReactiveApi, y, {
           ...propertyConfig,
-          get: (): pixel => _pixels[y][x],
-          set: (pixel: pixel) => {
-            if (pixel < 0 && pixel > 15)
-              throw new RangeError();
-            if (_pixels[y][x] === pixel) return pixel;
+          get: (): paletteIndex => _pixels[x][y],
+          set: (paletteIndex: paletteIndex) => {
+            validatePaletteIndex(paletteIndex);
             // assignment hook
-            _pixels[y][x] = pixel;
-            api.hook.trigger(y, x, pixel);
+            _pixels[x][y] = paletteIndex;
+            api.hook.trigger(x, y, paletteIndex);
           }
         });
-        Object.defineProperty(unreactiveRowApi, x, {
+        Object.defineProperty(columnUnreactiveApi, y, {
           ...propertyConfig,
-          get: (): pixel => _pixels[y][x],
-          set: (pixel: pixel) => {
-            if (pixel < 0 && pixel > 15)
-              throw new RangeError();
-            _pixels[y][x] = pixel;
+          get: (): paletteIndex => _pixels[x][y],
+          set: (paletteIndex: paletteIndex) => {
+            validatePaletteIndex(paletteIndex);
+            _pixels[x][y] = paletteIndex;
           }
         });
       }
-      Object.defineProperty(api, y, {
+      Object.defineProperty(api.reactive, x, {
         ...propertyConfig,
-        get: (): Array<pixel> => rowApi,
-        set: (row: Array<pixel>) => {
-          for (let x = 0; x < rowApi.length; ++x) {
-            rowApi[x] = row[x];
-          }
+        get: (): FixedLengthArray<paletteIndex> => columnReactiveApi,
+        set: (column: FixedLengthArray<paletteIndex>) => {
+          validateColumn(column);
+          for (let y = 0; y < api.height; ++y)
+            columnReactiveApi[y] = column[y];
+          Object.defineProperty(column, "length", {
+            ...fixedLengthPropertyConfig,
+          });
+          Object.preventExtensions(column);
         }
       });
-      Object.defineProperty(unreactiveApi, y, {
+      Object.defineProperty(api.unreactive, x, {
         ...propertyConfig,
-        get: (): Array<pixel> => unreactiveRowApi,
-        set: (row: Array<pixel>) => {
-          for (let x = 0; x < unreactiveRowApi.length; ++x) {
-            unreactiveRowApi[x] = row[x];
-          }
+        get: (): FixedLengthArray<paletteIndex> => columnUnreactiveApi,
+        set: (column: FixedLengthArray<paletteIndex>) => {
+          validateColumn(column);
+          for (let y = 0; y < api.height; ++y)
+            columnUnreactiveApi[y] = column[y];
+          // lock down length
+          Object.defineProperty(column, "length", {
+            ...fixedLengthPropertyConfig,
+          });
+          Object.preventExtensions(column);
         }
       });
     }
     this._pixelsApi = api;
-    api.unreactive = unreactiveApi;
   }
 
 
@@ -643,65 +707,62 @@ class Acnl extends Drawable {
     for (const sectionName in _type.sections) {
       const mapping = _type.sections[sectionName];
       const sectionApi: PixelsSource =
-        new PixelsSource(mapping.length).fill(null);
-      const unreactiveSectionApi: Array<Array<pixel>>
-        = new Array<Array<pixel>>(mapping.length);
-      for (let y: number = 0; y < mapping.length; ++y) {
-        const rowApi = new Array<pixel>(mapping[y].length);
-        const unreactiveRowApi = new Array<pixel>(mapping[y].length);
-        for (let x: number = 0; x < mapping[y].length; ++x) {
-          const targetY = mapping[y][x][0];
-          const targetX = mapping[y][x][1];
+        new PixelsSource(mapping.length, mapping[0].length);
+      for (let x: number = 0; x < mapping.length; ++x) {
+        const columnReactiveApi = sectionApi.reactive[x];
+        const columnUnreactiveApi = sectionApi.unreactive[x];
+        for (let y: number = 0; y < mapping[x].length; ++y) {
+          const targetX = mapping[x][y][0];
+          const targetY = mapping[x][y][1];
           // wrapping existing setter at target
-          const { get, set } = Object.getOwnPropertyDescriptor(pixels[targetY], targetX);
-          Object.defineProperty(pixels[targetY], targetX, {
+          const { get, set } = Object.getOwnPropertyDescriptor(pixels.reactive[targetX], targetY);
+          Object.defineProperty(pixels.reactive[targetX], targetY, {
             ...propertyConfig,
             get: get,
             set: (pixel) => {
-              if (get() === pixel) return pixel;
               // run the existing function, but now with hook call after it finishes
+              // creates a wrapping effect
               set(pixel);
               // console.log(`modifying at (${y}, ${x}) targeting (${targetY}, ${targetX})`);
-              sectionApi.hook.trigger(y, x, pixel);
+              sectionApi.hook.trigger(x, y, pixel);
             }
           });
           // trigger setter at target
-          Object.defineProperty(rowApi, x, {
+          Object.defineProperty(columnReactiveApi, y, {
             ...propertyConfig,
-            get: (): pixel => pixels[targetY][targetX],
-            set: (pixel: pixel) => { pixels[targetY][targetX] = pixel; },
+            get: (): paletteIndex => _pixels[targetX][targetY],
+            set: (paletteIndex: paletteIndex) => {
+              pixels.reactive[targetX][targetY] = paletteIndex;
+            },
           });
-          Object.defineProperty(unreactiveRowApi, x, {
+          Object.defineProperty(columnUnreactiveApi, y, {
             ...propertyConfig,
-            get: (): pixel => _pixels[targetY][targetX],
-            set: (pixel: pixel) => {
-              if (pixel < 0 && pixel > 15)
-                throw new RangeError();
-              _pixels[targetY][targetX] = pixel;
+            get: (): paletteIndex => _pixels[targetX][targetY],
+            set: (paletteIndex: paletteIndex) => {
+              pixels.unreactive[targetX][targetY] = paletteIndex;
             }
           });
         }
-        Object.defineProperty(sectionApi, y, {
+        Object.defineProperty(sectionApi.reactive, x, {
           ...propertyConfig,
-          get: (): Array<pixel> => rowApi,
-          set: (row: Array<pixel>) => {
-            for (let x = 0; x < rowApi.length; ++x) {
-              rowApi[x] = row[x];
+          get: (): FixedLengthArray<paletteIndex> => columnReactiveApi,
+          set: (column: FixedLengthArray<paletteIndex>) => {
+            for (let y = 0; y < columnReactiveApi.length; ++y) {
+              columnReactiveApi[y] = column[y];
             }
           }
         });
-        Object.defineProperty(unreactiveSectionApi, y, {
+        Object.defineProperty(sectionApi.unreactive, x, {
           ...propertyConfig,
-          get: (): Array<pixel> => unreactiveRowApi,
-          set: (row: Array<pixel>) => {
-            for (let x = 0; x < unreactiveRowApi.length; ++x) {
-              unreactiveRowApi[x] = row[x];
+          get: (): FixedLengthArray<paletteIndex> => columnUnreactiveApi,
+          set: (column: FixedLengthArray<paletteIndex>) => {
+            for (let y = 0; y < columnUnreactiveApi.length; ++y) {
+              columnUnreactiveApi[y] = column[y];
             }
           }
         });
       }
       api[sectionName] = sectionApi;
-      sectionApi.unreactive = unreactiveSectionApi;
     }
     this._sectionsApi = api;
   }
@@ -726,69 +787,131 @@ class Acnl extends Drawable {
 
 
   /**
-   * Gets the town attributes.
+   * Gets the town id of the Acnl.
    */
-  public get town(): Town {
-    return this._townApi;
+  public get townId(): number {
+    return this._townId;
   }
 
 
   /**
-   * Sets the town attributes.
+   * Sets the town id of the Acnl.
    */
-  public set town(town: Town) {
-    const { _town } = this;
-    // no undefined values (null still possible)
-    let {
-      id = this._town.id,
-      name = this._town.name,
-    } = town;
-    // truncate/transform/ensure valid values
-    if (typeof id === "number") {
-      if (id < 65536) _town.id = id;
+  public set townId(townId: number) {
+    if (
+      typeof townId !== "number" ||
+      !Number.isInteger(townId)
+    ) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new TypeError(message);
     }
-    if (typeof name === "string") {
-      if (name.length <= 8) _town.name = name;
+    if (townId < 0 || townId >= 65536) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new RangeError(message);
     }
+    this._townId = townId;
   }
 
 
   /**
-   * Gets the designer.
+   * Gets the town name of the Acnl.
    */
-  public get designer(): Designer {
-    return this._designerApi;
+  public get townName(): string {
+    return this._townName;
   }
 
 
   /**
-   * Sets the designer attributes.
+   * Sets the town name of the Acnl.
    */
-  public set designer(designer: Designer) {
-    // no undefined values (null still possible)
-    const { _designer } = this;
-    let {
-      id = _designer.id,
-      name = _designer.name,
-      isFemale = _designer.isFemale,
-    } = designer;
-    // truncate/transform/ensure valid values
-    if (typeof id === "number") {
-      if (id < 65536) _designer.id = id;
+  public set townName(townName: string) {
+    if (typeof townName !== "string") {
+      const message = `Expected a string of length 8 or less.`;
+      throw new TypeError(message);
     }
-    if (typeof name === "string") {
-      if (name.length <= 8) _designer.name = name;
+    if (townName.length > 8) {
+      const message = `Expected a string of length 8 or less.`;
+      throw new RangeError(message);
     }
-    if (typeof isFemale === "boolean") {
-      _designer.isFemale = isFemale;
+    this._townName = townName;
+  }
+
+
+  /**
+   * Gets the villager id of the Acnl.
+   */
+  public get villagerId(): number {
+    return this._villagerId;
+  }
+
+
+  /**
+   * Sets the villager id of the Acnl.
+   */
+  public set villagerId(villagerId: number) {
+    if (
+      typeof villagerId !== "number" ||
+      !Number.isInteger(villagerId)
+    ) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new TypeError(message);
     }
+    if (villagerId < 0 || villagerId >= 65536) {
+      const message = `Expected a valid UInt16 number.`;
+      throw new RangeError(message);
+    }
+    this._villagerId = villagerId;
+  }
+
+
+  /**
+   * Gets the villager name of the Acnl.
+   */
+  public get villagerName(): string {
+    return this._villagerName;
+  }
+
+
+  /**
+   * Sets the villager name of the Acnl.
+   */
+  public set villagerName(villagerName: string) {
+    if (typeof villagerName !== "string") {
+      const message = `Expected a string of length 8 or less.`;
+      throw new TypeError(message);
+    }
+    if (villagerName.length > 8) {
+      const message = `Expected a string of length 8 or less.`;
+      throw new RangeError(message);
+    }
+    this._villagerName = villagerName;
+  }
+
+
+  /**
+   * Gets the villager gender.
+   */
+  public get villagerIsFemale(): boolean {
+    return this._villagerIsFemale;
+  }
+
+
+  /**
+   * Sets the villager gender.
+   */
+  public set villagerIsFemale(villagerIsFemale: boolean) {
+    if (typeof villagerIsFemale !== "boolean") {
+      const message = `Expected a boolean.`;
+      throw new TypeError(message);
+    }
+    this._villagerIsFemale = villagerIsFemale;
   }
 
 
   /**
    * Gets the PatternType of the Acnl.
    */
-  public get type(): PatternType {
+  public get type(): AcnlTypes[keyof AcnlTypes] {
     return this._type;
   }
 
@@ -796,10 +919,10 @@ class Acnl extends Drawable {
   /**
    * Sets the PatternType of the Acnl.
    */
-  public set type(type: PatternType) {
+  public set type(type: AcnlTypes[keyof AcnlTypes]) {
     const { _hooks, _type } = this;
     // must match from enum, no excuses
-    for (let acnlType of AcnlTypes) {
+    for (let acnlType of Object.values(AcnlTypes)) {
       if (type === acnlType && type !== _type) {
         this._type = type;
         // reset and clean up apis
@@ -821,22 +944,41 @@ class Acnl extends Drawable {
 
 
   /**
-   * Sets the palette of the Acnl.
+   * Sets the entire palette of the Acnl.
+   * Assimilates passed palette into the pattern.
    */
   public set palette(palette: Array<color>) {
+    // turns the passed palette into the new api object
     const { _palette, _hooks } = this;
-    if (typeof palette !== "object" || !(palette instanceof Array)) throw new TypeError();
-    if (palette.length > 15) throw new TypeError(); // too many
-    for (let color of palette)
-      if (!Acnl.colorToByte.has(color))
-        throw new TypeError();
+    if (!(palette instanceof Array)) {
+      const message = `Expected an array of colors from the Acnl colorspace.`;
+      throw new TypeError(message);
+    }
+    if (palette.length !== this._palette.length) {
+      const message = `Palette size must be of size ${this._palette.length} for Acnl.`;
+      throw new RangeError(message); // too many
+    }
+    for (const color of palette) {
+      if (typeof color !== "string") {
+        const message = `Expected valid colors from the Acnl colorspace.`;
+        throw new TypeError(message);
+      }
+      const chromaColor: chroma.Color = chroma(color);
+      if (!Acnl.colors.has(chromaColor.hex("rgb").toUpperCase())) {
+        const message = `Expected valid colors from the Acnl colorspace.`;
+        throw new RangeError(message);
+      }
+    }
     for (let i = 0; i < _palette.length; ++i) {
-      let color: color = palette[i];
+      const color: color = palette[i];
+      const chromaColor: chroma.Color = chroma(color);
       // block all non-unique changes
-      if (_palette[i] === color) continue;
-      _palette[i] = color;
+      if (_palette[i] === chromaColor.hex("rgb")) continue;
+      _palette[i] = chromaColor.hex("rgb").toUpperCase();
       _hooks.palette.trigger(i, color);
     }
+    // now use it to replace the palette api, allows for equality operator
+    if (palette !== this._paletteApi) this._refreshPaletteApi(palette);
   }
 
 
@@ -858,6 +1000,7 @@ class Acnl extends Drawable {
     return this._pixelsApi;
   }
 
+
   /**
    * Gets the hooks of the Acnl.
    */
@@ -866,94 +1009,94 @@ class Acnl extends Drawable {
   }
 
 
-  /**
-   * Gets the language byte of the Acnl.
-   */
-  private get language(): number {
-    return this._language;
-  }
+  // /**
+  //  * Gets the language byte of the Acnl.
+  //  */
+  // private get language(): number {
+  //   return this._language;
+  // }
 
 
-  /**
-   * Sets the language byte of the Acnl.
-   */
-  private set language(language: number) {
-    if (language < 128) {
-      this._language = language;
-    }
-  }
+  // /**
+  //  * Sets the language byte of the Acnl.
+  //  */
+  // private set language(language: number) {
+  //   if (language < 128) {
+  //     this._language = language;
+  //   }
+  // }
 
 
-  /**
-   * Gets the country byte of the Acnl.
-   */
-  private get country(): number {
-    return this._country;
-  }
+  // /**
+  //  * Gets the country byte of the Acnl.
+  //  */
+  // private get country(): number {
+  //   return this._country;
+  // }
 
 
-  /**
-   * Sets the country byte of the Acnl.
-   */
-  private set country(country: number) {
-    if (country < 128) {
-      this._country = country;
-    }
-  }
+  // /**
+  //  * Sets the country byte of the Acnl.
+  //  */
+  // private set country(country: number) {
+  //   if (country < 128) {
+  //     this._country = country;
+  //   }
+  // }
 
 
-  /**
-   * Gets the region byte of the Acnl.
-   */
-  private get region(): number {
-    return this._region;
-  }
+  // /**
+  //  * Gets the region byte of the Acnl.
+  //  */
+  // private get region(): number {
+  //   return this._region;
+  // }
 
 
-  /**
-   * Sets the region byte of the Acnl.
-   */
-  private set region(region: number) {
-    if (region < 128) {
-      this._region = region;
-    }
-  }
+  // /**
+  //  * Sets the region byte of the Acnl.
+  //  */
+  // private set region(region: number) {
+  //   if (region < 128) {
+  //     this._region = region;
+  //   }
+  // }
 
 
-  /**
-   * Gets the color byte of the Acnl.
-   */
-  private get color(): number {
-    return this._color;
-  }
+  // /**
+  //  * Gets the color byte of the Acnl.
+  //  */
+  // private get color(): number {
+  //   return this._color;
+  // }
 
 
-  /**
-   * Sets the color byte of the Acnl.
-   */
-  private set color(color: number) {
-    if (color < 15) {
-      this._color = color;
-    }
-  }
+  // /**
+  //  * Sets the color byte of the Acnl.
+  //  */
+  // private set color(color: number) {
+  //   if (color < 15) {
+  //     this._color = color;
+  //   }
+  // }
 
 
-  /**
-   * Gets looks byte of the Acnl.
-   */
-  private get looks(): number {
-    return this._looks;
-  }
+  // /**
+  //  * Gets looks byte of the Acnl.
+  //  */
+  // private get looks(): number {
+  //   return this._looks;
+  // }
 
 
-  /**
-   * Sets looks byte of the Acnl.
-   */
-  private set looks(looks: number) {
-    if (looks < 128) {
-      this._looks = looks;
-    }
-  }
+  // /**
+  //  * Sets looks byte of the Acnl.
+  //  */
+  // private set looks(looks: number) {
+  //   if (looks < 128) {
+  //     this._looks = looks;
+  //   }
+  // }
 
 
   /**
@@ -973,12 +1116,12 @@ class Acnl extends Drawable {
     }
     // do a size check
     this._title = bytesToString(bytes.splice(0, 42));
-    this._designer.id = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._designer.name = bytesToString(bytes.splice(0, 18));
-    this._designer.isFemale = Boolean(bytes.splice(0, 1)[0]);
+    this._villagerId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._villagerName = bytesToString(bytes.splice(0, 18));
+    this._villagerIsFemale = Boolean(bytes.splice(0, 1)[0]);
     bytes.splice(0, 1); // zero padding
-    this._town.id = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._town.name = bytesToString(bytes.splice(0, 18));
+    this._townId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._townName = bytesToString(bytes.splice(0, 18));
     this._language = bytes.splice(0, 1)[0];
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
@@ -991,7 +1134,7 @@ class Acnl extends Drawable {
     this._type = byteToType.get(bytes.splice(0, 1)[0]);
     bytes.splice(0, 2); // zero padding
     // load pixels
-    const pixelsFlattened: pixel[] = bytes
+    const pixelsFlattened: paletteIndex[] = bytes
       .splice(0, bytes.length)
       .reduce((accum, byte) => {
         // each byte contains 2 pixels
@@ -1000,8 +1143,8 @@ class Acnl extends Drawable {
         return accum;
       }, []);
     for (let y = 0; y < this._type.size; ++y) {
-      for (let x = 0; x < this.pixels[y].length; ++x) {
-        this._pixels[y][x] = pixelsFlattened[x + y * 32];
+      for (let x = 0; x < PIXELS_WIDTH; ++x) {
+        this._pixels[x][y] = pixelsFlattened[x + y * PIXELS_WIDTH];
       }
     }
     this._refreshPixelsApi();
@@ -1014,6 +1157,7 @@ class Acnl extends Drawable {
   /**
    * Creates an Acnl from a formatted binary string.
    * @param binaryString - the formatted binary string to convert
+   * @returns - the Acnl
    */
   public static fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
     const acnl = new Acnl();
@@ -1023,13 +1167,17 @@ class Acnl extends Drawable {
 
   /**
    * Creates a formatted binary string from the Acnl.
+   * @returns - the binary string
    */
   public toBinaryString(): string {
     // encode everything into hex numbers
     const {
       _title,
-      _designer,
-      _town,
+      _villagerId,
+      _villagerName,
+      _villagerIsFemale,
+      _townId,
+      _townName,
       _language,
       _country,
       _region,
@@ -1043,15 +1191,15 @@ class Acnl extends Drawable {
     bytes.push(...stringToBytes(_title));
     bytes.push(...new Array((20 - _title.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
-    bytes.push(...Uint16ToBytes(_designer.id));
-    bytes.push(...stringToBytes(_designer.name));
-    bytes.push(...new Array((8 - _designer.name.length) * 2).fill(0)); // padding
+    bytes.push(...Uint16ToBytes(_villagerId));
+    bytes.push(...stringToBytes(_villagerName));
+    bytes.push(...new Array((8 - _villagerName.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
-    bytes.push(Number(_designer.isFemale));
+    bytes.push(Number(_villagerIsFemale));
     bytes.push(0); // zero padding
-    bytes.push(...Uint16ToBytes(_town.id));
-    bytes.push(...stringToBytes(_town.name));
-    bytes.push(...new Array((8 - _town.name.length) * 2).fill(0)); // padding
+    bytes.push(...Uint16ToBytes(_townId));
+    bytes.push(...stringToBytes(_townName));
+    bytes.push(...new Array((8 - _townName.length) * 2).fill(0)); // padding
     bytes.push(0, 0); // eos
     bytes.push(_language);
     bytes.push(0); // zero padding
@@ -1063,11 +1211,11 @@ class Acnl extends Drawable {
     bytes.push(typeToByte.get(_type));
     bytes.push(0, 0); // zero padding
     // pixel data bunched together
-    bytes.push(...new Array(_type.size * 32 / 2).fill(null)
+    bytes.push(...new Array(_type.size * PIXELS_WIDTH / 2).fill(null)
       .map((_, i) => {
-        const x = (i * 2) % 32;
-        const y = Math.floor((i * 2) / 32);
-        return ((_pixels[y][x] << 4) + (_pixels[y][x + 1] & 0xf));
+        const x = (i * 2) % PIXELS_WIDTH;
+        const y = Math.floor((i * 2) / PIXELS_WIDTH);
+        return ((_pixels[x][y] << 4) + (_pixels[x + 1][y] & 0xf));
       }));
     return bytesToBinaryString(bytes);
   }
@@ -1076,6 +1224,7 @@ class Acnl extends Drawable {
   /**
    * Creates a formatted binary string from an Acnl.
    * @param acnl - the acnl instance
+   * @returns - the binary string
    */
   public static toBinaryString(acnl: Acnl): string {
     return acnl.toBinaryString();
@@ -1083,10 +1232,11 @@ class Acnl extends Drawable {
 
 
   /**
-   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in an image.
+   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in one image.
    * @param image - an image to scan for QR Codes
+   * @returns - a promise resolving tothe Acnl
    */
-  public async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     if (!(image instanceof HTMLImageElement)) {
       const message = `Expected instanceof ${HTMLImageElement.name}`;
       throw new TypeError(message);
@@ -1097,9 +1247,7 @@ class Acnl extends Drawable {
     browserQRCodeReader.hints = hints;
 
     let results: Array<Result>;
-    try {
-      results = await browserQRCodeReader.decodeFromImage(image);
-    }
+    try { results = await browserQRCodeReader.decodeFromImage(image); }
     catch (error) {
       let message = `No valid QR codes could be scanned from the image.`;
       if (error instanceof ImageLoadingException) message = error.message;
@@ -1172,11 +1320,75 @@ class Acnl extends Drawable {
   /**
    * Creates an Acnl from 1 whole or 4 multipart QR Codes in an image.
    * @param image - an image to scan for QR Codes
-   * @returns - a promise containing the Acnl
+   * @returns - a promise resolving to the Acnl
    */
-  public static async fromImage(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public static async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     const acnl = new Acnl();
-    return acnl.fromImage(image);
+    return await acnl.fromQRCodes(image);
+  }
+
+
+  /**
+   * Makes QR Code images for the Acnl.
+   * @returns - a Promise resolving to the QR Code images
+   */
+  public async toQRCodes(): Promise<Array<HTMLImageElement>> {
+    const qrCodes: Array<QRCode> = new Array<QRCode>();
+    const bytes: byte[] = binaryStringToBytes(this.toBinaryString());
+    if (this._type.size === 32)
+      qrCodes.push(MyEncoder.encode(new Uint8Array(bytes), QRCodeDecoderErrorCorrectionLevel.M, null));
+    else {
+      // needs 0 padding
+      bytes.push(...new Array(2160 - bytes.length).fill(0));
+      const parityByte = Math.round(Math.random() * 255);
+      for (let i = 0; i < 4; ++i) {
+        qrCodes.push(
+          MyEncoder.encode(
+            new Uint8Array(bytes.slice(i * 540, (i + 1) * 540)),
+            QRCodeDecoderErrorCorrectionLevel.M,
+            null,
+            [i, 3, parityByte]
+          )
+        );
+      }
+    }
+    const qrCodeImages: Array<HTMLImageElement> = qrCodes.map((qrCode: QRCode) => {
+      const byteMatrix: ByteMatrix = qrCode.getMatrix();
+      const byteMatrixWidth: number = byteMatrix.getWidth();
+      const byteMatrixHeight: number = byteMatrix.getHeight();
+      // padding around the qr code
+      const quietZone: number = 4;
+
+      const canvas: HTMLCanvasElement = document.createElement("canvas");
+      canvas.width = byteMatrixWidth + quietZone * 2;
+      canvas.height = byteMatrixHeight + quietZone * 2;
+      const context: CanvasRenderingContext2D = canvas.getContext("2d");
+      context.imageSmoothingEnabled = false;
+      context.fillStyle = "#FFFFFF";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#000000";
+      for (let x: number = 0; x < byteMatrixWidth; ++x) {
+        for (let y: number = 0; y < byteMatrixHeight; ++y) {
+          if (byteMatrix.get(x, y) === 0) continue;
+          context.fillRect(x + quietZone, y + quietZone, 1, 1);
+        }
+      }
+      const image: HTMLImageElement = document.createElement("img");
+      image.src = canvas.toDataURL("image/jpeg", 1);
+      console.log(image.height, image.width);
+      return image;
+    });
+    return qrCodeImages;
+  }
+
+
+  /**
+   * Makes QR Code images for the Acnl.
+   * @param acnl - the acnl
+   * @returns - a Promise resolving to the qr code images
+   */
+  public static async toQRCodes(acnl: Acnl): Promise<Array<HTMLImageElement>> {
+    return await acnl.toQRCodes();
   }
 }
 

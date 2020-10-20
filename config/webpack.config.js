@@ -35,6 +35,8 @@ const outputUMD = {
   library: "acpatterns",
   libraryTarget: "umd",
   path: pathToBuildUMD,
+  umdNamedDefine: true,
+  globalObject: `(typeof self !== 'undefined' ? self : this)`,
 };
 
 // for system testing
@@ -121,9 +123,7 @@ const webpackDevConfigCJS = {
   },
   resolve,
   performance: false,
-  externals,
 };
-
 
 const webpackProdConfigCJS = {
   target: "node",
@@ -136,13 +136,13 @@ const webpackProdConfigCJS = {
   },
   resolve,
   performance: false,
-  externals,
 };
 
 const webpackDevConfigUMD = {
   ...webpackDevConfigCJS,
   target: "web",
   output: outputUMD,
+  externals,
 };
 
 const webpackProdConfigUMD = {
@@ -150,6 +150,7 @@ const webpackProdConfigUMD = {
   target: "web",
   output: outputUMD,
   optimization: optimizationProd,
+  externals,
 };
 
 const webpackDevConfigUMDTest = {

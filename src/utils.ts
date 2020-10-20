@@ -1,3 +1,29 @@
+
+/**
+ * Name of array methods that can change an array length.
+ */
+type ArrayLengthMutationKeys = 'splice' | 'push' | 'pop' | 'shift' | 'unshift'
+
+/**
+ * Alias for fixed length array support.
+ */
+export type FixedLengthArray<T, TObj = [...Array<T>]> =
+  Pick<TObj, Exclude<keyof TObj, ArrayLengthMutationKeys>>
+  & {
+    readonly length;
+    [I: number]: T
+    [Symbol.iterator]: () => IterableIterator<T>
+  };
+
+/**
+ * Property configs to lock down length. Used w/ FixedLengthArray type.
+ */
+export const fixedLengthPropertyConfig = {
+  enumerable: false,
+  configurable: false,
+  writable: false,
+};
+
 /**
  * A valid byte value from 0 - 255.
  */
@@ -12,7 +38,7 @@ export type color = string;
  * A number pointing to the palette index with the color.
  * Maps a pixel's color to a pattern's palette index.
  */
-export type pixel = number;
+export type paletteIndex = number;
 
 /**
  * A grid of coordinate values [x, y].
@@ -41,6 +67,52 @@ export const validateBytes = (bytes: Array<byte>) => {
     }
   }
 };
+
+
+/**
+ * Converts any positive number into bytes.
+ * @param number - a positive number.
+ * @param maxBytes - the max byte length the number should fit into.
+ */
+export const UintToBytes = (number: number, maxBytes: number): byte[] => {
+  if (typeof number !== "number") {
+    const message = `Expected a valid Uint number.`;
+    throw new TypeError(message);
+  }
+  if (number < 0) {
+    const message = `Expected a valid Uint number.`;
+    throw new RangeError(message);
+  }
+  // byte max range
+  const bytes: byte[] = [];
+  const minBytes = Math.ceil(Math.log2(number) / 8);
+  // unshift byte values in big endian
+  if (minBytes > maxBytes) {
+    const message = `Number does not fit into byte length.`;
+    throw new RangeError(message);
+  }
+  for (let i = 0; i < minBytes; ++i) {
+    bytes.push(number & 0xff);
+    number = number >> 8;
+  }
+  // fill the rest with 0s
+  bytes.unshift(...new Array(maxBytes - minBytes).fill(0));
+  bytes.reverse(); // reverse for little endian order
+  return bytes;
+};
+
+
+/**
+ * Turns bytes (little endian) into an unsigned int
+ * @param bytes - the bytes to convert
+ */
+export const bytesToUint = (bytes: byte[]): number => {
+  validateBytes(bytes);
+  let num: number = 0;
+  
+  
+  return num;
+}
 
 
 /**
