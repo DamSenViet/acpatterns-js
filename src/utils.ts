@@ -70,6 +70,52 @@ export const validateBytes = (bytes: Array<byte>) => {
 
 
 /**
+ * Converts any positive number into bytes.
+ * @param number - a positive number.
+ * @param maxBytes - the max byte length the number should fit into.
+ */
+export const UintToBytes = (number: number, maxBytes: number): byte[] => {
+  if (typeof number !== "number") {
+    const message = `Expected a valid Uint number.`;
+    throw new TypeError(message);
+  }
+  if (number < 0) {
+    const message = `Expected a valid Uint number.`;
+    throw new RangeError(message);
+  }
+  // byte max range
+  const bytes: byte[] = [];
+  const minBytes = Math.ceil(Math.log2(number) / 8);
+  // unshift byte values in big endian
+  if (minBytes > maxBytes) {
+    const message = `Number does not fit into byte length.`;
+    throw new RangeError(message);
+  }
+  for (let i = 0; i < minBytes; ++i) {
+    bytes.push(number & 0xff);
+    number = number >> 8;
+  }
+  // fill the rest with 0s
+  bytes.unshift(...new Array(maxBytes - minBytes).fill(0));
+  bytes.reverse(); // reverse for little endian order
+  return bytes;
+};
+
+
+/**
+ * Turns bytes (little endian) into an unsigned int
+ * @param bytes - the bytes to convert
+ */
+export const bytesToUint = (bytes: byte[]): number => {
+  validateBytes(bytes);
+  let num: number = 0;
+  
+  
+  return num;
+}
+
+
+/**
  * Turns a Uint16 number into two bytes (little endian).
  * @param number - the Uint16 number to convert
  */
