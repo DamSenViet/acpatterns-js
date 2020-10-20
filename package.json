@@ -2,10 +2,9 @@
   "name": "acpatterns",
   "version": "0.0.0",
   "description": "A JavaScript library for interacting with Animal Crossing pattern data structures and files.",
-  "main": "build/cjs/index.js",
   "module": "build/esm/index.js",
   "types": "build/esm/index.d.ts",
-  "browser": "build/umd/build.js",
+  "browser": "build/umd/index.js",
   "scripts": {
     "clean": "node scripts/clean.js",
     "dev:docs": "vuepress dev docs",
@@ -36,12 +35,15 @@
     "dotenv": "^8.2.0",
     "fs-extra": "^9.0.0",
     "jest": "^26.0.1",
+    "node-sass": "^4.14.1",
+    "sass-loader": "^7.3.1",
     "signale": "^1.4.0",
     "terser-webpack-plugin": "^4.2.2",
     "ts-loader": "^7.0.4",
     "typescript": "^3.9.2",
     "vuepress": "^1.6.0",
     "vuepress-plugin-typescript": "^0.3.1",
+    "vuepress-types": "^0.9.4",
     "webpack": "^4.43.0",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-format-messages": "^2.0.6",
@@ -56,5 +58,6 @@
     "chroma-js": "^2.1.0",
     "pnnquant": "git+https://github.com/DamSenViet/PnnQuant.js.git#20fea867d9a0dce4b0a0a0d865cb798c8731eb34",
     "ts-custom-error": "^3.2.0"
-  }
+  },
+  "unpkg": "build/umd/index.js"
 }

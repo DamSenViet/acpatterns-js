@@ -3,7 +3,6 @@
     "./src/index.ts",
   ],
   "exclude": [
-    "./node_modules",
     "./tests"
   ],
   "compilerOptions": {
@@ -27,9 +26,6 @@
       "DOM",
     ],
     "moduleResolution": "node",
-    "types": [
-      "babylonjs",
-    ],
     // ### STRICT CHECKS
     // "alwaysStrict": true,
     // "noImplicitAny": true,

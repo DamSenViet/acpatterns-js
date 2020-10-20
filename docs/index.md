@@ -6,10 +6,10 @@ tagline: Edit Animal Crossing Patterns
 actionText: Get Started →
 actionLink: /guide/
 features:
-- title: Automatically Reactive
+- title: Reactive
   details:
     A hook system allows for direct access to drawable sections of the
-    pattern reflecting changes into the 2D and 3D renders.
+    pattern immediately reflecting changes into the 2D and 3D renders.
 - title: Community First
   details:
     Open source and professionally documented. Designed to be extensible by

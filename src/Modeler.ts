@@ -66,8 +66,6 @@ patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
 export interface ModelerOptions {
   pattern: Drawable;
   canvas: HTMLCanvasElement;
-  textureCanvas: HTMLCanvasElement;
-  pixelsCanvas: HTMLCanvasElement;
 };
 
 /**
