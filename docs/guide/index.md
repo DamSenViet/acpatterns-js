@@ -3,6 +3,8 @@
 ## Introduction
 
  This library provides data structures for manipulating Animal Crossing patterns and  utility structures like drawers and modelers that handle rendering the contents of a pattern format.
+ 
+ <Introduction />
 
 ## Installation
 
