@@ -521,7 +521,7 @@ class Acnl extends ImageProjectable {
   /**
    * The event hooks that the pattern can emit.
    */
-  private _hooks: HookSystem = null;
+  private _hooks: Readonly<HookSystem> = null;
 
   // stuff no one should touch b/c actual mapped values are unknown
   private _language: number = 0;
@@ -536,8 +536,7 @@ class Acnl extends ImageProjectable {
    */
   public constructor() {
     super();
-    // proxies and apis here
-    // setup on all apis
+    // setup on all public apis
     this._refreshHooksApi();
     this._refreshPaletteApi();
     this._refreshPixelsApi();
@@ -549,12 +548,14 @@ class Acnl extends ImageProjectable {
    * Refreshes the hooks API.
    */
   private _refreshHooksApi(): void {
-    this._hooks = {
-      type: new Hook<[PatternType]>(),
-      palette: new Hook<[number, color]>(),
-      load: new Hook<[]>(),
-      refresh: new Hook<[]>(),
-    };
+    this._hooks = Object.seal(
+      Object.freeze({
+        type: new Hook<[PatternType]>(),
+        palette: new Hook<[number, color]>(),
+        load: new Hook<[]>(),
+        refresh: new Hook<[]>(),
+      })
+    );
   }
 
 
@@ -586,7 +587,7 @@ class Acnl extends ImageProjectable {
             const message = `Expected a valid color from the Acnl colorspace.`;
             throw new RangeError(message);
           }
-          this._palette[i] = chromaColor.hex("rgb");
+          this._palette[i] = chromaColor.hex("rgb").toUpperCase();
           this._hooks.palette.trigger(i, chromaColor.hex("rgb"));
         }
       });
@@ -969,7 +970,7 @@ class Acnl extends ImageProjectable {
       const chromaColor: chroma.Color = chroma(color);
       // block all non-unique changes
       if (_palette[i] === chromaColor.hex("rgb")) continue;
-      _palette[i] = color;
+      _palette[i] = chromaColor.hex("rgb").toUpperCase();
       _hooks.palette.trigger(i, color);
     }
     // now use it to replace the palette api, allows for equality operator

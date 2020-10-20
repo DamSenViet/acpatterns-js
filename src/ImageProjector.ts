@@ -1,6 +1,6 @@
 import PixelsSource from "./PixelsSource";
 import ImageProjectable from "./ImageProjectable";
-import { paletteIndex, } from "./utils";
+import { color, paletteIndex, } from "./utils";
 import chroma from "chroma-js";
 import { ImageProjectingError } from "./errors";
 import PnnQuant from "pnnquant";
@@ -284,36 +284,43 @@ class ImageProjector {
       dithering: false,
     });
     pnngquant.quantizeImage();
-    const pngquantPaletteBuffer = new Uint8Array(pnngquant.getPalette());
-    const imageChromaColors = [];
+    const pngquantPaletteBuffer: Uint8Array = new Uint8Array(pnngquant.getPalette());
+    const imageChromaColors: Array<chroma.Color> = [];
     for (let i = 0; i < pngquantPaletteBuffer.length; i += 4) {
-      const r = pngquantPaletteBuffer[i + 0];
-      const g = pngquantPaletteBuffer[i + 1];
-      const b = pngquantPaletteBuffer[i + 2];
-      const a = pngquantPaletteBuffer[i + 3];
+      const r: number = pngquantPaletteBuffer[i + 0];
+      const g: number = pngquantPaletteBuffer[i + 1];
+      const b: number = pngquantPaletteBuffer[i + 2];
+      // const a: number = pngquantPaletteBuffer[i + 3];
       imageChromaColors.push(chroma(r, g, b));
     }
 
-    // assign colors to the palette
-    for (let i = paletteOffset; i < paletteOffset + paletteSize; ++i) {
+    // get unique colors closest to the one in the colorspace
+    const uniqueColors = new Set<color>();
+    for (let i: number = 0; i < imageChromaColors.length; ++i) {
       const chromaColor: chroma.Color = imageChromaColors[i];
-      const patternClass = (pattern.constructor as typeof ImageProjectable);
-      pattern.palette[i] = patternClass.getClosestColor(chromaColor.hex("rgb"));
+      const patternClass: typeof ImageProjectable = <typeof ImageProjectable>pattern.constructor;
+      uniqueColors.add(patternClass.getClosestColor(chromaColor.hex("rgb")).toUpperCase());
+    }
+    const colors: Array<color> = [...uniqueColors];
+
+    // assign colors to the palette
+    for (let i: number = 0; i < colors.length; ++i) {
+      pattern.palette[i + paletteOffset] = colors[i];
     }
 
     // select paletteIndex closest to the one in the palette for every pixel
     for (let x = 0; x < imageData.width; ++x) {
       for (let y = 0; y < imageData.height; ++y) {
-        const sectionY = y + sectionOffsetY;
-        const sectionX = x + sectionOffsetX;
+        const sectionY: number = y + sectionOffsetY;
+        const sectionX: number = x + sectionOffsetX;
         // imageData is a linear array
         const imageDataOffset = (x + (y * imageData.width)) * 4;
-        const r = imageData.data[imageDataOffset + 0];
-        const g = imageData.data[imageDataOffset + 1];
-        const b = imageData.data[imageDataOffset + 2];
+        const r: number = imageData.data[imageDataOffset + 0];
+        const g: number = imageData.data[imageDataOffset + 1];
+        const b: number = imageData.data[imageDataOffset + 2];
         // 0 means transparent and 255 means opaque
-        const a = imageData.data[imageDataOffset + 3];
-        const opacity = a / 255;
+        const a: number = imageData.data[imageDataOffset + 3];
+        const opacity: number = a / 255;
         // if a is not above or equal to alpha threshold, make that pixel transparent
         if (opacity < opacityThreshold) {
           section.unreactive[sectionX][sectionY] = pattern.palette.length;
@@ -323,7 +330,7 @@ class ImageProjector {
         // find closest color in palette set pixel to that color
         let closestColorPaletteIndex: paletteIndex = null;
         let closestColorDistance: number = null;
-        for (let i = paletteOffset; i < paletteOffset + paletteSize; ++i) {
+        for (let i = paletteOffset; i < paletteOffset + colors.length; ++i) {
           const chromaColor: chroma.Color = chroma(r, g, b).alpha(a / 255);
           const distance: number = chroma.distance(
             chromaColor,

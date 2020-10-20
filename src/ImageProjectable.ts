@@ -23,13 +23,8 @@ abstract class ImageProjectable extends Drawable {
       const message = `Expected a valid color representation.`;
       throw new TypeError(message);
     }
-    return inputColor;
+    return chroma(inputColor).hex("rgb");
   }
-
-  /**
-   * Gets the paleete.
-   */
-  public abstract get palette(): Array<color>;
 };
 
 export default ImageProjectable;
