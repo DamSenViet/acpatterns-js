@@ -58,6 +58,7 @@ class ImageProjector {
    * @param opacityThreshold - a number from 0 to 1, opacity values below this threshold are transparent
    * @param imageSmoothingQuality - the image smoothing quality performed during downscaling
    * @param colorMatchingMethod - the color matching method from pixel to palette
+   * @returns - a Promise resolving to void
    */
   public async project(
     image: HTMLImageElement,

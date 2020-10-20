@@ -22,10 +22,14 @@ import {
   DecodeHintType,
   ResultMetadataType,
   Result,
+  QRCodeDecoderErrorCorrectionLevel,
 } from '@zxing/library/esm';
+import QRCode from "@zxing/library/esm/core/qrcode/encoder/QRCode";
+import ByteMatrix from "@zxing/library/esm/core/qrcode/encoder/ByteMatrix";
 import {
   MyBrowserQRCodeReader,
   ImageLoadingException,
+  MyEncoder,
 } from "./myZxing";
 import { QRScanningError } from "./errors";
 import chroma from "chroma-js";
@@ -1153,6 +1157,7 @@ class Acnl extends ImageProjectable {
   /**
    * Creates an Acnl from a formatted binary string.
    * @param binaryString - the formatted binary string to convert
+   * @returns - the Acnl
    */
   public static fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
     const acnl = new Acnl();
@@ -1162,6 +1167,7 @@ class Acnl extends ImageProjectable {
 
   /**
    * Creates a formatted binary string from the Acnl.
+   * @returns - the binary string
    */
   public toBinaryString(): string {
     // encode everything into hex numbers
@@ -1218,6 +1224,7 @@ class Acnl extends ImageProjectable {
   /**
    * Creates a formatted binary string from an Acnl.
    * @param acnl - the acnl instance
+   * @returns - the binary string
    */
   public static toBinaryString(acnl: Acnl): string {
     return acnl.toBinaryString();
@@ -1227,8 +1234,9 @@ class Acnl extends ImageProjectable {
   /**
    * Loads data into the Acnl from 1 whole or 4 multipart QR codes in one image.
    * @param image - an image to scan for QR Codes
+   * @returns - a promise resolving tothe Acnl
    */
-  public async fromQRCode(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     if (!(image instanceof HTMLImageElement)) {
       const message = `Expected instanceof ${HTMLImageElement.name}`;
       throw new TypeError(message);
@@ -1312,11 +1320,75 @@ class Acnl extends ImageProjectable {
   /**
    * Creates an Acnl from 1 whole or 4 multipart QR Codes in an image.
    * @param image - an image to scan for QR Codes
-   * @returns - a promise containing the Acnl
+   * @returns - a promise resolving to the Acnl
    */
-  public static async fromQRCode(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+  public static async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
     const acnl = new Acnl();
-    return acnl.fromQRCode(image);
+    return await acnl.fromQRCodes(image);
+  }
+
+
+  /**
+   * Makes QR Code images for the Acnl.
+   * @returns - a Promise resolving to the QR Code images
+   */
+  public async toQRCodes(): Promise<Array<HTMLImageElement>> {
+    const qrCodes: Array<QRCode> = new Array<QRCode>();
+    const bytes: byte[] = binaryStringToBytes(this.toBinaryString());
+    if (this._type.size === 32)
+      qrCodes.push(MyEncoder.encode(new Uint8Array(bytes), QRCodeDecoderErrorCorrectionLevel.M, null));
+    else {
+      // needs 0 padding
+      bytes.push(...new Array(2160 - bytes.length).fill(0));
+      const parityByte = Math.round(Math.random() * 255);
+      for (let i = 0; i < 4; ++i) {
+        qrCodes.push(
+          MyEncoder.encode(
+            new Uint8Array(bytes.slice(i * 540, (i + 1) * 540)),
+            QRCodeDecoderErrorCorrectionLevel.M,
+            null,
+            [i, 3, parityByte]
+          )
+        );
+      }
+    }
+    const qrCodeImages: Array<HTMLImageElement> = qrCodes.map((qrCode: QRCode) => {
+      const byteMatrix: ByteMatrix = qrCode.getMatrix();
+      const byteMatrixWidth: number = byteMatrix.getWidth();
+      const byteMatrixHeight: number = byteMatrix.getHeight();
+      // padding around the qr code
+      const quietZone: number = 4;
+
+      const canvas: HTMLCanvasElement = document.createElement("canvas");
+      canvas.width = byteMatrixWidth + quietZone * 2;
+      canvas.height = byteMatrixHeight + quietZone * 2;
+      const context: CanvasRenderingContext2D = canvas.getContext("2d");
+      context.imageSmoothingEnabled = false;
+      context.fillStyle = "#FFFFFF";
+      context.fillRect(0, 0, canvas.width, canvas.height);
+      context.fillStyle = "#000000";
+      for (let x: number = 0; x < byteMatrixWidth; ++x) {
+        for (let y: number = 0; y < byteMatrixHeight; ++y) {
+          if (byteMatrix.get(x, y) === 0) continue;
+          context.fillRect(x + quietZone, y + quietZone, 1, 1);
+        }
+      }
+      const image: HTMLImageElement = document.createElement("img");
+      image.src = canvas.toDataURL("image/jpeg", 1);
+      console.log(image.height, image.width);
+      return image;
+    });
+    return qrCodeImages;
+  }
+
+
+  /**
+   * Makes QR Code images for the Acnl.
+   * @param acnl - the acnl
+   * @returns - a Promise resolving to the qr code images
+   */
+  public static async toQRCodes(acnl: Acnl): Promise<Array<HTMLImageElement>> {
+    return await acnl.toQRCodes();
   }
 }
 

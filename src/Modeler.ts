@@ -679,6 +679,7 @@ class Modeler {
 
   /**
    * Puts the modeler into reactive state.
+   * @returns - a Promise resolving to void
    */
   public async play(): Promise<void> {
     if (this._state !== ModelerStates.PAUSED) return;
@@ -696,6 +697,7 @@ class Modeler {
 
   /**
    * Puts the modeler into the non-reactive state.
+   * @returns - a Promise resolving to void
    */
   public async pause(): Promise<void> {
     if (this._state !== ModelerStates.PLAYING) return;
@@ -711,6 +713,7 @@ class Modeler {
   /**
    * Puts the modeler into stopped state and cleans up all resources expended.
    * Modeler cannot be used beyond this function call.
+   * @returns - a Promise resolving to void
    */
   public async dispose(): Promise<void> {
     if (this._state === ModelerStates.DISPOSED) return;

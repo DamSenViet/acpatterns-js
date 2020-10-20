@@ -86,6 +86,12 @@
     .qrs-images {
       display: none;
     }
+    
+    .qr-code {
+      height: 500px;
+      width: 500px;
+      image-rendering: pixelated;
+    }
 
     @media only screen and (min-width: 480px) {
       canvas.model {
@@ -213,8 +219,12 @@
       <button onclick="projectImage('./image-projects/transparent.png')">transparent</button>
     </div>
   </div>
-  <div>
-    <canvas class="test-canvas" width=300 height=300></canvas>
+  <div class="qr-codes-container">
+    <div>QR Codes</div>
+    <div><button onclick="renderQrCodes()">render</button></div>
+    <div class="qr-codes">
+      
+    </div>
   </div>
   <script>
     const pixelsCanvas = document.querySelector("canvas.pixels");
@@ -311,7 +321,7 @@
       ) continue;
       qrButton.onclick = function () {
         console.log(`loading ${this.innerText}`);
-        acnl.fromQRCode(qrImage);
+        acnl.fromQRCodes(qrImage);
       }
     }
 
@@ -344,7 +354,18 @@
       console.log(binaryString);
     };
 
-
+    
+    const renderQrCodes = async() => {
+      const qrCodeImages = await acnl.toQRCodes();
+      const qrCodesElement = document.querySelector(".qr-codes");
+      while(qrCodesElement.firstChild) {
+        qrCodesElement.removeChild(qrCodesElement.firstChild);
+      }
+      for (const qrCodeImage of qrCodeImages) {
+        qrCodeImage.classList.add("qr-code");
+        qrCodesElement.appendChild(qrCodeImage);
+      }
+    }
   </script>
 </body>
 
