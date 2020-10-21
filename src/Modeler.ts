@@ -183,6 +183,12 @@ class Modeler {
 
 
   /**
+   * A flag to detect when the scene is setup.
+   */
+  private _isSetup: boolean = false;
+
+
+  /**
    * To end the loading process.
    */
   private _endLoadingSignal: (value?: void) => void = null;
@@ -194,6 +200,10 @@ class Modeler {
     this._endLoadingSignal = resolve;
   });
 
+
+  /**
+   * The queue to update and block the loading pipeline.
+   */
   private _loadingQueue: Array<PatternType> = new Array<PatternType>();
 
   /**
@@ -238,13 +248,6 @@ class Modeler {
 
     this._updateMeasurements();
     this._refreshPixels();
-    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
-    this._pattern.hooks.type.tap(this._onTypeUpdate);
-    this._pattern.hooks.refresh.tap(this._onRefresh);
-    this._pattern.hooks.load.tap(this._onLoad);
-    this._source.hook.tap(this._onPixelUpdate);
-
-    this._setupScene();
   }
 
 
@@ -312,7 +315,6 @@ class Modeler {
     const targetMaterial: PBRMaterial =
       <PBRMaterial>this._scene.getMaterialByID(modelData.targetMaterialId);
     targetMaterial.albedoTexture = this._texture;
-    this._redraw();
 
     this._scene.freezeActiveMeshes();
     for (const mesh of this._loadedContainer.meshes) {
@@ -321,6 +323,16 @@ class Modeler {
     for (const material of this._loadedContainer.materials) {
       if (material !== targetMaterial) material.freeze();
     }
+
+    this._isSetup = true;
+    this._redraw();
+    this._endLoadingSignal();
+    this._pattern.hooks.palette.tap(this._onPaletteUpdate);
+    this._pattern.hooks.type.tap(this._onTypeUpdate);
+    this._pattern.hooks.refresh.tap(this._onRefresh);
+    this._pattern.hooks.load.tap(this._onLoad);
+    this._source.hook.tap(this._onPixelUpdate);
+    
     // this._scene.debugLayer.show();
 
     // setup world axis for debugging
@@ -328,7 +340,6 @@ class Modeler {
 
     await new Promise((resolve) => { this._scene.executeWhenReady(resolve); });
     this._engine.runRenderLoop(() => { this._scene.render(); });
-    this._endLoadingSignal();
   }
 
 
@@ -611,7 +622,8 @@ class Modeler {
   /**
    * Draws the _pixelsCanvas onto after the _textureCanvas after processing.
    */
-  private _redraw(): void {
+  private async _redraw(): Promise<void> {
+    if (!this._isSetup) return;
     if (this._pixelFilter)
       xbrz(
         this._pixelsContext,
@@ -672,6 +684,19 @@ class Modeler {
     }
     this._pixelFilter = pixelFilter;
     this._redraw();
+  }
+
+
+  /**
+   * Sets up the 3d scene.
+   */
+  public async setup(): Promise<void> {
+    if (this._isSetup) return;
+    if (this._state === ModelerStates.DISPOSED) {
+      const message = `Modeler has been disposed. Cannot set pixelFilter.`;
+      throw new IllegalStateError(message);
+    }
+    await this._setupScene();
   }
 
 
