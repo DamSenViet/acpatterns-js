@@ -55,7 +55,7 @@ const themeConfig = {
 
 
 const plugins = [
-  'vuepress-plugin-typescript',
+  // 'vuepress-plugin-typescript',
 ];
 
 module.exports = {
