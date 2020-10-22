@@ -10,36 +10,45 @@
 
 
 <script>
-import { Acnl, Drawer, tools } from "./../../../build/esm";
-
 export default {
   data: function () {
     return {
-      acnl: new Acnl(),
+      acnl: null,
       drawer: null,
     };
   },
   async mounted() {
+    const {
+      Acnl,
+      Drawer,
+      tools
+    } = await import("./../../../build/esm");
+
+    const acnl = new Acnl();
+    acnl.palette[acnl.palette.length - 1] = Acnl.getClosestColor("black");
+
+    const pen = new tools.Pen({ size: 1 });
+    pen.paletteIndex = acnl.palette.length - 1;
+
     const drawerCanvas = this.$refs["drawerCanvas"];
-    this.drawer = new Drawer({
-      pattern: this.acnl,
+    const drawer = new Drawer({
+      pattern: acnl,
       canvas: drawerCanvas,
     });
-    this.drawer.grid = true;
-    this.drawer.indicator = true;
-    this.drawer.source = this.acnl.sections.texture;
-    const pen = new tools.Pen({ size: 1 });
-    this.drawer.tool = pen;
-    pen.paletteIndex = this.acnl.palette.length - 1;
-    this.acnl.palette[this.acnl.palette.length - 1] = Acnl.getClosestColor(
-      "black"
-    );
+    drawer.grid = true;
+    drawer.indicator = true;
+    drawer.source = acnl.sections.texture;
+    drawer.tool = pen;
+
+    this.acnl = acnl;
+    this.drawer = drawer;
   },
   destroyed() {
     this.drawer.dispose();
   },
 };
 </script>
+
 
 <style lang="scss" scoped>
 @import "./../styles/colors";

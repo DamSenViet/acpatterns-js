@@ -12,13 +12,6 @@
 
 
 <script>
-import {
-  Acnl,
-  Drawer,
-  Modeler,
-  tools,
-  ImageProjector,
-} from "./../../../build/esm";
 import imageSrc from "./../../../tests/system/image-projects/complex.jpg";
 
 export default {
@@ -31,6 +24,14 @@ export default {
     };
   },
   async mounted() {
+    const {
+      Acnl,
+      Drawer,
+      tools,
+      Modeler,
+      ImageProjector
+      } = await import("./../../../build/esm");
+
     const acnl = new Acnl();
     acnl.palette[acnl.palette.length - 1] = Acnl.getClosestColor("black");
 
@@ -94,6 +95,7 @@ export default {
   },
 };
 </script>
+
 
 <style lang="scss" scoped>
 @import "./../styles/colors";
