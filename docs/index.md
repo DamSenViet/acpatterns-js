@@ -2,7 +2,7 @@
 home: true
 heroText: acpatterns-js
 heroImage: /hero.svg
-tagline: Edit Animal Crossing Patterns
+tagline: Animal Crossing Patterns Software
 actionText: Get Started →
 actionLink: /guide/
 features:

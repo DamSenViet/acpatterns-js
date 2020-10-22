@@ -21,7 +21,7 @@ Based on our internal library at https://github.com/Thulinma/ACNLPatternTool/.
 
 ## Documentation
 
-To view documentation, examples, or a playground demo, visit the [documentation site](https://damsenviet.github.io/acpatterns-js/https://damsenviet.github.io/acpatterns-js/).
+To view documentation, examples, or a playground demo, visit the [documentation site](https://damsenviet.github.io/acpatterns-js/).
 
 
 ## Introduction
@@ -37,6 +37,7 @@ Thanks goes out to my [acpatterns](https://acpatterns.com/) team for contributin
 - [Thulinma](https://github.com/Thulinma) - reverse engineering the file formats
 - [Myumi](https://github.com/myumi) - modifying the the qr-code library
 - [Tero](https://tero.space/) - designing our graphical assets
+- [daelsepara](https://github.com/daelsepara) - porting the pixel filter
 
 
 ## Contributing

@@ -1,0 +1,29 @@
+// breakpoints
+$breakpoint-small-narrow: 419px;
+$breakpoint-small-normal: 719px;
+$breakpoint-medium-narrow: 959px;
+
+
+@mixin respond-to($breakpoint) {
+  @media only screen and (min-width: $breakpoint) {
+    @content;
+  }
+}
+
+@mixin screen-small-narrow() {
+  @include respond-to($breakpoint-small-narrow) {
+    @content;
+  }
+}
+
+@mixin screen-small-normal() {
+  @include respond-to($breakpoint-small-normal) {
+    @content;
+  }
+}
+
+@mixin screen-medium-narrow() {
+  @include respond-to($breakpoint-medium-narrow) {
+    @content;
+  }
+}
