@@ -18,37 +18,37 @@ export interface DrawerMeasurements {
   /**
    * Pattern source measurements.
    */
-  sourceHeight: number;
-  sourceHalfHeight: number;
   sourceWidth: number;
   sourceHalfWidth: number;
-  textureHeight: number;
+  sourceHeight: number;
+  sourceHalfHeight: number;
   textureWidth: number;
+  textureHeight: number;
 
   /**
    * Raw canvas measurements.
    */
   size: number;
   pixelSize: number,
-  yStart: number;
-  yCenter: number;
-  yStop: number;
-  ySize: number;
   xStart: number;
   xCenter: number;
   xStop: number;
   xSize: number;
+  yStart: number;
+  yCenter: number;
+  yStop: number;
+  ySize: number;
 
   /**
    * Canvas pixel grid measurements.
    */
   pixelGridSize: number;
-  pixelYStart: number;
-  pixelYCenter: number;
-  pixelYStop: number;
   pixelXStart: number;
   pixelXCenter: number;
   pixelXStop: number;
+  pixelYStart: number;
+  pixelYCenter: number;
+  pixelYStop: number;
 };
 
 
@@ -140,31 +140,31 @@ class Drawer {
    */
   private _measurements: Readonly<DrawerMeasurements> = Object.freeze({
     // source meaasurements
-    sourceHeight: null,
-    sourceHalfHeight: null,
     sourceWidth: null,
     sourceHalfWidth: null,
-    textureHeight: null,
+    sourceHeight: null,
+    sourceHalfHeight: null,
     textureWidth: null,
+    textureHeight: null,
     // raw canvas measurements
     size: null,
     pixelSize: null,
-    yStart: null,
-    yCenter: null,
-    yStop: null,
-    ySize: null,
     xStart: null,
     xCenter: null,
     xStop: null,
     xSize: null,
+    yStart: null,
+    yCenter: null,
+    yStop: null,
+    ySize: null,
     // canvas pixel measurements
     pixelGridSize: null,
-    pixelYStart: null,
-    pixelYCenter: null,
-    pixelYStop: null,
     pixelXStart: null,
     pixelXCenter: null,
     pixelXStop: null,
+    pixelYStart: null,
+    pixelYCenter: null,
+    pixelYStop: null,
   });
 
   /**
@@ -248,91 +248,95 @@ class Drawer {
     // NOTE: USING NON-CSS MEASUREMENTS
     // BASE VALUES OFF OF ATTRIBUTE VALUES WHICH ARE NOT AFFECTED BY CSS
     if (
-      this._canvas.height !== this._canvas.width ||
-      this._canvas.height % 128 !== 0
-    ) throw new TypeError();
+      this._canvas.width !== this._canvas.height ||
+      this._canvas.width % 128 !== 0 &&
+      this._canvas.width / 128 !== 0
+    ) {
+      const message = `Canvas width and height must be equal and at least a multiple of 128.`;
+      throw new TypeError(message);
+    }
 
-    const size = this._canvas.height;
+    const size = this.canvas.width;
     this._context.imageSmoothingEnabled = false;
 
     // sync necessary sizes together
     // imageSmoothingEnabled auto reset to true after size changes, force false
-    this._gridCanvas.height = size;
     this._gridCanvas.width = size;
+    this._gridCanvas.height = size;
     this._gridContext.imageSmoothingEnabled = false;
-    this._indicatorCanvas.height = size;
     this._indicatorCanvas.width = size;
+    this._indicatorCanvas.height = size;
     this._indicatorContext.imageSmoothingEnabled = false;
 
 
     // determine pixel size based on source
-    const sourceHeight: number = this._source.height;
-    const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
     const sourceWidth: number = this._source.width;
     const sourceHalfWidth: number = Math.floor(sourceWidth / 2);
-    const textureHeight = sourceHeight * 4;
+    const sourceHeight: number = this._source.height;
+    const sourceHalfHeight: number = Math.floor(sourceHeight / 2);
     const textureWidth = sourceWidth * 4;
+    const textureHeight = sourceHeight * 4;
 
-    this._pixelsCanvas.height = sourceHeight;
     this._pixelsCanvas.width = sourceWidth;
+    this._pixelsCanvas.height = sourceHeight;
     this._pixelsContext.imageSmoothingEnabled = false;
-    this._textureCanvas.height = textureHeight;
     this._textureCanvas.width = textureWidth;
+    this._textureCanvas.height = textureHeight;
     this._textureContext.imageSmoothingEnabled = false;
 
     // the number of pixels the canvas can fit
     // expand to fit
-    let pixelGridSize: number = sourceHeight > sourceWidth ? sourceHeight : sourceWidth;
+    let pixelGridSize: number = Math.max(sourceHeight, sourceWidth);
     // figure out how many canvas (NOT CSS) pixels each pixel will be
     const pixelSize = this._canvas.height / pixelGridSize;
 
     const top: number = Math.floor(pixelGridSize / 2);
     const left: number = Math.floor(pixelGridSize / 2);
-    const translateY: number = -sourceHalfHeight;
     const translateX: number = -sourceHalfWidth;
+    const translateY: number = -sourceHalfHeight;
 
-    const pixelYStart = top + translateY;
-    const pixelYCenter = pixelYStart + sourceHalfHeight;
-    const pixelYStop = pixelYStart + sourceHeight;
     const pixelXStart = left + translateX;
     const pixelXCenter = pixelXStart + sourceHalfWidth;
     const pixelXStop = pixelXStart + sourceWidth;
-
-    const yStart = pixelYStart * pixelSize;
-    const yCenter = pixelYCenter * pixelSize;
-    const yStop = pixelYStop * pixelSize;
-    const ySize = yStop - yStart;
+    const pixelYStart = top + translateY;
+    const pixelYCenter = pixelYStart + sourceHalfHeight;
+    const pixelYStop = pixelYStart + sourceHeight;
 
     const xStart = pixelXStart * pixelSize;
     const xCenter = pixelXCenter * pixelSize;
     const xStop = pixelXStop * pixelSize;
     const xSize = xStop - xStart;
 
+    const yStart = pixelYStart * pixelSize;
+    const yCenter = pixelYCenter * pixelSize;
+    const yStop = pixelYStop * pixelSize;
+    const ySize = yStop - yStart;
+
     // overwrite, don't replace
     this._measurements = Object.freeze<DrawerMeasurements>({
-      sourceHeight,
-      sourceHalfHeight,
       sourceWidth,
       sourceHalfWidth,
-      textureHeight,
+      sourceHeight,
+      sourceHalfHeight,
       textureWidth,
+      textureHeight,
       size,
       pixelSize,
-      yStart,
-      yCenter,
-      yStop,
-      ySize,
       xStart,
       xCenter,
       xSize,
       xStop,
+      yStart,
+      yCenter,
+      yStop,
+      ySize,
       pixelGridSize,
-      pixelYStart,
-      pixelYCenter,
-      pixelYStop,
       pixelXStart,
       pixelXCenter,
       pixelXStop,
+      pixelYStart,
+      pixelYCenter,
+      pixelYStop,
     });
   }
 
@@ -341,6 +345,7 @@ class Drawer {
    * Redraws the _canvas.
    */
   private _redraw = (): void => {
+    if (this._state === DrawerStates.DISPOSED) return;
     this._context.clearRect(
       0, 0,
       this._measurements.size, this._measurements.size
@@ -794,6 +799,7 @@ class Drawer {
     if (this._state === DrawerStates.DISPOSED) return;
     this.pause();
     this.tool = null;
+    this._state = DrawerStates.DISPOSED;
     this._canvas = null;
     this._context = null;
     this._pattern = null;
@@ -807,7 +813,6 @@ class Drawer {
     this._indicatorCanvas = null;
     this._indicatorContext = null;
     this._measurements = null;
-    this._state = DrawerStates.DISPOSED;
   }
 }
 

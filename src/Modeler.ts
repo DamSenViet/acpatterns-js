@@ -623,7 +623,7 @@ class Modeler {
    * Draws the _pixelsCanvas onto after the _textureCanvas after processing.
    */
   private async _redraw(): Promise<void> {
-    if (!this._isSetup) return;
+    if (!this._isSetup || this._state === ModelerStates.DISPOSED) return;
     if (this._pixelFilter)
       xbrz(
         this._pixelsContext,
@@ -741,6 +741,8 @@ class Modeler {
   public async dispose(): Promise<void> {
     if (this._state === ModelerStates.DISPOSED) return;
     this.pause();
+    this._state = ModelerStates.DISPOSED;
+    await this._loadingSignal;
     this._canvas = null;
     this._pattern = null;
     this._source = null;
@@ -749,17 +751,31 @@ class Modeler {
     this._textureCanvas = null;
     this._textureContext = null;
     this._measurements = null;
-    this._engine.dispose();
-    this._engine = null;
-    this._scene = null;
-    this._texture = null;
-    this._camera = null;
+    this._engine.stopRenderLoop();
+    if (this._hemisphericLight != null)
+      this._hemisphericLight.dispose();
     this._hemisphericLight = null;
+    if (this._directionalLight != null)
+      this._directionalLight.dispose();
     this._directionalLight = null;
+    if (this._camera != null)
+      this._camera.dispose();
+    this._camera = null;
+    if (this._texture != null)
+      this._texture.dispose();
+    this._texture = null;
+    if (this._loadedContainer != null)
+      this._loadedContainer.dispose();
     this._loadedContainer = null;
+    if (this._scene != null)
+      this._scene.dispose();
+    this._scene = null;
+    if (this._clothingStandContainer != null)
+      this._clothingStandContainer.dispose();
     this._clothingStandContainer = null;
-    this._pattern = null;
-    this._state = ModelerStates.DISPOSED;
+    if (this._engine != null)
+      this._engine.dispose();
+    this._engine = null;
   }
 }
 

@@ -278,7 +278,7 @@ class ImageProjector {
     const pnngquant: PnnQuant = new PnnQuant({
       pixels: new Uint32Array(
         subSectionContext
-          .getImageData(0, 0, imageOffsetHeight, imageOffsetWidth)
+          .getImageData(0, 0, sectionOffsetWidth, sectionOffsetHeight)
           .data.buffer
       ),
       colors: paletteSize,
