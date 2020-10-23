@@ -1,8 +1,8 @@
-import ImageProjectable from "./ImageProjectable";
-import Hook from "./Hook";
-import PixelsSource from "./PixelsSource";
-import PatternType from "./PatternType";
-import HookSystem from "./HookSystem";
+import ImageProjectable from "./../ImageProjectable";
+import Hook from "./../Hook";
+import PixelsSource from "./../PixelsSource";
+import PatternType from "./../PatternType";
+import HookSystem from "./../HookSystem";
 import {
   color,
   paletteIndex,
@@ -17,21 +17,21 @@ import {
   binaryStringToBytes,
   bytesToBinaryString,
   propertyConfig,
-} from "./utils";
+} from "./../utils";
 import {
   DecodeHintType,
   ResultMetadataType,
   Result,
   QRCodeDecoderErrorCorrectionLevel,
-} from '@zxing/library/esm';
+} from "@zxing/library/esm";
 import QRCode from "@zxing/library/esm/core/qrcode/encoder/QRCode";
 import ByteMatrix from "@zxing/library/esm/core/qrcode/encoder/ByteMatrix";
 import {
   MyBrowserQRCodeReader,
   ImageLoadingException,
   MyEncoder,
-} from "./myZxing";
-import { QRScanningError } from "./errors";
+} from "./../myZxing";
+import { QRScanningError } from "./../errors";
 import chroma from "chroma-js";
 
 // ACNL binary data layout.

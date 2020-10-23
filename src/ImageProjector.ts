@@ -336,7 +336,7 @@ class ImageProjector {
           const distance: number = chroma.distance(
             chromaColor,
             pattern.palette[i],
-            "rgb"
+            colorMatchingMethod,
           );
           if (
             closestColorPaletteIndex != null &&

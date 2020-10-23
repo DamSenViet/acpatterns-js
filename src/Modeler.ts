@@ -1,4 +1,4 @@
-import Acnl from "./Acnl";
+import Acnl from "./formats/Acnl";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
 import Drawable from "./Drawable";

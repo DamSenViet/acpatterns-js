@@ -241,7 +241,7 @@
     const qrsImagesElement = document.querySelector("div.qrs-images");
     const qrsButtonsElement = document.querySelector("div.qrs-buttons");
 
-    let acnl = new acpatterns.Acnl();
+    let acnl = new acpatterns.formats.Acnl();
     let drawer = new acpatterns.Drawer({
       pattern: acnl,
       canvas: drawCanvas,
@@ -279,13 +279,13 @@
     });
 
     const fillTypesElement = () => {
-      for (let typeKey of Object.keys(acpatterns.Acnl.types)) {
+      for (let typeKey of Object.keys(acpatterns.formats.Acnl.types)) {
         const button = new DOMParser().parseFromString(
-          `<button>${acpatterns.Acnl.types[typeKey].name}</button>`,
+          `<button>${acpatterns.formats.Acnl.types[typeKey].name}</button>`,
           "text/html").querySelector("body").firstChild;
         typesElement.insertBefore(button, null);
         button.onclick = (() => {
-          acnl.type = acpatterns.Acnl.types[typeKey];
+          acnl.type = acpatterns.formats.Acnl.types[typeKey];
         });
       }
     };

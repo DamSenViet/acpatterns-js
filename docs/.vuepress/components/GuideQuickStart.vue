@@ -19,13 +19,13 @@ export default {
   },
   async mounted() {
     const {
-      Acnl,
+      formats,
       Drawer,
-      tools
+      tools,
     } = await import("./../../../build/esm");
 
-    const acnl = new Acnl();
-    acnl.palette[acnl.palette.length - 1] = Acnl.getClosestColor("black");
+    const acnl = new formats.Acnl();
+    acnl.palette[acnl.palette.length - 1] = formats.Acnl.getClosestColor("black");
 
     const pen = new tools.Pen({ size: 1 });
     pen.paletteIndex = acnl.palette.length - 1;
