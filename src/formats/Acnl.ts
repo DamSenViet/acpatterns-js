@@ -898,15 +898,16 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
   public set type(type: AcnlTypes[keyof AcnlTypes]) {
     const { _hooks, _type } = this;
     // must match from enum, no excuses
-    for (let acnlType of Object.values(AcnlTypes)) {
-      if (type === acnlType && type !== _type) {
-        this._type = type;
-        // reset and clean up apis
-        this._refreshPixelsApi();
-        this._refreshSectionsApi();
-        _hooks.type.trigger(type);
-        return;
-      }
+    if (!Object.values(AcnlTypes).includes(type)) {
+      const message = `Expected a type from the Acnl format.`;
+      throw new TypeError(message);
+    }
+    if (type !== this._type) {
+      this._type = type;
+      // reset and clean up apis
+      this._refreshPixelsApi();
+      this._refreshSectionsApi();
+      _hooks.type.trigger(type);
     }
   }
 
