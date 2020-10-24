@@ -1,6 +1,8 @@
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
-import Drawable from "./Drawable";
+import Drawable, {
+  isInstanceofDrawable
+} from "./Drawable";
 import { Tool } from "./tools";
 import {
   color,
@@ -207,7 +209,7 @@ class Drawer {
     const { canvas, pattern } = options;
     if (
       pattern == null ||
-      !(pattern instanceof Drawable)
+      !isInstanceofDrawable(pattern)
     ) {
       const message = `Expected an instance of a Drawable pattern.`;
       throw new TypeError(message);

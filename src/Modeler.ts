@@ -1,7 +1,9 @@
 import Acnl from "./formats/Acnl";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
-import Drawable from "./Drawable";
+import Drawable, {
+  isInstanceofDrawable
+} from "./Drawable";
 import {
   color,
   paletteIndex,
@@ -230,7 +232,7 @@ class Modeler {
     const { canvas, pattern } = options;
     if (
       pattern == null ||
-      !(pattern instanceof Drawable)
+      !(isInstanceofDrawable(pattern))
     ) {
       const message = `Expected an instance of a Drawable pattern.`;
       throw new TypeError(message);

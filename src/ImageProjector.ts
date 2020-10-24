@@ -1,5 +1,7 @@
 import PixelsSource from "./PixelsSource";
-import ImageProjectable from "./ImageProjectable";
+import ImageProjectable, {
+  isInstanceofImageProjectable
+} from "./ImageProjectable";
 import { color, paletteIndex, } from "./utils";
 import chroma from "chroma-js";
 import { ImageProjectingError } from "./errors";
@@ -111,10 +113,7 @@ class ImageProjector {
     }
 
     // verify pattern
-    if (
-      !(pattern instanceof ImageProjectable &&
-        pattern.constructor !== ImageProjectable)
-    ) {
+    if (!isInstanceofImageProjectable(pattern)) {
       const message = `Expected an instance of a image projectable pattern.`;
       throw new TypeError(message);
     }
@@ -299,8 +298,7 @@ class ImageProjector {
     const uniqueColors = new Set<color>();
     for (let i: number = 0; i < imageChromaColors.length; ++i) {
       const chromaColor: chroma.Color = imageChromaColors[i];
-      const patternClass: typeof ImageProjectable = <typeof ImageProjectable>pattern.constructor;
-      uniqueColors.add(patternClass.getClosestColor(chromaColor.hex("rgb")).toUpperCase());
+      uniqueColors.add(pattern.nearestInColorSpace(chromaColor.hex("rgb")).toUpperCase());
     }
     const colors: Array<color> = [...uniqueColors];
 

@@ -1,4 +1,4 @@
-import ImageProjectable from "./../ImageProjectable";
+import AcPattern from "./../AcPattern";
 import Hook from "./../Hook";
 import PixelsSource from "./../PixelsSource";
 import PatternType from "./../PatternType";
@@ -18,6 +18,8 @@ import {
   bytesToBinaryString,
   propertyConfig,
 } from "./../utils";
+import Drawable, { Drawables } from "./../Drawable";
+import ImageProjectable, { ImageProjectables } from "./../ImageProjectable";
 import {
   DecodeHintType,
   ResultMetadataType,
@@ -388,7 +390,7 @@ const PALETTE_SIZE = 15;
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends ImageProjectable {
+class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
   /**
    * An Enum of all possible PatternTypes.
@@ -409,32 +411,6 @@ class Acnl extends ImageProjectable {
    * A mapping of bytes to hex color strings.
    */
   public static byteToColor = byteToColor;
-
-  /**
-   * Returns the closest color in the color palette of the pattern.
-   * @param color - the color to compare against
-   */
-  public static getClosestColor(inputColor: color): color {
-    if (typeof inputColor !== "string") {
-      const message = `Expected a valid color representation.`;
-      throw new TypeError(message);
-    }
-    try { chroma(inputColor); }
-    catch (error) {
-      const message = `Expected a valid color representation.`;
-      throw new TypeError(message);
-    }
-    let outputColor: color = null;
-    let outputColorDistance: number = null;
-    for (const color of Acnl.colors) {
-      const distance: number = chroma.distance(inputColor, color, "rgb");
-      // always pick the color with the minimum distance
-      if (outputColor != null && distance >= outputColorDistance) continue;
-      outputColor = color;
-      outputColorDistance = distance;
-    }
-    return outputColor;
-  }
 
   /**
    * Title, name of the pattern.
@@ -1100,6 +1076,33 @@ class Acnl extends ImageProjectable {
 
 
   /**
+   * Returns the nearest color in the color space of the Acnl.
+   * @param color - the color to match
+   */
+  public nearestInColorSpace(inputColor: color): color {
+    if (typeof inputColor !== "string") {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
+    try { chroma(inputColor); }
+    catch (error) {
+      const message = `Expected a valid color representation.`;
+      throw new TypeError(message);
+    }
+    let outputColor: color = null;
+    let outputColorDistance: number = null;
+    for (const color of Acnl.colors) {
+      const distance: number = chroma.distance(inputColor, color, "rgb");
+      // always pick the color with the minimum distance
+      if (outputColor != null && distance >= outputColorDistance) continue;
+      outputColor = color;
+      outputColorDistance = distance;
+    }
+    return outputColor;
+  }
+
+
+  /**
    * Loads data into the Acnl from a formatted binary string.
    * @param binaryString - the formatted binary string
    */
@@ -1392,4 +1395,6 @@ class Acnl extends ImageProjectable {
   }
 }
 
+Drawables.push(Acnl);
+ImageProjectables.push(Acnl);
 export default Acnl;
