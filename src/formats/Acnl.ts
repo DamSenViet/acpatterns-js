@@ -25,6 +25,7 @@ import {
   ResultMetadataType,
   Result,
   QRCodeDecoderErrorCorrectionLevel,
+  NotFoundException,
 } from "@zxing/library/esm";
 import QRCode from "@zxing/library/esm/core/qrcode/encoder/QRCode";
 import ByteMatrix from "@zxing/library/esm/core/qrcode/encoder/ByteMatrix";
@@ -35,6 +36,7 @@ import {
 } from "./../myZxing";
 import { QRScanningError } from "./../errors";
 import chroma from "chroma-js";
+import { passCubePixelShader } from "babylonjs/Shaders/passCube.fragment";
 
 // ACNL binary data layout.
 //
@@ -1079,6 +1081,7 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
   /**
    * Returns the nearest color in the color space of the Acnl.
    * @param color - the color to match
+   * @returns - the closest color the colorspace, hex string
    */
   public nearestInColorSpace(inputColor: color): color {
     if (typeof inputColor !== "string") {
@@ -1100,72 +1103,6 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
       outputColorDistance = distance;
     }
     return outputColor;
-  }
-
-
-  /**
-   * Loads data into the Acnl from a formatted binary string.
-   * @param binaryString - the formatted binary string
-   */
-  public fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
-    // decode everything
-    const bytes = binaryStringToBytes(binaryString);
-    if (
-      bytes.length < 620 ||
-      (bytes.length > 620 && bytes.length < 2156) ||
-      bytes.length > 2160
-    ) {
-      const message = `Expected binary string with 620 or 2156 - 2160 bytes, but received ${bytes.length} bytes.`;
-      throw new RangeError(message);
-    }
-    // do a size check
-    this._title = bytesToString(bytes.splice(0, 42));
-    this._villagerId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._villagerName = bytesToString(bytes.splice(0, 18));
-    this._villagerIsFemale = Boolean(bytes.splice(0, 1)[0]);
-    bytes.splice(0, 1); // zero padding
-    this._townId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._townName = bytesToString(bytes.splice(0, 18));
-    this._language = bytes.splice(0, 1)[0];
-    bytes.splice(0, 1); // zero padding
-    this._country = bytes.splice(0, 1)[0];
-    this._region = bytes.splice(0, 1)[0];
-    bytes.splice(0, 15).forEach((byte, i) => {
-      this._palette[i] = Acnl.byteToColor.get(byte);
-    });
-    this._color = bytes.splice(0, 1)[0];
-    this._looks = bytes.splice(0, 1)[0];
-    this._type = byteToType.get(bytes.splice(0, 1)[0]);
-    bytes.splice(0, 2); // zero padding
-    // load pixels
-    const pixelsFlattened: paletteIndex[] = bytes
-      .splice(0, bytes.length)
-      .reduce((accum, byte) => {
-        // each byte contains 2 pixels
-        accum.push(byte & 0xf);
-        accum.push((byte >> 4) & 0xf);
-        return accum;
-      }, []);
-    for (let y = 0; y < this._type.size; ++y) {
-      for (let x = 0; x < PIXELS_WIDTH; ++x) {
-        this._pixels[x][y] = pixelsFlattened[x + y * PIXELS_WIDTH];
-      }
-    }
-    this._refreshPixelsApi();
-    this._refreshSectionsApi();
-    this._hooks.load.trigger();
-    return this;
-  }
-
-
-  /**
-   * Creates an Acnl from a formatted binary string.
-   * @param binaryString - the formatted binary string to convert
-   * @returns - the Acnl
-   */
-  public static fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
-    const acnl = new Acnl();
-    return acnl.fromBinaryString(binaryString);
   }
 
 
@@ -1236,88 +1173,86 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
 
   /**
-   * Loads data into the Acnl from 1 whole or 4 multipart QR codes in one image.
+   * Loads data into the Acnl from a formatted binary string.
+   * @param binaryString - the formatted binary string
+   * @returns - this acnl
+   */
+  public fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
+    // decode everything
+    const bytes = binaryStringToBytes(binaryString);
+    if (
+      bytes.length < 620 ||
+      (bytes.length > 620 && bytes.length < 2156) ||
+      bytes.length > 2160
+    ) {
+      const message = `Expected binary string with 620 or 2156 - 2160 bytes, but received ${bytes.length} bytes.`;
+      throw new RangeError(message);
+    }
+    // do a size check
+    this._title = bytesToString(bytes.splice(0, 42));
+    this._villagerId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._villagerName = bytesToString(bytes.splice(0, 18));
+    this._villagerIsFemale = Boolean(bytes.splice(0, 1)[0]);
+    bytes.splice(0, 1); // zero padding
+    this._townId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
+    this._townName = bytesToString(bytes.splice(0, 18));
+    this._language = bytes.splice(0, 1)[0];
+    bytes.splice(0, 1); // zero padding
+    this._country = bytes.splice(0, 1)[0];
+    this._region = bytes.splice(0, 1)[0];
+    bytes.splice(0, 15).forEach((byte, i) => {
+      this._palette[i] = Acnl.byteToColor.get(byte);
+    });
+    this._color = bytes.splice(0, 1)[0];
+    this._looks = bytes.splice(0, 1)[0];
+    this._type = byteToType.get(bytes.splice(0, 1)[0]);
+    bytes.splice(0, 2); // zero padding
+    // load pixels
+    const pixelsFlattened: paletteIndex[] = bytes
+      .splice(0, bytes.length)
+      .reduce((accum, byte) => {
+        // each byte contains 2 pixels
+        accum.push(byte & 0xf);
+        accum.push((byte >> 4) & 0xf);
+        return accum;
+      }, []);
+    for (let y = 0; y < this._type.size; ++y) {
+      for (let x = 0; x < PIXELS_WIDTH; ++x) {
+        this._pixels[x][y] = pixelsFlattened[x + y * PIXELS_WIDTH];
+      }
+    }
+    this._refreshPixelsApi();
+    this._refreshSectionsApi();
+    this._hooks.load.trigger();
+    return this;
+  }
+
+
+  /**
+   * Creates an Acnl from a formatted binary string.
+   * @param binaryString - the formatted binary string to convert
+   * @returns - the Acnl
+   */
+  public static fromBinaryString(binaryString: string): Acnl /* throws RangeError, TypeError */ {
+    const acnl = new Acnl();
+    return acnl.fromBinaryString(binaryString);
+  }
+
+
+  /**
+   * Loads data into the Acnl from 1 whole or 4 multipart QR codes over multiple images.
    * @param image - an image to scan for QR Codes
    * @returns - a promise resolving tothe Acnl
    */
-  public async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
-    if (!(image instanceof HTMLImageElement)) {
-      const message = `Expected instanceof ${HTMLImageElement.name}`;
-      throw new TypeError(message);
-    }
-    const browserQRCodeReader = new MyBrowserQRCodeReader();
-    const hints = new Map();
-    hints.set(DecodeHintType.TRY_HARDER, true);
-    browserQRCodeReader.hints = hints;
-
-    let results: Array<Result>;
-    try { results = await browserQRCodeReader.decodeFromImage(image); }
-    catch (error) {
-      let message = `No valid QR codes could be scanned from the image.`;
-      if (error instanceof ImageLoadingException) message = error.message;
-      throw new QRScanningError(message);
-    }
-    browserQRCodeReader.reset();
-    if (results.length === 0) {
+  public async fromQRCodes(images: Array<HTMLImageElement>): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+    const acnls = await Acnl.fromQRCodes(images);
+    if (acnls.length === 0) {
       const message = `No valid QR Codes could be scanned from the image.`;
       throw new QRScanningError(message);
     }
-    else if (results.length === 1) {
-      const bytes: Uint8Array = results[0]
-        .getResultMetadata()
-        .get(ResultMetadataType.BYTE_SEGMENTS)[0];
-      const binaryString = bytesToBinaryString(<Array<byte>><unknown>bytes);
-      try {
-        return this.fromBinaryString(binaryString);
-      }
-      catch (error) {
-        const message = `QR Code(s) contained invalid contents.`;
-        throw new QRScanningError(message);
-      }
-    }
-    else if (results.length === 4) {
-      interface ExtractedResult {
-        bytes: Uint8Array;
-        sequenceNumber: number;
-      };
-      const extractedResults: Array<ExtractedResult> = results.map((result) => {
-        const resultMetadata = result.getResultMetadata();
-        const bytes: Uint8Array = resultMetadata
-          .get(ResultMetadataType.BYTE_SEGMENTS)[0];
-        const sequenceNumber: number = <number>resultMetadata
-          .get(ResultMetadataType.STRUCTURED_APPEND_SEQUENCE) >> 4;
-        return {
-          bytes,
-          sequenceNumber,
-        };
-      });
-      extractedResults.sort((a, b) => {
-        return a.sequenceNumber - b.sequenceNumber;
-      });
-      const missingSequenceNumbers = new Set([0, 1, 2, 3]);
-      extractedResults.forEach((extractedResult) => {
-        missingSequenceNumbers.delete(extractedResult.sequenceNumber);
-      });
-      if (missingSequenceNumbers.size > 0) {
-        const message = `Image is missing specific QR codes that make up the Acnl formatted pattern.`
-        throw new QRScanningError(message);
-      }
-      const binaryString = extractedResults.map((extractedResult) => {
-        return bytesToBinaryString(<Array<byte>><unknown>extractedResult.bytes);
-      }).join("");
-      try {
-        return this.fromBinaryString(binaryString);
-      }
-      catch (error) {
-        const message = `QR Code(s) contained invalid contents.`;
-        throw new QRScanningError(message);
-      }
-    }
-    else {
-      // not enough or too many qr codes in the image, need custom error
-      const message = `Image contains too many or too few QR codes to extract a single Acnl formatted pattern.`;
-      throw new QRScanningError(message);
-    }
+    // load data from an acnl into itself
+    const acnl = acnls[0];
+    return this.fromBinaryString(acnl.toBinaryString());
   }
 
 
@@ -1326,9 +1261,116 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
    * @param image - an image to scan for QR Codes
    * @returns - a promise resolving to the Acnl
    */
-  public static async fromQRCodes(image: HTMLImageElement): Promise<Acnl> /* throws TypeError, QRScanningError */ {
-    const acnl = new Acnl();
-    return await acnl.fromQRCodes(image);
+  public static async fromQRCodes(images: Array<HTMLImageElement>): Promise<Array<Acnl>> /* throws TypeError, QRScanningError */ {
+    interface ExtractedResult {
+      bytes: Uint8Array;
+      sequenceNumber: number;
+      parity: number; // number to check to make sure qr parts are from same data
+    };
+    if (!(images instanceof Array)) {
+      const message = `Expected an array of ${HTMLImageElement.name}`;
+      throw new TypeError(message);
+    }
+    for (const image of images) {
+      if (!(image instanceof HTMLImageElement)) {
+        const message = `Expected an array of ${HTMLImageElement.name}`;
+        throw new TypeError(message);
+      }
+    }
+    const acnls = new Array<Acnl>();
+    const parityToExtractedResults = new Map<number, Array<ExtractedResult>>();
+    for (const image of images) {
+      const browserQRCodeReader = new MyBrowserQRCodeReader();
+      const hints = new Map();
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      browserQRCodeReader.hints = hints;
+
+      let results: Array<Result>;
+      try {
+        results = await browserQRCodeReader.decodeFromImage(image);
+        browserQRCodeReader.reset();
+      }
+      catch (error) {
+        if (!(error instanceof NotFoundException)) {
+          if (error instanceof ImageLoadingException) {
+            const message = error.message;
+            throw new QRScanningError(message);
+          }
+          else throw error;
+        };
+        continue;
+      }
+      const extractedResults: Array<ExtractedResult> = results.map((result) => {
+        const resultMetadata = result.getResultMetadata();
+        const bytes: Uint8Array = resultMetadata
+          .get(ResultMetadataType.BYTE_SEGMENTS)[0];
+        const sequenceNumber: number = <number>resultMetadata
+          .get(ResultMetadataType.STRUCTURED_APPEND_SEQUENCE) >> 4;
+        const parity: number = <number>resultMetadata.get(
+          ResultMetadataType.STRUCTURED_APPEND_PARITY);
+        return {
+          bytes,
+          sequenceNumber,
+          parity,
+        };
+      });
+      for (const extractedResult of extractedResults) {
+        // no need to deal with parity if you can just get it directly
+        if (extractedResult.bytes.length === 620) {
+          try {
+            const binaryString: string = bytesToBinaryString(
+              <Array<byte>><unknown>extractedResult.bytes
+            );
+            const acnl = Acnl.fromBinaryString(binaryString);
+            acnls.push(acnl);
+          }
+          catch (error) { }
+          continue;
+        }
+        if (extractedResult.bytes.length !== 540) { continue; }
+        let parityExtractedResults: Array<ExtractedResult>;
+        if (!parityToExtractedResults.has(extractedResult.parity)) {
+          parityExtractedResults = new Array<ExtractedResult>();
+          parityToExtractedResults.set(extractedResult.parity, parityExtractedResults);
+        }
+        else
+          parityExtractedResults =
+            parityToExtractedResults.get(extractedResult.parity);
+        parityExtractedResults.push(extractedResult);
+        const uniqueSequenceNumbers =
+          new Set(parityExtractedResults.map((er) => er.sequenceNumber));
+        uniqueSequenceNumbers.add(extractedResult.sequenceNumber);
+        if (
+          !uniqueSequenceNumbers.has(0) ||
+          !uniqueSequenceNumbers.has(1) ||
+          !uniqueSequenceNumbers.has(2) ||
+          !uniqueSequenceNumbers.has(3)
+        ) continue;
+        // if you have all parts, assemble the acnl
+        const acnlExtractedResults: Array<ExtractedResult>
+          = new Array<ExtractedResult>();
+        for (let i = 0; i < 4; ++i) {
+          const index = parityExtractedResults.findIndex((v) => {
+            if (v.sequenceNumber === i) return true;
+          });
+          acnlExtractedResults.push(parityExtractedResults[index]);
+        }
+        const binaryString: string = acnlExtractedResults.map((er) => {
+          return bytesToBinaryString(<Array<byte>><unknown>er.bytes);
+        }).join("");
+        const acnl = Acnl.fromBinaryString(binaryString);
+        // already guaranteed byte length is correct
+        acnls.push(acnl);
+        // remove used results to prevent reuse
+        for (const acnlExtractedResult of acnlExtractedResults) {
+          const index = parityExtractedResults.indexOf(acnlExtractedResult);
+          parityExtractedResults.splice(index, 1);
+        }
+        if (parityExtractedResults.length === 0)
+          parityToExtractedResults.delete(extractedResult.parity);
+      }
+    }
+    return acnls;
   }
 
 
