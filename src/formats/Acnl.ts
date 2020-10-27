@@ -19,6 +19,7 @@ import {
   propertyConfig,
 } from "./../utils";
 import Drawable, { Drawables } from "./../Drawable";
+import Modelable, { Modelables } from "./../Modelable";
 import ImageProjectable, { ImageProjectables } from "./../ImageProjectable";
 import {
   DecodeHintType,
@@ -392,7 +393,7 @@ const PALETTE_SIZE = 15;
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends AcPattern implements Drawable, ImageProjectable {
+class Acnl extends AcPattern implements Drawable, Modelable, ImageProjectable {
 
   /**
    * An Enum of all possible PatternTypes.
@@ -1241,11 +1242,12 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
   /**
    * Loads data into the Acnl from 1 whole or 4 multipart QR codes over multiple images.
+   * If multiple Acnls are encoded in the images, loads the first one.
    * @param image - an image to scan for QR Codes
-   * @returns - a promise resolving tothe Acnl
+   * @returns - a promise resolving to the Acnl
    */
   public async fromQRCodes(images: Array<HTMLImageElement>): Promise<Acnl> /* throws TypeError, QRScanningError */ {
-    const acnls = await Acnl.fromQRCodes(images);
+    const acnls = await Acnl.readQRCodes(images);
     if (acnls.length === 0) {
       const message = `No valid QR Codes could be scanned from the image.`;
       throw new QRScanningError(message);
@@ -1257,11 +1259,26 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
 
   /**
-   * Creates an Acnl from 1 whole or 4 multipart QR Codes in an image.
-   * @param image - an image to scan for QR Codes
+   * Decodes 1 whole or 4 multipart QR codes to construct an Acnl from the
+   * images. If there are multiple Acnls encoded in the images, loads the first
+   * it can decode.
+   * @param images - the images to scan for QR Codes
    * @returns - a promise resolving to the Acnl
    */
-  public static async fromQRCodes(images: Array<HTMLImageElement>): Promise<Array<Acnl>> /* throws TypeError, QRScanningError */ {
+  public static async fromQRCodes(
+    images: Array<HTMLImageElement>
+  ): Promise<Acnl> /* throws TypeError, QRScanningError */ {
+    const acnl = new Acnl();
+    return await acnl.fromQRCodes(images);
+  }
+
+
+  /**
+   * Decodes QR Codes to construct multiple Acnls from the images.
+   * @param images - the images to scan for QR Codes
+   * @returns - a promise resolving to the Acnls
+   */
+  public static async readQRCodes(images: Array<HTMLImageElement>): Promise<Array<Acnl>> /* throws TypeError, QRScanningError */ {
     interface ExtractedResult {
       bytes: Uint8Array;
       sequenceNumber: number;
@@ -1375,7 +1392,7 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
 
   /**
-   * Makes QR Code images for the Acnl.
+   * Creates QR Code images for the Acnl.
    * @returns - a Promise resolving to the QR Code images
    */
   public async toQRCodes(): Promise<Array<HTMLImageElement>> {
@@ -1429,7 +1446,7 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 
 
   /**
-   * Makes QR Code images for the Acnl.
+   * Creates QR Code images for the Acnl.
    * @param acnl - the acnl
    * @returns - a Promise resolving to the qr code images
    */
@@ -1439,5 +1456,6 @@ class Acnl extends AcPattern implements Drawable, ImageProjectable {
 }
 
 Drawables.push(Acnl);
+Modelables.push(Acnl);
 ImageProjectables.push(Acnl);
 export default Acnl;

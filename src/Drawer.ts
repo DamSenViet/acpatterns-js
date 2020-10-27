@@ -794,7 +794,7 @@ class Drawer {
 
 
   /**
-   * Puts the drawer into stopped state and cleans up all resources expendded.
+   * Puts the drawer into a stopped state and cleans up all resources expended.
    * Drawer cannot be used beyond this function call.
    */
   public dispose(): void {
