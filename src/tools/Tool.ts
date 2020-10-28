@@ -1,6 +1,6 @@
-import PixelsSource from "../PixelsSource";
-import Drawer, { DrawerMeasurements } from "../Drawer";
-import Drawable from "../Drawable";
+import AcPattern from "./../AcPattern";
+import PixelsSource from "./../PixelsSource";
+import Drawer, { DrawerMeasurements } from "./../Drawer";
 
 
 /**
@@ -24,7 +24,7 @@ class Tool {
     return this._drawer._context;
   }
 
-  protected get _pattern(): Drawable {
+  protected get _pattern(): AcPattern {
     // @ts-ignore
     return this._drawer._pattern;
   }

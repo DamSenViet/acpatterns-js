@@ -18,9 +18,6 @@ import {
   bytesToBinaryString,
   propertyConfig,
 } from "./../utils";
-import Drawable, { Drawables } from "./../Drawable";
-import Modelable, { Modelables } from "./../Modelable";
-import ImageProjectable, { ImageProjectables } from "./../ImageProjectable";
 import {
   DecodeHintType,
   ResultMetadataType,
@@ -37,7 +34,6 @@ import {
 } from "./../myZxing";
 import { QRScanningError } from "./../errors";
 import chroma from "chroma-js";
-import { passCubePixelShader } from "babylonjs/Shaders/passCube.fragment";
 
 // ACNL binary data layout.
 //
@@ -393,7 +389,7 @@ const PALETTE_SIZE = 15;
 /**
  * Class representing an Animal Crossing New Leaf in-game pattern.
  */
-class Acnl extends AcPattern implements Drawable, Modelable, ImageProjectable {
+class Acnl extends AcPattern {
 
   /**
    * An Enum of all possible PatternTypes.
@@ -1082,9 +1078,9 @@ class Acnl extends AcPattern implements Drawable, Modelable, ImageProjectable {
   /**
    * Returns the nearest color in the color space of the Acnl.
    * @param color - the color to match
-   * @returns - the closest color the colorspace, hex string
+   * @returns - the closest color in the colorspace, hex string
    */
-  public nearestInColorSpace(inputColor: color): color {
+  public static nearestColorInColorSpace(inputColor: color): color {
     if (typeof inputColor !== "string") {
       const message = `Expected a valid color representation.`;
       throw new TypeError(message);
@@ -1455,7 +1451,4 @@ class Acnl extends AcPattern implements Drawable, Modelable, ImageProjectable {
   }
 }
 
-Drawables.push(Acnl);
-Modelables.push(Acnl);
-ImageProjectables.push(Acnl);
 export default Acnl;

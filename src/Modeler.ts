@@ -1,9 +1,7 @@
+import AcPattern from "./AcPattern";
 import Acnl from "./formats/Acnl";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
-import Modelable, {
-  isInstanceofModelable
-} from "./Modelable";
 import {
   color,
   paletteIndex,
@@ -66,7 +64,7 @@ patternTypeToModelData.set(Acnl.types.Standard, assets.acnl.standard);
  * Modeler constructor options.
  */
 export interface ModelerOptions {
-  pattern: Modelable;
+  pattern: AcPattern;
   canvas: HTMLCanvasElement;
 };
 
@@ -88,7 +86,7 @@ enum ModelerStates {
 };
 
 /**
- * Renders a Drawable Pattern on a model.
+ * Renders a pattern on a model.
  * Reacts to changes to the pattern by default.
  */
 class Modeler {
@@ -106,7 +104,7 @@ class Modeler {
   /**
    * The pattern to texture the model with.
    */
-  private _pattern: Modelable = null;
+  private _pattern: AcPattern = null;
 
   /**
    * Cached pixels source from the pattern.
@@ -232,9 +230,9 @@ class Modeler {
     const { canvas, pattern } = options;
     if (
       pattern == null ||
-      !(isInstanceofModelable(pattern))
+      !(pattern instanceof AcPattern)
     ) {
-      const message = `Expected an instance of a Drawable pattern.`;
+      const message = `Expected an instance of a pattern.`;
       throw new TypeError(message);
     }
     if (
@@ -659,7 +657,7 @@ class Modeler {
   /**
    * Gets the pattern the Modeler is drawing.
    */
-  public get pattern(): Modelable {
+  public get pattern(): AcPattern {
     return this._pattern;
   }
 

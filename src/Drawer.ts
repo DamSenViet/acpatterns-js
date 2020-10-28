@@ -1,8 +1,6 @@
+import AcPattern from "./AcPattern";
 import PixelsSource from "./PixelsSource";
 import PatternType from "./PatternType";
-import Drawable, {
-  isInstanceofDrawable
-} from "./Drawable";
 import { Tool } from "./tools";
 import {
   color,
@@ -13,7 +11,7 @@ import xbrz from "./xbrz";
 
 export interface DrawerOptions {
   canvas: HTMLCanvasElement,
-  pattern: Drawable;
+  pattern: AcPattern;
 };
 
 export interface DrawerMeasurements {
@@ -62,7 +60,7 @@ enum DrawerStates {
 
 
 /**
- * Renders a Drawable Pattern on a canvas.
+ * Renders a pattern on a canvas.
  * Reacts to changes to the pattern by default.
  */
 class Drawer {
@@ -85,7 +83,7 @@ class Drawer {
   /**
    * The pattern to draw.
    */
-  private _pattern: Drawable = null;
+  private _pattern: AcPattern = null;
 
   /**
    * The source of the pattern to be drawn.
@@ -209,9 +207,9 @@ class Drawer {
     const { canvas, pattern } = options;
     if (
       pattern == null ||
-      !isInstanceofDrawable(pattern)
+      !(pattern instanceof AcPattern)
     ) {
-      const message = `Expected an instance of a Drawable pattern.`;
+      const message = `Expected an instance of a pattern.`;
       throw new TypeError(message);
     }
     if (
@@ -606,7 +604,7 @@ class Drawer {
   /**
    * Gets the pattern the Drawer is drawing.
    */
-  public get pattern(): Drawable {
+  public get pattern(): AcPattern {
     return this._pattern;
   }
 
