@@ -25,7 +25,7 @@ export default {
     } = await import("./../../../build/esm");
 
     const acnl = new formats.Acnl();
-    acnl.palette[acnl.palette.length - 1] = acnl.nearestInColorSpace("black");
+    acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
     const pen = new tools.Pen({ size: 1 });
     pen.paletteIndex = acnl.palette.length - 1;

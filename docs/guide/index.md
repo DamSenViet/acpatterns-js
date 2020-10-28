@@ -100,7 +100,7 @@ const drawerCanvas = document.querySelector(".drawer");
 
 // make last color in palette black
 const acnl = new formats.Acnl();
-acnl.palette[acnl.palette.length - 1] = acnl.nearestInColorSpace("black");
+acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
 // make pen use last color in the palette
 const pen = new tools.Pen({ size: 1 });
@@ -132,10 +132,10 @@ const drawerCanvas: HTMLCanvasElement = document.querySelector(".drawer");
 
 // make last color in palette black
 const acnl: format.Acnl = new formats.Acnl();
-acnl.palette[acnl.palette.length - 1] = acnl.nearestInColorSpace("black");
+acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
 // make pen use last color in the palette
-const pen: Pen = new tools.Pen({ size: 1 });
+const pen: tools.Pen = new tools.Pen({ size: 1 });
 pen.paletteIndex = acnl.palette.length - 1;
 
 // make the drawer draw the texture representation of the pattern
@@ -162,7 +162,7 @@ If you installed the library via `<script></script>` , use this code instead.
 
   // make last color in palette black
   const acnl = new acpatterns.formats.Acnl();
-  acnl.palette[acnl.palette.length - 1] = acnl.nearestInColorSpace("black");
+  acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
   // make pen use last color in the palette
   const pen: Pen = new acpatterns.tools.Pen({ size: 1 });
