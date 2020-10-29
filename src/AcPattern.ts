@@ -11,6 +11,11 @@ abstract class AcPattern {
   public abstract get type(): PatternType;
 
   /**
+   * Sets the pattern type.
+   */
+  public abstract set type(type: PatternType);
+
+  /**
    * Gets the pattern palette.
    */
   public abstract get palette(): Array<color>;
@@ -32,7 +37,11 @@ abstract class AcPattern {
     texture: PixelsSource;
     [key: string]: PixelsSource;
   };
-  
+
+  /**
+   * Returns the closest available hex color to the pattern format's color space.
+   * @param inputColor - the color to translate into the color space
+   */
   public static nearestColorInColorSpace(inputColor: color): color {
     if (typeof inputColor !== "string") {
       const message = `Expected a valid color representation.`;

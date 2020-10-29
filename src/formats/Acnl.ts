@@ -1411,6 +1411,7 @@ class Acnl extends AcPattern {
         );
       }
     }
+    const qrCodeImagesLoadedPromises: Array<Promise<void>> = new Array<Promise<void>>();
     const qrCodeImages: Array<HTMLImageElement> = qrCodes.map((qrCode: QRCode) => {
       const byteMatrix: ByteMatrix = qrCode.getMatrix();
       const byteMatrixWidth: number = byteMatrix.getWidth();
@@ -1433,10 +1434,18 @@ class Acnl extends AcPattern {
         }
       }
       const image: HTMLImageElement = document.createElement("img");
-      image.src = canvas.toDataURL("image/jpeg", 1);
-      console.log(image.height, image.width);
+      qrCodeImagesLoadedPromises.push(new Promise<void>((resolve) => {
+        const imageOnLoad = () => {
+          image.removeEventListener("load", imageOnLoad);
+          resolve();
+        };
+        image.addEventListener("load", imageOnLoad);
+        image.src = canvas.toDataURL("image/jpeg", 1);
+      }));
       return image;
     });
+    // wait for all images to finish loading
+    await Promise.all(qrCodeImagesLoadedPromises);
     return qrCodeImages;
   }
 
