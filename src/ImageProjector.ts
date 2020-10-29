@@ -1,5 +1,5 @@
+import AcPattern from "./AcPattern";
 import PixelsSource from "./PixelsSource";
-import ImageProjectable from "./ImageProjectable";
 import { color, paletteIndex, } from "./utils";
 import chroma from "chroma-js";
 import { ImageProjectingError } from "./errors";
@@ -67,7 +67,7 @@ class ImageProjector {
     // do not need to check aspect ratios, auto stretching to match
     imageOffsetWidth: number = image.width,
     imageOffsetHeight: number = image.height,
-    pattern: ImageProjectable,
+    pattern: AcPattern,
     paletteOffset: number = 0,
     paletteSize: number = pattern.palette.length - paletteOffset,
     section: PixelsSource = pattern.sections.texture,
@@ -111,11 +111,8 @@ class ImageProjector {
     }
 
     // verify pattern
-    if (
-      !(pattern instanceof ImageProjectable &&
-        pattern.constructor !== ImageProjectable)
-    ) {
-      const message = `Expected an instance of a image projectable pattern.`;
+    if (!(pattern instanceof AcPattern)) {
+      const message = `Expected an instance of a pattern.`;
       throw new TypeError(message);
     }
 
@@ -299,8 +296,10 @@ class ImageProjector {
     const uniqueColors = new Set<color>();
     for (let i: number = 0; i < imageChromaColors.length; ++i) {
       const chromaColor: chroma.Color = imageChromaColors[i];
-      const patternClass: typeof ImageProjectable = <typeof ImageProjectable>pattern.constructor;
-      uniqueColors.add(patternClass.getClosestColor(chromaColor.hex("rgb")).toUpperCase());
+      uniqueColors.add(
+        (pattern.constructor as typeof AcPattern)
+         .nearestColorInColorSpace(chromaColor.hex("rgb"))
+          .toUpperCase());
     }
     const colors: Array<color> = [...uniqueColors];
 
@@ -336,7 +335,7 @@ class ImageProjector {
           const distance: number = chroma.distance(
             chromaColor,
             pattern.palette[i],
-            "rgb"
+            colorMatchingMethod,
           );
           if (
             closestColorPaletteIndex != null &&

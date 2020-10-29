@@ -80,6 +80,7 @@ as their texture representation and allow you to draw on the canvas.
 Assuming you have the following HTML content, you can link a pattern to a
 `Drawer` in this quick start guide like so:
 
+
 1. **ES Modules**
 
 If you installed the library via `npm` or `yarn` use the code below.
@@ -89,17 +90,17 @@ If you installed the library via `npm` or `yarn` use the code below.
 
 ``` js
 import {
-  Acnl,
+  formats,
   Drawer,
   tools,
 } from "acpatterns";
 
-// this or maybe a ref to the canvas in a component system
+// like this or maybe a ref to the canvas in a component system
 const drawerCanvas = document.querySelector(".drawer");
 
 // make last color in palette black
-const acnl = new Acnl();
-acnl.palette[acnl.palette.length - 1] = Acnl.getClosestColor("black");
+const acnl = new formats.Acnl();
+acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
 // make pen use last color in the palette
 const pen = new tools.Pen({ size: 1 });
@@ -115,27 +116,26 @@ drawer.grid = true;
 drawer.indicator = true;
 drawer.tool = pen;
 ```
-
 </code-block>
 
 <code-block title="TypeScript">
 
 ``` ts
 import {
-  Acnl,
+  formats,
   Drawer,
   tools,
 } from "acpatterns"; 
 
-// this or maybe a ref to the canvas in a component system
+// like this or maybe a ref to the canvas in a component system
 const drawerCanvas: HTMLCanvasElement = document.querySelector(".drawer");
 
 // make last color in palette black
-const acnl: Acnl = new Acnl();
-acnl.palette[acnl.palette.length - 1] = Acnl.getClosestColor("black");
+const acnl: format.Acnl = new formats.Acnl();
+acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
 // make pen use last color in the palette
-const pen: Pen = new tools.Pen({ size: 1 });
+const pen: tools.Pen = new tools.Pen({ size: 1 });
 pen.paletteIndex = acnl.palette.length - 1;
 
 // make the drawer draw the texture representation of the pattern
@@ -148,9 +148,9 @@ drawer.grid = true;
 drawer.indicator = true;
 drawer.tool = pen;
 ```
-
 </code-block>
 </code-group>
+
 
 2. **Script**
 
@@ -161,8 +161,8 @@ If you installed the library via `<script></script>` , use this code instead.
   const drawerCanvas = document.querySelector(".drawer");
 
   // make last color in palette black
-  const acnl = new acpatterns.Acnl();
-  acnl.palette[acnl.palette.length - 1] = acnl.constructor.getClosestColor("black");
+  const acnl = new acpatterns.formats.Acnl();
+  acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
   // make pen use last color in the palette
   const pen: Pen = new acpatterns.tools.Pen({ size: 1 });

@@ -19,7 +19,7 @@ const nav = [
 const displayAllHeaders = false;
 
 const sidebar = "auto";
-const sidebarDepth = 3;
+const sidebarDepth = 2; // max supported is 2
 
 const search = true;
 const searchPlaceholder = "Search...";

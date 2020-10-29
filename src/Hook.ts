@@ -1,13 +1,13 @@
 class Hook<T extends any[]> {
-  private _callbacks: Function[] = [];
+  private _callbacks: Array<(...args: T) => any> = [];
 
   public constructor() { }
 
-  public tap(callback: Function): void {
+  public tap(callback: (...args: T) => any): void {
     this._callbacks.push(callback);
   }
 
-  public untap(callback: Function): void {
+  public untap(callback: (...args: T) => any): void {
     for (let i = 0; i < this._callbacks.length; ++i) {
       if (callback !== this._callbacks[i]) continue;
       this._callbacks.splice(i, 1);
@@ -15,10 +15,7 @@ class Hook<T extends any[]> {
   }
 
   public clear(): void {
-    for (let i = 0; i < this._callbacks.length; ++i) {
-      this._callbacks[i] = null;
-    }
-    while (this._callbacks.length !== 0) {
+    while (this._callbacks.length > 0) {
       this._callbacks.pop();
     }
   }

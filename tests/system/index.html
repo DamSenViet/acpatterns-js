@@ -142,6 +142,7 @@
   </div>
   <div>
     <input class="acnl" type="file" accept=".acnl" />
+    <input class="fromQRCodes" type="file" />
     <input class="toBinaryStr" type="file" />
   </div>
   <div class="qrs-container">
@@ -234,6 +235,7 @@
     const modelCanvas = document.querySelector("canvas.model");
     const input = document.querySelector("input.acnl");
     const toBinaryStr = document.querySelector("input.toBinaryStr");
+    const fromQRCodes = document.querySelector("input.fromQRCodes");
 
     const sectionsElement = document.querySelector("div.sections");
     const typesElement = document.querySelector("div.types");
@@ -241,7 +243,7 @@
     const qrsImagesElement = document.querySelector("div.qrs-images");
     const qrsButtonsElement = document.querySelector("div.qrs-buttons");
 
-    let acnl = new acpatterns.Acnl();
+    let acnl = new acpatterns.formats.Acnl();
     let drawer = new acpatterns.Drawer({
       pattern: acnl,
       canvas: drawCanvas,
@@ -279,13 +281,13 @@
     });
 
     const fillTypesElement = () => {
-      for (let typeKey of Object.keys(acpatterns.Acnl.types)) {
+      for (let typeKey of Object.keys(acpatterns.formats.Acnl.types)) {
         const button = new DOMParser().parseFromString(
-          `<button>${acpatterns.Acnl.types[typeKey].name}</button>`,
+          `<button>${acpatterns.formats.Acnl.types[typeKey].name}</button>`,
           "text/html").querySelector("body").firstChild;
         typesElement.insertBefore(button, null);
         button.onclick = (() => {
-          acnl.type = acpatterns.Acnl.types[typeKey];
+          acnl.type = acpatterns.formats.Acnl.types[typeKey];
         });
       }
     };
@@ -322,7 +324,7 @@
       ) continue;
       qrButton.onclick = function () {
         console.log(`loading ${this.innerText}`);
-        acnl.fromQRCodes(qrImage);
+        acnl.fromQRCodes([qrImage]);
       }
     }
 
@@ -345,7 +347,18 @@
       acnl.fromBinaryString(binaryString);
       console.log(acnl.toBinaryString() === binaryString);
     };
-
+    
+    fromQRCodes.onchange = async (event) => {
+      const fileReader = new FileReader();
+      const dataURL = await new Promise((resolve) => {
+        fileReader.onload = event => resolve(event.target.result);
+        fileReader.readAsDataURL(event.target.files[0]);
+      });
+      const image = document.createElement("img");
+      image.src = dataURL;
+      await acnl.fromQRCodes(image);
+    };
+    
     toBinaryStr.onchange = async (event) => {
       const fileReader = new FileReader();
       const binaryString = await new Promise((resolve) => {
@@ -355,7 +368,6 @@
       console.log(binaryString);
     };
 
-    
     const renderQrCodes = async() => {
       const qrCodeImages = await acnl.toQRCodes();
       const qrCodesElement = document.querySelector(".qr-codes");
@@ -366,7 +378,26 @@
         qrCodeImage.classList.add("qr-code");
         qrCodesElement.appendChild(qrCodeImage);
       }
-    }
+    };
+    
+    
+    (async () => {
+      // testing multiple qr codes
+      const imageSources = [
+        "./qr-acnl-dress.png",
+        "./qr-acnl-standee.jpg",
+        "./qr-acnl-standard.jpg",
+      ];
+      const images = imageSources.map((src) => {
+        const image = document.createElement("img");
+        image.src = src;
+        return image;
+      });
+      const patterns = await acpatterns.formats.Acnl.fromQRCodes(images);
+      console.log("testing scanning multiple qr codes at once");
+      console.log(patterns);
+    })();
+    
   </script>
 </body>
 
