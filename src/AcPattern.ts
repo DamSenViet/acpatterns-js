@@ -39,7 +39,7 @@ abstract class AcPattern {
   };
 
   /**
-   * Returns the closest available hex color to the pattern format's color space.
+   * Translates the inputColor to the closest available hex color in the space.
    * @param inputColor - the color to translate into the color space
    */
   public static nearestColorInColorSpace(inputColor: color): color {

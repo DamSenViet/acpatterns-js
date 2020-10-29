@@ -513,13 +513,20 @@ class Acnl extends AcPattern {
   /**
    * Instantiates an Acnl.
    */
-  public constructor() {
+  public constructor(acnl?) {
     super();
     // setup on all public apis
     this._refreshHooksApi();
     this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
+    if (acnl instanceof Acnl) {
+      this.fromBinaryString(acnl.toBinaryString());
+    }
+    else {
+      const message = `Expected undefined or an instance of an Acnl.`;
+      throw new TypeError(message);
+    }
   };
 
 
