@@ -2,6 +2,7 @@ import Tool from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface CircleOptions {
+  paletteIndex?: paletteIndex;
 }
 
 
@@ -58,6 +59,8 @@ class Circle extends Tool {
   public constructor(options?: CircleOptions) {
     super();
     if (arguments.length <= 0) return;
+    const { paletteIndex } = options;
+    if (paletteIndex != null) this.paletteIndex = paletteIndex;
   }
 
 
