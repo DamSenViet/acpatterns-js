@@ -47,17 +47,26 @@
     "webpack": "^4.43.0",
     "webpack-bundle-analyzer": "^3.9.0",
     "webpack-format-messages": "^2.0.6",
-    "worker-loader": "^3.0.4",
     "yargs": "^15.3.1"
   },
   "dependencies": {
     "@types/chroma-js": "^2.1.0",
     "@zxing/library": "^0.17.1",
-    "babylonjs": "^4.1.0",
-    "babylonjs-loaders": "^4.1.0",
     "chroma-js": "^2.1.0",
     "pnnquant": "git+https://github.com/DamSenViet/PnnQuant.js.git#20fea867d9a0dce4b0a0a0d865cb798c8731eb34",
     "ts-custom-error": "^3.2.0"
+  },
+  "peerDependencies": {
+    "babylonjs": "^4.1.0",
+    "babylonjs-loaders": "^4.1.0"
+  },
+  "peerDependenciesMeta": {
+    "babylonjs": {
+      "optional": true
+    },
+    "babylonjs-loaders": {
+      "optional": true
+    }
   },
   "unpkg": "build/umd/index.js"
 }
