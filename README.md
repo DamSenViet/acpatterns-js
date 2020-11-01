@@ -22,7 +22,7 @@ rendering engine is required to use the modeler.
 
 ``` bash
 # core library
-npm install acpatterns
+npm install @damsenviet/acpatterns
 # if you need the modeler
 npm install babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
@@ -31,7 +31,7 @@ npm install babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 
 ``` bash
 # core library
-yarn add acpatterns
+yarn add @damsenviet/acpatterns
 # if you need the modeler
 yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
@@ -43,7 +43,7 @@ yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 <script src="https://unpkg.com/babylonjs@^4.1.0/babylon.js"></script>
 <script src="https://unpkg.com/babylonjs-loaders@^4.1.0/babylonjs.loaders.min.js"></script>
 <!-- core library -->
-<script src="https://unpkg.com/acpatterns"></script>
+<script src="https://unpkg.com/@damsenviet/acpatterns"></script>
 ```
 
 
@@ -78,7 +78,7 @@ import {
   formats,
   Drawer,
   tools,
-} from "acpatterns";
+} from "@damsenviet/acpatterns";
 
 // need reference to the canvas
 const drawerCanvas = document.querySelector(".drawer");
