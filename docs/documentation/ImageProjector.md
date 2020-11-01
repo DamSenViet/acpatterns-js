@@ -4,6 +4,11 @@
 
 Instantiates an ImageProjector.
 
+* Arguments
+  + `image`
+    - Type: `HTMLImageElement`
+    - Required: `true`
+
 ## Instance Methods
 
 ### project
@@ -11,8 +16,8 @@ Instantiates an ImageProjector.
 Projects an image onto a pattern.
 
 * Arguments
-  + `image`
-    - Type: `HTMLImageElement`
+  + `pattern`
+    - Type: `AcPattern`
     - Required: `true`
   + `imageOffsetX`
     - Type: `number`
@@ -29,17 +34,6 @@ Projects an image onto a pattern.
   + `imageOffsetHeight`
     - Type: `number`
     - Default: `image.height`
-    - Required: `false`
-  + `pattern`
-    - Type: `AcPattern`
-    - Required: `true`
-  + `paletteOffset`
-    - Type: `number`
-    - Default: `0`
-    - Required: `false`
-  + `paletteSize`
-    - Type: `number`
-    - Default: `pattern.palette.length`
     - Required: `false`
   + `section`
     - Type: `PixelsSource`
@@ -60,6 +54,14 @@ Projects an image onto a pattern.
   + `sectionOffsetHeight`
     - Type: `number`
     - Default: `section.height`
+    - Required: `false`
+  + `paletteOffset`
+    - Type: `number`
+    - Default: `0`
+    - Required: `false`
+  + `paletteSize`
+    - Type: `number`
+    - Default: `pattern.palette.length`
     - Required: `false`
   + `opacityThreshold`
     - Type: `number`

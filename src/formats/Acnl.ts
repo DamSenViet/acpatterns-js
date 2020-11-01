@@ -520,9 +520,9 @@ class Acnl extends AcPattern {
     this._refreshPaletteApi();
     this._refreshPixelsApi();
     this._refreshSectionsApi();
-    if (acnl instanceof Acnl) {
+    if (acnl == null) return;
+    if (acnl instanceof Acnl)
       this.fromBinaryString(acnl.toBinaryString());
-    }
     else {
       const message = `Expected undefined or an instance of an Acnl.`;
       throw new TypeError(message);

@@ -56,7 +56,6 @@ export default {
     await modeler.setup();
     modeler.pixelFilter = true;
 
-    const imageProjector = new ImageProjector();
     const image = new Image();
     await new Promise((resolve, reject) => {
       image.addEventListener("load", () => {
@@ -65,20 +64,20 @@ export default {
       image.crossOrigin = "Anonymous";
       image.src = imageSrc;
     });
+    const imageProjector = new ImageProjector(image);
     await imageProjector.project(
-      image,
+      acnl,
       0,
       0,
       image.width,
       image.height,
-      acnl,
-      0,
-      acnl.palette.length,
       acnl.sections.texture,
       0,
       0,
       acnl.sections.texture.width,
       acnl.sections.texture.height,
+      0,
+      acnl.palette.length,
       1,
       ImageProjector.ImageSmoothingQualities.None,
       ImageProjector.ColorMatchingMethods.LAB

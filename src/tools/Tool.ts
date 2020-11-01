@@ -199,13 +199,13 @@ class Tool {
   /**
    * Mount all event listeners onto the canvas.
    */
-  protected mount(): void { }
+  public mount(): void { }
 
 
   /**
    * Unmount all mounted event listeners on canvas.
    */
-  protected unmount(): void { }
+  public unmount(): void { }
 }
 
 export default Tool;

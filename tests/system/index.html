@@ -253,8 +253,7 @@
       canvas: modelCanvas,
     });
     modeler.setup();
-    let imageProjector = new acpatterns.ImageProjector();
-
+    
     const projectImage = (async (src) => {
       const img = new Image();
       await new Promise((resolve, reject) => {
@@ -263,17 +262,17 @@
         });
         img.src = src;
       });
+      let imageProjector = new acpatterns.ImageProjector(img);
       await imageProjector.project(
-        img,
+        acnl,
         0, 0,
         img.width,
         img.height,
-        acnl,
-        0,
-        acnl.palette.length,
         acnl.pixels,
         0, 0,
         32, 32,
+        0,
+        acnl.palette.length,
         1,
         acpatterns.ImageProjector.ImageSmoothingQualities.None,
         acpatterns.ImageProjector.ColorMatchingMethods.RGB,
