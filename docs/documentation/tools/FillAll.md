@@ -13,8 +13,7 @@ Instantiates a FillAll tool.
     - Type: `Object`
     - Properties:
       * `paletteIndex`
-        * Type: `paletteIndex`
-        * Required: `false`
+        * Type: [`paletteIndex`](./../paletteIndex.md)
 
 ## Instance Accessors
 
@@ -26,4 +25,4 @@ The index on the palette indicating the color to fill in the pixel.
   + Type: `number`
   + Default: `0`
 * `set`
-  + Type: `number`  
+  + Type: `number`

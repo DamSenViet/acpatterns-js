@@ -4,10 +4,18 @@ class Hook<T extends any[]> {
   public constructor() { }
 
   public tap(callback: (...args: T) => any): void {
+    if (!(callback instanceof Function)) {
+      const message = `Expected a function.`;
+      throw new TypeError(message)
+    }
     this._callbacks.push(callback);
   }
 
   public untap(callback: (...args: T) => any): void {
+    if (!(callback instanceof Function)) {
+      const message = `Expected a function.`;
+      throw new TypeError(message)
+    }
     for (let i = 0; i < this._callbacks.length; ++i) {
       if (callback !== this._callbacks[i]) continue;
       this._callbacks.splice(i, 1);

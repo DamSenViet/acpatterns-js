@@ -18,7 +18,7 @@ The type of the pattern (e.g. Standard, Shirt, Dress, etc.)
 The mapping for rendering colors.
 
 * `get`
-  + Type: `Array<color>`
+  + Type: `Array<`[`color`](./color.md)`>`
 
 ### pixels
 
@@ -53,8 +53,7 @@ The hook system for subscribing to and triggering events.
 Translates the inputColor to the closest available hex color in the space.
 
 * Arguments:
-  + `inputColor`
-    - Type: `color`
-    - Required: `true`
+  + `inputColor`<Badge text="required" type="tip" />
+    - Type: [`color`](./color.md)
 * Returns
-  + Type: `color`
+  + Type: [`color`](./color.md)

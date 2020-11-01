@@ -14,10 +14,8 @@ Instantiates a Pen tool.
     - Properties:
       * `size`
         * Type: `number`
-        * Required: `false`
       * `paletteIndex`
-        * Type: `paletteIndex`
-        * Required: `false`
+        * Type: [`paletteIndex`](./../paletteIndex.md)
 
 ## Instance Accessors
 
@@ -29,7 +27,7 @@ The size of the square area to draw using the pen.
   + Type: `number`
   + Default: `1`
 * `set`
-  + Type: `number`  
+  + Type: `number`
 
 ### paletteIndex
 

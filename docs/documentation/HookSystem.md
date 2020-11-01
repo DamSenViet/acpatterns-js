@@ -14,7 +14,7 @@ Triggers internally when the pattern changes with the new pattern type.
 
 Triggers internally when the palette changes with the index that changed and the new color.
 
-* Type: [`Hook<number, color>`](./Hook.md)
+* Type: [`Hook<number, `[`color`](./color.md)`>`](./Hook.md)
 
 ### load
 
