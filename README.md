@@ -114,7 +114,7 @@ drawer.tool = pen;
   acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
   // make pen use last color in the palette
-  const pen: Pen = new acpatterns.tools.Pen({ size: 1 });
+  const pen = new acpatterns.tools.Pen({ size: 1 });
   pen.paletteIndex = acnl.palette.length - 1;
 
   // make the drawer draw the texture representation of the pattern
