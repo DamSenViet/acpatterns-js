@@ -25,7 +25,7 @@ rendering engine is required to use the modeler.
 # core library
 npm install acpatterns
 # if you need the modeler
-npm install babylonjs babylonjs-loaders
+npm install babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
 
 2. **YARN**
@@ -34,7 +34,7 @@ npm install babylonjs babylonjs-loaders
 # core library
 yarn add acpatterns
 # if you need the modeler
-yard add babylonjs babylonjs-loaders
+yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
 
 3. **CDN**
