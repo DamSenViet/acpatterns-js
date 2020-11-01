@@ -23,10 +23,10 @@ The height of the pixel grid.
 The reactive map of the pixels.
 
 * `get`
-  + Type: `FixedLengthArray<FixedLengthArray<paletteIndex>>`
+  + Type: `FixedLengthArray<FixedLengthArray<`[`paletteIndex`](./paletteIndex)`>>`
 
 ### unreactive
 
 * `get`
-  + Type: `FixedLengthArray<FixedLengthArray<paletteIndex>>`
+  + Type: `FixedLengthArray<FixedLengthArray<`[`paletteIndex`](./paletteIndex)`>>`
   

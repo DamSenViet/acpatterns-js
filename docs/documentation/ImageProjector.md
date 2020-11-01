@@ -4,6 +4,17 @@
 
 Instantiates an ImageProjector.
 
+* Arguments
+  + `image`<Badge text="required" type="tip" />
+    - Type: `HTMLImageElement`
+
+## Instance Accessors
+
+### image
+
+* `get`
+  + Type: `HTMLImageElement`
+
 ## Instance Methods
 
 ### project
@@ -11,68 +22,50 @@ Instantiates an ImageProjector.
 Projects an image onto a pattern.
 
 * Arguments
-  + `image`
-    - Type: `HTMLImageElement`
-    - Required: `true`
+  + `pattern`<Badge text="required" type="tip" />
+    - Type: `AcPattern`
   + `imageOffsetX`
     - Type: `number`
     - Default: `0`
-    - Required: `false`
   + `imageOffsetY`
     - Type: `number`
     - Default: `0`
-    - Required: `false`
   + `imageOffsetWidth`
     - Type: `number`
-    - Default: `image.width`
-    - Required: `false`
+    - Default: `this.image.width`
   + `imageOffsetHeight`
     - Type: `number`
-    - Default: `image.height`
-    - Required: `false`
-  + `pattern`
-    - Type: `AcPattern`
-    - Required: `true`
-  + `paletteOffset`
-    - Type: `number`
-    - Default: `0`
-    - Required: `false`
-  + `paletteSize`
-    - Type: `number`
-    - Default: `pattern.palette.length`
-    - Required: `false`
+    - Default: `this.image.height`
   + `section`
     - Type: `PixelsSource`
     - Default: `pattern.sections.texture`
-    - Required: `false`
   + `sectionOffsetX`
     - Type: `number`
     - Default: `0`
-    - Required: `false`
   + `sectionOffsetY`
     - Type: `number`
     - Default: `0`
-    - Required: `false`
   + `sectionOffsetWidth`
     - Type: `number`
     - Default: `section.width`
-    - Required: `false`
   + `sectionOffsetHeight`
     - Type: `number`
     - Default: `section.height`
-    - Required: `false`
+  + `paletteOffset`
+    - Type: `number`
+    - Default: `0`
+  + `paletteSize`
+    - Type: `number`
+    - Default: `pattern.palette.length`
   + `opacityThreshold`
     - Type: `number`
     - Default: `1`
-    - Required: `false`
   + `imageSmoothingQuality`
     - Type: `ImageProjector.ImageSmoothingQualities`
     - Default: `ImageProjector.ImageSmoothingQualities.None`
-    - Required: `false`
   + `colorMatchingMethod`
     - Type: `ImageProjector.ColorMatchingMethods`
     - Default: `ImageProjector.ColorMatchingMethods.RGB`
-    - Required: `false`
 * Returns
   + Type: `Promise<void>`
 
@@ -90,14 +83,10 @@ Projects an image onto a pattern.
         const colorMatchingMethod = acpatterns.ImageProjector.ColorMatchingMethods.LAB;
 
         /* project image onto pattern */
-        const imageProjector = new acpatterns.ImageProjector();
-        await imageProjector.project({
-            image,
+        const imageProjector = new acpatterns.ImageProjector(image);
+        await imageProjector.project(
             pattern,
-            imageSmoothingQuality,
-            colorMatchingMethod,
-        });
-
+        );
     })();
 ```
 

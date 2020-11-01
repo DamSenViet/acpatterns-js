@@ -11,7 +11,7 @@ Instantiates a Hook.
 Adds a callback to the hook.
 
 * Arguments
-  + `callback`
+  + `callback`<Badge text="required" type="tip" />
     - Type: `Function`
     - Arguments:
       + Type: `T`
@@ -23,7 +23,7 @@ Adds a callback to the hook.
 Removes a callback from the Hook.
 
 * Arguments
-  + `callback`
+  + `callback`<Badge text="required" type="tip" />
     - Type: `Function`
     - Arguments:
       + Type: `T`

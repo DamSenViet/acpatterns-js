@@ -3,7 +3,8 @@ import { paletteIndex } from "../utils";
 
 export interface PenOptions {
   size?: number;
-}
+  paleletteIndex?: paletteIndex;
+};
 
 /**
  * A square Brush.
@@ -53,8 +54,9 @@ class Pen extends Tool {
   public constructor(options?: PenOptions) {
     super();
     if (arguments.length <= 0) return;
-    const { size } = options;
+    const { size, paleletteIndex } = options;
     if (size != null) this.size = size;
+    if (paleletteIndex != null) this.paletteIndex = paleletteIndex;
   }
 
 

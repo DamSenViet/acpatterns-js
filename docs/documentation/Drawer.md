@@ -11,12 +11,10 @@ Instantiates a Drawer.
   + `options`
     - Type: `Object`
     - Properties:
-      * `canvas`
+      * `canvas`<Badge text="required" type="tip" />
         * Type: `HTMLCanvasElement`
-        * Required: `true`
-      * `pattern`
+      * `pattern`<Badge text="required" type="tip" />
         * Type: [`AcPattern`](./AcPattern)
-        * Required: `true`
 
 ## Instance Accessors
 

@@ -34,56 +34,71 @@ class ImageProjector {
    */
   public static ColorMatchingMethods: typeof ColorMatchingMethods = ColorMatchingMethods;
 
+  /**
+   * The image to project.
+   */
+  protected _image: HTMLImageElement = null;
+
 
   /**
    * Instantiates a Converter.
+   * @param image - the image to project
    */
-  public constructor() { }
-
+  public constructor(image) {
+    if (!(image instanceof HTMLImageElement)) {
+      const message = `Expected an HTMLImageElement.`;
+      throw new TypeError(message);
+    }
+    this._image = image;
+  }
+  
+  
+  /**
+   * Gets the image.
+   */
+  public get image(): HTMLImageElement {
+    return this._image;
+  }
+  
+  
   /**
    * Projects an image onto a pattern.
-   * @param image - the image to convert
+   * @param pattern - the pattern that will be modified
    * @param imageOffsetX -the x of the top left corner of the sub-rectangle in the image
    * @param imageOffsetY - the y  of the top left corner of the sub-rectangle in the image
    * @param imageOffsetWidth - the width of the sub-rectangle in the image
    * @param imageOffsetHeight - the height of the sub-rectangle in the image
-   * @param pattern - the pattern that will be modified
-   * @param paletteOffset - the starting index in the palette that will be overwritten
-   * @param paletteSize - the number of palette indexes that will be used to convert the image
    * @param section - the section to project the image onto
    * @param sectionOffsetX - the x of the top left corner of the sub-rectangle in the section
    * @param sectionOffsetY - the y of the top right corner of the sub-rectangle in the section
    * @param sectionOffsetWidth - the width of the sub-rectangle in the section
    * @param sectionOffsetHeight - the height of the sub-rectangle in the section
+   * @param paletteOffset - the starting index in the palette that will be overwritten
+   * @param paletteSize - the number of palette indexes that will be used to convert the image
    * @param opacityThreshold - a number from 0 to 1, opacity values below this threshold are transparent
    * @param imageSmoothingQuality - the image smoothing quality performed during downscaling
    * @param colorMatchingMethod - the color matching method from pixel to palette
    * @returns - a Promise resolving to void
    */
   public async project(
-    image: HTMLImageElement,
+    pattern: AcPattern,
     imageOffsetX: number = 0,
     imageOffsetY: number = 0,
     // do not need to check aspect ratios, auto stretching to match
-    imageOffsetWidth: number = image.width,
-    imageOffsetHeight: number = image.height,
-    pattern: AcPattern,
-    paletteOffset: number = 0,
-    paletteSize: number = pattern.palette.length - paletteOffset,
+    imageOffsetWidth: number = this._image.width,
+    imageOffsetHeight: number = this._image.height,
     section: PixelsSource = pattern.sections.texture,
     sectionOffsetX: number = 0,
     sectionOffsetY: number = 0,
     sectionOffsetWidth: number = section.width,
     sectionOffsetHeight: number = section.height,
+    paletteOffset: number = 0,
+    paletteSize: number = pattern.palette.length - paletteOffset,
     opacityThreshold: number = 1,
     imageSmoothingQuality: ImageSmoothingQualities = ImageSmoothingQualities.None,
     colorMatchingMethod: ColorMatchingMethods = ColorMatchingMethods.RGB,
   ): Promise<void> /* throws TypeError, RangeError, ImageProjectingError */ {
-
-    if (!(image instanceof HTMLImageElement)) {
-      const message = `Expected an instance of a HTMLImageElement.`;
-      throw new TypeError(message);
-    }
+    const { _image: image } = this;
 
     // verify image dimensions and subsection size valid
     if (
@@ -298,7 +313,7 @@ class ImageProjector {
       const chromaColor: chroma.Color = imageChromaColors[i];
       uniqueColors.add(
         (pattern.constructor as typeof AcPattern)
-         .nearestColorInColorSpace(chromaColor.hex("rgb"))
+          .nearestColorInColorSpace(chromaColor.hex("rgb"))
           .toUpperCase());
     }
     const colors: Array<color> = [...uniqueColors];

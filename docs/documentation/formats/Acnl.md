@@ -11,7 +11,6 @@ Instantiates an Acnl.
 * Arguments
   + `acnl`
     - Type: `Acnl`
-    - Required: `false`
 
 ## Instance Accessors
 
@@ -95,10 +94,10 @@ The type of the pattern (e.g. Standard, Shirt, Dress, etc.)
 A mapping for rendering colors.
 
 * `get`
-  + Type: `Array<color>`
+  + Type: `Array<`[`color`](./../color.md)`>`
   + Default: `new Array<color>(15).fill("#FFFFFF")` .
 * `set`
-  + Type: `Array<color>`
+  + Type: `Array<`[`color`](./../color.md)`>`
 
 ### pixels
 
@@ -130,7 +129,7 @@ The hook system for subscribing to and triggering events.
     - `type`:
       + Type: [`Hook<[PatternType]>`](./../Hook.md);
     - `palette`
-      + Type: [`Hook<[number, color]>`](./../Hook.md);
+      + Type: [`Hook<[number, `](./../Hook.md)[`color`](./color.md)[`]>`](./../Hook.md);
     - `load`
       + Type: [`Hook<[]>`](./../Hook.md);
     - `refresh`
@@ -151,12 +150,10 @@ Creates a formatted binary string from an Acnl.
 Loads data into the Acnl from a formatted binary string.
 
 * Arguments
-  + `binaryString`
+  + `binaryString`<Badge text="required" type="tip" />
     - Type: `string`
-    - Required: `true`
 * Returns
-  + Type: `Acnl`
-* Throws: `RangeError` , `TypeError`
+  + Type: [`Acnl`](#Acnl)
 
 ### toQRCodes
 
@@ -182,7 +179,7 @@ decode.
   + `images`
     - Type: `Array<HTMLImageElement>`
 * Returns
-  + Type: `Promise<Acnl>`
+  + Type: `Promise<`[`Acnl`](#Acnl)`>`
 
 ## Static Properties
 
@@ -217,19 +214,19 @@ The pattern type this format instance is using e.g. Standard, Shirt, Hat, etc.
 
 The set of colors in the Acnl colorspace.
 
-* Type: `Set<color>`
+* Type: `Set<`[`color`](./../color.md)`>`
 
 ### colorToByte
 
 The color to byte mappings, used to convert colors to byte values.
 
-* Type: `Map<color, byte>`
+* Type: `Map<`[`color`](./../color.md)`, byte>`
 
 ### byteToColor
 
 The byte to color mappings, used to convert bytes to colors.
 
-* Type: `Map<byte, color>`
+* Type: `Map<byte, `[`color`](./../color.md)`>`
 
 ## Static Methods
 
@@ -238,20 +235,18 @@ The byte to color mappings, used to convert bytes to colors.
 Translates the inputColor to the closest available hex color in the space.
 
 * Arguments
-  + `color`
-    - Type: `color`
-    - Required: `true`
+  + `color`<Badge text="required" type="tip" />
+    - Type: [`color`](./../color.md)
 * Returns
-  * Type: `color`
+  * Type: [`color`](./../color.md)
 
 ### toBinaryString
 
 Creates a formatted binary string from an Acnl.
 
 * Arguments
-  + `acnl`
-    - Type: `Acnl`
-    - Required: `true`
+  + `acnl`<Badge text="required" type="tip" />
+    - Type: [`Acnl`](#Acnl)
 * Returns
   + Type: `string`
 
@@ -260,20 +255,18 @@ Creates a formatted binary string from an Acnl.
 Creates an Acnl from a formatted binary string.
 
 * Arguments
-  + `binaryString`
+  + `binaryString`<Badge text="required" type="tip" />
     - Type: `string`
-    - Required: `true`
 * Returns
-  + Type: `Acnl`
+  + Type: [`Acnl`](#Acnl)
 
 ### toQRCodes
 
 Creates QR Code images for the Acnl.
 
 * Arguments
-  + `acnl`
-    - Type: `acnl`
-    - Required: `true`
+  + `acnl`<Badge text="required" type="tip" />
+    - Type: [`Acnl`](#Acnl)
 * Returns 
   + Type: `Promise<Array<HTMLImageElement>>`
 
@@ -282,11 +275,10 @@ Creates QR Code images for the Acnl.
 Constructs an acnl from QR Codes.
 
 * Arguments
-  + `images`
+  + `images`<Badge text="required" type="tip" />
     - Type: `Array<HTMLImageElement>`
-    - Required: `true`
 * Returns 
-  + Type: `Promise<Acnl>`
+  + Type: `Promise<`[`Acnl`](#Acnl)`>`
 
 ### readQRCodes
 
@@ -296,8 +288,7 @@ The image must be sufficiently sharp enough to read the QR codes. Compressed
 image formats (like jpeg) are more likely to fail because they introduce noise.
 
 * Arguments
-  + `images`
+  + `images`<Badge text="required" type="tip" />
     - Type: `Array<HTMLImageElement>`
-    - Required: `true`
 * Returns 
-  + Type: `Promise<Array<Acnl>>`
+  + Type: `Promise<Array<`[`Acnl`](#Acnl)`>>`

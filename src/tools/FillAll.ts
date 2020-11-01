@@ -2,7 +2,7 @@ import Tool from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface FillAllOptions {
-  size?: number;
+  paletteIndex?: paletteIndex;
 }
 
 /**
@@ -48,6 +48,8 @@ class FillAll extends Tool {
   public constructor(options?: FillAllOptions) {
     super();
     if (arguments.length <= 0) return;
+    const { paletteIndex } = options;
+    if (paletteIndex != null) this.paletteIndex = paletteIndex;
   }
 
 

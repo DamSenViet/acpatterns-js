@@ -35,12 +35,6 @@ class Drag extends Tool {
   protected _didDrawOnLastSource: boolean = false;
 
   /**
-   * The value to overwrite pixels with.
-   * A pointer to a color in the palette palette.
-   */
-  protected _paletteIndex: paletteIndex = 0;
-
-  /**
    * The X component of source anchor point for drawing the Line.
    */
   protected _startingSourceX: number = null;
@@ -59,26 +53,7 @@ class Drag extends Tool {
     super();
     if (arguments.length <= 0) return;
   }
-
-
-  /**
-   * Gets the palette pointer of the bucket.
-   */
-  public get paletteIndex(): number {
-    return this._paletteIndex;
-  }
-
-
-  /**
-   * Sets the palette pointer of the bucket.
-   */
-  public set paletteIndex(paletteIndex: number) {
-    if (typeof paletteIndex !== "number") {
-      throw new TypeError();
-    }
-    this._paletteIndex = paletteIndex;
-  };
-
+  
 
   /**
    * Draws the default cursor preview/indicator.

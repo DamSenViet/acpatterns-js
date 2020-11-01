@@ -57,7 +57,7 @@ yard add babylonjs babylonjs-loaders
 ## Quick Start
 
 To manipulate the pattern via UI, initiate a pattern instance and link it to
-a `Drawer`. Make the drawer draw the tool indicators, the grid and then set the
+a `Drawer`. Make the drawer draw the tool indicators and the grid, and then set the
 drawer's tool. The following will render the content of the patterns
 as their texture representation and allow you to draw on the canvas.
 
@@ -83,7 +83,7 @@ Assuming you have the following HTML content, you can link a pattern to a
 
 1. **ES Modules**
 
-If you installed the library via `npm` or `yarn` use the code below.
+If you installed the library via NPM or YARN use the code below.
 
 <code-group>
 <code-block title="JavaScript">
@@ -95,7 +95,7 @@ import {
   tools,
 } from "acpatterns";
 
-// like this or maybe a ref to the canvas in a component system
+// need reference to the canvas
 const drawerCanvas = document.querySelector(".drawer");
 
 // make last color in palette black
@@ -154,7 +154,7 @@ drawer.tool = pen;
 
 2. **Script**
 
-If you installed the library via `<script></script>` , use this code instead.
+If you installed the library via CDN, use this code instead.
 
 ``` html
 <script>

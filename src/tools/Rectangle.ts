@@ -1,7 +1,9 @@
 import Tool from "./Tool";
 import { paletteIndex } from "../utils";
+import { option } from "yargs";
 
 export interface RectangleOptions {
+  paletteIndex?: paletteIndex;
 }
 
 
@@ -55,9 +57,11 @@ class Rectangle extends Tool {
    * Instantiates a Bucket tool.
    * @param options - a config object
    */
-  public constructor(options?: Rectangle) {
+  public constructor(options?: RectangleOptions) {
     super();
     if (arguments.length <= 0) return;
+    const { paletteIndex } = options;
+    if (paletteIndex != null) this.paletteIndex = paletteIndex;
   }
 
 
