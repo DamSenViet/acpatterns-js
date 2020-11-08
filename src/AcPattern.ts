@@ -5,6 +5,13 @@ import { color } from "./utils";
 import chroma from "chroma-js";
 
 abstract class AcPattern {
+  constructor(implemented) {
+    if (implemented !== true) {
+      const message = `Cannot instantiate abstract class.`;
+      throw Error(message);
+    }
+  }
+  
   /**
    * Gets the pattern type.
    */
