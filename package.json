@@ -1,6 +1,6 @@
 {
   "name": "@damsenviet/acpatterns",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "A JavaScript library for interacting with Animal Crossing pattern data structures and files.",
   "module": "build/esm/index.js",
   "types": "build/esm/index.d.ts",

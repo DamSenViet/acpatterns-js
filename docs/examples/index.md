@@ -189,4 +189,6 @@ generated between acpatterns.com and acpatterns-js, this library uses field
 limitations based on in-game limits, whereas the internal library at
 acpatterns.com uses file-format based limits.
 
-e.g. ACNL only allows villager names to be 8 characters, but the file-format allows for 9 (not counting null termination). This library obeys the 8 character limit set by the developers of the game for safety.
+e.g. ACNL only allows villager names to be 8 characters, but the file-format
+allows for 9 (not counting null termination). This library obeys the 8
+character limit set by the developers of the game for safety.
