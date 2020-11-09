@@ -1,4 +1,4 @@
-import Tool from "./Tool";
+import Tool, { defaultFillStyle } from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface LineOptions {
@@ -197,7 +197,10 @@ class Line extends Tool {
     targetSourceY: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    if (this._paletteIndex !== this._pattern.palette.length)
+      this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    else
+      this._indicatorContext.fillStyle = defaultFillStyle;
     this._onBresenhamsLine(
       this._startingSourceX,
       this._startingSourceY,

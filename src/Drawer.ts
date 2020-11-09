@@ -502,13 +502,13 @@ class Drawer {
    * @param pixel - the pixel value, pointing to the idx of its palette
    */
   private _onPixelUpdate = (sourceX: number, sourceY: number, paletteIndex: paletteIndex): void => {
-    if (paletteIndex === 15) {
+    if (paletteIndex === this._pattern.palette.length) {
       this._pixelsContext.clearRect(sourceX, sourceY, 1, 1);
-      return;
     }
-    this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
-    this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
-
+    else {
+      this._pixelsContext.fillStyle = this._pattern.palette[paletteIndex];
+      this._pixelsContext.fillRect(sourceX, sourceY, 1, 1);
+    }
 
     if (this._pixelFilter)
       xbrz(

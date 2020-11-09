@@ -1,4 +1,4 @@
-import Tool from "./Tool";
+import Tool, { defaultStrokeStyle } from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface PenOptions {
@@ -106,7 +106,7 @@ class Pen extends Tool {
     targetSourceY: number,
     size: number = this._size,
   ): void {
-    this._indicatorContext.strokeStyle = "#00d2c2";
+    this._indicatorContext.strokeStyle = defaultStrokeStyle;
     this._indicatorContext.lineWidth = Math.ceil(this._measurements.pixelSize / 4);
     // top left of the square
     let topLeftSourceX: number;

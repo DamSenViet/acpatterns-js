@@ -594,11 +594,11 @@ class Acnl extends AcPattern {
     const api: PixelsSource = new PixelsSource(PIXELS_WIDTH, PIXELS_HEIGHT);
     const validatePaletteIndex = (paletteIndex: number) => {
       if (typeof paletteIndex !== "number") {
-        const message = ``;
+        const message = `Pixels must be an index in the range of [0, ${PALETTE_SIZE}]`;
         throw new TypeError(message);
       }
-      if (paletteIndex < 0 && paletteIndex > PALETTE_SIZE) {
-        const message = ``;
+      if (paletteIndex < 0 || paletteIndex > PALETTE_SIZE) {
+        const message = `Pixels must be an index in the range of [0, ${PALETTE_SIZE}]`;
         throw new RangeError(message);
       }
     };

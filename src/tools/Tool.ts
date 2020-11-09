@@ -2,6 +2,8 @@ import AcPattern from "./../AcPattern";
 import PixelsSource from "./../PixelsSource";
 import Drawer, { DrawerMeasurements } from "./../Drawer";
 
+export const defaultFillStyle = "rgba(50, 250, 234, 0.6)";
+export const defaultStrokeStyle = "#00d2c2";
 
 /**
  * Base class for drawing Tools used by Drawer.

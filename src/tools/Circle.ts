@@ -1,4 +1,4 @@
-import Tool from "./Tool";
+import Tool, { defaultFillStyle } from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface CircleOptions {
@@ -188,7 +188,10 @@ class Circle extends Tool {
     targetSourceY: number,
   ): void {
     // if not one space, draw the two anchors, then everything in between
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    if (this._paletteIndex !== this._pattern.palette.length)
+      this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    else
+      this._indicatorContext.fillStyle = defaultFillStyle;
     const radius = Math.max(
       Math.abs(this._startingSourceX - targetSourceX),
       Math.abs(this._startingSourceY - targetSourceY),

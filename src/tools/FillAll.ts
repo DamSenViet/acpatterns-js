@@ -1,4 +1,4 @@
-import Tool from "./Tool";
+import Tool, { defaultFillStyle } from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface FillAllOptions {
@@ -130,7 +130,6 @@ class FillAll extends Tool {
    */
   protected _indicate(): void {
     let isFilled = true;
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         if (this._source.unreactive[sourceX][sourceY] !== this._paletteIndex) {
@@ -140,7 +139,10 @@ class FillAll extends Tool {
     }
     if (isFilled === true) return;
     
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    if (this._paletteIndex !== this._pattern.palette.length)
+      this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    else
+      this._indicatorContext.fillStyle = defaultFillStyle;
     for (let sourceY = 0; sourceY < this._measurements.sourceHeight; ++sourceY) {
       for (let sourceX = 0; sourceX < this._measurements.sourceWidth; ++sourceX) {
         this._indicatorContext.fillRect(
