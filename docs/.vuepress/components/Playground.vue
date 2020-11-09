@@ -861,10 +861,9 @@ export default {
 
     & > img {
       width: 100%;
+      -ms-interpolation-mode: nearest-neighbor;
       image-rendering: pixelated;
-      image-rendering: -webkit-optimize-contrast;
       image-rendering: -moz-crisp-edges;
-      image-rendering: pixelated;
     }
   }
 }
