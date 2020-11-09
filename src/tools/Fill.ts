@@ -1,4 +1,4 @@
-import Tool from "./Tool";
+import Tool, { defaultFillStyle } from "./Tool";
 import { paletteIndex } from "../utils";
 
 export interface FillOptions {
@@ -150,7 +150,10 @@ class Fill extends Tool {
     const paletteIndexToReplace = this._source.unreactive[targetSourceX][targetSourceY];
     if (paletteIndexToReplace === this._paletteIndex) return;
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    if (this._paletteIndex !== this._pattern.palette.length)
+      this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    else
+      this._indicatorContext.fillStyle = defaultFillStyle;
     for (let i = 0; i < sourcePoints.length; ++i) {
       const [sourceX, sourceY] = <[number, number]>JSON.parse(sourcePoints[i]);
       this._indicatorContext.fillRect(
@@ -228,7 +231,6 @@ class Fill extends Tool {
   ): void {
     this._computeLastSourcePointJSONSet(targetSourceX, targetSourceY);
     const sourcePoints = [...this._lastSourcePointJSONSet.values()];
-    this._indicatorContext.fillStyle = "rgba(50, 250, 234, 0.6)";
     for (let i = 0; i < sourcePoints.length; ++i) {
       const [sourceX, sourceY] = <[number, number]>JSON.parse(sourcePoints[i]);
       this._source.unreactive[sourceX][sourceY] = this._paletteIndex;

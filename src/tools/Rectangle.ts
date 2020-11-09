@@ -1,6 +1,5 @@
-import Tool from "./Tool";
+import Tool, { defaultFillStyle } from "./Tool";
 import { paletteIndex } from "../utils";
-import { option } from "yargs";
 
 export interface RectangleOptions {
   paletteIndex?: paletteIndex;
@@ -158,7 +157,10 @@ class Rectangle extends Tool {
       Math.min(this._startingSourceY, targetSourceY)
     );
 
-    this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    if (this._paletteIndex !== this._pattern.palette.length)
+      this._indicatorContext.fillStyle = this._pattern.palette[this._paletteIndex];
+    else
+      this._indicatorContext.fillStyle = defaultFillStyle;
 
     // top left (exclusive) to top right (inclusive)
     for (let sourceX = topLeftSourceX + 1; sourceX <= topLeftSourceX + width; ++sourceX) {

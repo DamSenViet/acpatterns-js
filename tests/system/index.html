@@ -344,7 +344,6 @@
       });
 
       acnl.fromBinaryString(binaryString);
-      console.log(acnl.toBinaryString() === binaryString);
     };
     
     fromQRCodes.onchange = async (event) => {
@@ -355,7 +354,7 @@
       });
       const image = document.createElement("img");
       image.src = dataURL;
-      await acnl.fromQRCodes(image);
+      await acnl.fromQRCodes([image]);
     };
     
     toBinaryStr.onchange = async (event) => {
@@ -365,6 +364,7 @@
         fileReader.readAsBinaryString(event.target.files[0]);
       });
       console.log(binaryString);
+      await navigator.clipboard.writeText(binaryString);
     };
 
     const renderQrCodes = async() => {

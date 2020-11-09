@@ -514,7 +514,7 @@ class Acnl extends AcPattern {
    * Instantiates an Acnl.
    */
   public constructor(acnl?) {
-    super();
+    super(true);
     // setup on all public apis
     this._refreshHooksApi();
     this._refreshPaletteApi();
@@ -594,11 +594,11 @@ class Acnl extends AcPattern {
     const api: PixelsSource = new PixelsSource(PIXELS_WIDTH, PIXELS_HEIGHT);
     const validatePaletteIndex = (paletteIndex: number) => {
       if (typeof paletteIndex !== "number") {
-        const message = ``;
+        const message = `Pixels must be an index in the range of [0, ${PALETTE_SIZE}]`;
         throw new TypeError(message);
       }
-      if (paletteIndex < 0 && paletteIndex > PALETTE_SIZE) {
-        const message = ``;
+      if (paletteIndex < 0 || paletteIndex > PALETTE_SIZE) {
+        const message = `Pixels must be an index in the range of [0, ${PALETTE_SIZE}]`;
         throw new RangeError(message);
       }
     };
@@ -1193,13 +1193,16 @@ class Acnl extends AcPattern {
       throw new RangeError(message);
     }
     // do a size check
-    this._title = bytesToString(bytes.splice(0, 42));
+    this._title = bytesToString(bytes.splice(0, 40));
+    bytes.splice(0, 2);
     this._villagerId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._villagerName = bytesToString(bytes.splice(0, 18));
+    this._villagerName = bytesToString(bytes.splice(0, 16));
+    bytes.splice(0, 2);
     this._villagerIsFemale = Boolean(bytes.splice(0, 1)[0]);
     bytes.splice(0, 1); // zero padding
     this._townId = bytesToUint16(<[byte, byte]>bytes.splice(0, 2));
-    this._townName = bytesToString(bytes.splice(0, 18));
+    this._townName = bytesToString(bytes.splice(0, 16));
+    bytes.splice(0, 2);
     this._language = bytes.splice(0, 1)[0];
     bytes.splice(0, 1); // zero padding
     this._country = bytes.splice(0, 1)[0];
