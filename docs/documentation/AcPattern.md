@@ -1,6 +1,6 @@
 # AcPattern
 
-An `abstract class` for all pattern formats to inherit.
+An `abstract class` for all pattern formats to inherit. Intended to be used a common interface for all pattern formats.
 
 ## Instance Accessors
 

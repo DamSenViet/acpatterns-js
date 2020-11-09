@@ -1,5 +1,6 @@
 ---
+layout: PlaygroundLayout
 sidebar: false
 ---
 
-# Playground
+<Playground />

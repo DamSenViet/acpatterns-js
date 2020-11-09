@@ -18,3 +18,13 @@
   }
   animation: moving-polkadots $duration linear infinite;
 }
+
+@mixin stripes($primary, $secondary, $size) {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    $primary,
+    $primary $size,
+    $secondary $size,
+    $secondary $size * 2,
+  )
+}

@@ -33,7 +33,7 @@ npm install babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 # core library
 yarn add @damsenviet/acpatterns
 # if you need the modeler
-yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
+yarn add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
 
 3. **CDN**
@@ -71,7 +71,7 @@ as their texture representation and allow you to draw on the canvas.
 Assuming you have the following HTML content, you can link a pattern to a
 `Drawer` in this quick start guide like so:
 
-1. **ES Modules**
+**ES Modules**
 
 ``` js
 import {
@@ -103,7 +103,7 @@ drawer.tool = pen;
 ```
 
 
-2. **Script**
+**Script**
 
 ``` html
 <script>

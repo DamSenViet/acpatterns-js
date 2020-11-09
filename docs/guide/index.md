@@ -1,6 +1,5 @@
 # Guide
 
-
 ## Introduction
 
 This library provides data structures for manipulating Animal Crossing
@@ -11,7 +10,6 @@ manipulate the pattern data structures directly or via UI and have those
 changes reflect in the 2D and 3D renders immediately.
 
  <GuideIntroduction />
-
 
 ## Installation
 
@@ -34,13 +32,10 @@ npm install babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 # core library
 yarn add @damsenviet/acpatterns
 # if you need the modeler
-yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
+yarn add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 ```
 
 3. **CDN**
-
-<code-group>
-<code-block title="unpkg">
 
 ``` html
 <!-- if you need the modeler -->
@@ -50,14 +45,10 @@ yard add babylonjs@">=4.1.0" babylonjs-loaders@">=4.1.0"
 <script src="https://unpkg.com/@damsenviet/acpatterns"></script>
 ```
 
-</code-block>
-</code-group>
-
-
 ## Quick Start
 
 To manipulate the pattern via UI, initiate a pattern instance and link it to
-a `Drawer`. Make the drawer draw the tool indicators and the grid, and then set the
+a `Drawer` . Make the drawer draw the tool indicators and the grid, and then set the
 drawer's tool. The following will render the content of the patterns
 as their texture representation and allow you to draw on the canvas.
 
@@ -80,19 +71,15 @@ as their texture representation and allow you to draw on the canvas.
 Assuming you have the following HTML content, you can link a pattern to a
 `Drawer` in this quick start guide like so:
 
-
 1. **ES Modules**
 
 If you installed the library via NPM or YARN use the code below.
 
-<code-group>
-<code-block title="JavaScript">
-
 ``` js
 import {
-  formats,
-  Drawer,
-  tools,
+    formats,
+    Drawer,
+    tools,
 } from "@damsenviet/acpatterns";
 
 // need reference to the canvas
@@ -103,54 +90,21 @@ const acnl = new formats.Acnl();
 acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
 // make pen use last color in the palette
-const pen = new tools.Pen({ size: 1 });
+const pen = new tools.Pen({
+    size: 1
+});
 pen.paletteIndex = acnl.palette.length - 1;
 
 // make the drawer draw the texture representation of the pattern
 const drawer = new Drawer({
-  canvas: drawerCanvas,
-  pattern: acnl,
+    canvas: drawerCanvas,
+    pattern: acnl,
 });
 drawer.source = acnl.sections.texture;
 drawer.grid = true;
 drawer.indicator = true;
 drawer.tool = pen;
 ```
-</code-block>
-
-<code-block title="TypeScript">
-
-``` ts
-import {
-  formats,
-  Drawer,
-  tools,
-} from "@damsenviet/acpatterns"; 
-
-// like this or maybe a ref to the canvas in a component system
-const drawerCanvas: HTMLCanvasElement = document.querySelector(".drawer");
-
-// make last color in palette black
-const acnl: format.Acnl = new formats.Acnl();
-acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
-
-// make pen use last color in the palette
-const pen: tools.Pen = new tools.Pen({ size: 1 });
-pen.paletteIndex = acnl.palette.length - 1;
-
-// make the drawer draw the texture representation of the pattern
-const drawer: Drawer = new Drawer({
-  canvas: drawerCanvas,
-  pattern: acnl,
-});
-drawer.source = acnl.sections.texture;
-drawer.grid = true;
-drawer.indicator = true;
-drawer.tool = pen;
-```
-</code-block>
-</code-group>
-
 
 2. **Script**
 
@@ -158,24 +112,26 @@ If you installed the library via CDN, use this code instead.
 
 ``` html
 <script>
-  const drawerCanvas = document.querySelector(".drawer");
+    const drawerCanvas = document.querySelector(".drawer");
 
-  // make last color in palette black
-  const acnl = new acpatterns.formats.Acnl();
-  acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
+    // make last color in palette black
+    const acnl = new acpatterns.formats.Acnl();
+    acnl.palette[acnl.palette.length - 1] = acnl.constructor.nearestColorInColorSpace("black");
 
-  // make pen use last color in the palette
-  const pen: Pen = new acpatterns.tools.Pen({ size: 1 });
-  pen.paletteIndex = acnl.palette.length - 1;
+    // make pen use last color in the palette
+    const pen = new acpatterns.tools.Pen({
+        size: 1
+    });
+    pen.paletteIndex = acnl.palette.length - 1;
 
-  // make the drawer draw the texture representation of the pattern
-  const drawer = new acpatterns.Drawer({
-    canvas: drawerCanvas,
-    pattern: acnl,
-  });
-  drawer.source = acnl.sections.texture;
-  drawer.grid = true;
-  drawer.indicator = true;
-  drawer.tool = pen;
+    // make the drawer draw the texture representation of the pattern
+    const drawer = new acpatterns.Drawer({
+        canvas: drawerCanvas,
+        pattern: acnl,
+    });
+    drawer.source = acnl.sections.texture;
+    drawer.grid = true;
+    drawer.indicator = true;
+    drawer.tool = pen;
 </script>
 ```
