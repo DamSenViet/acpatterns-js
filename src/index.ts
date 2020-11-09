@@ -1,3 +1,4 @@
+import 'ts-polyfill/lib/es2017-typed-arrays';
 export { default as AcPattern } from "./AcPattern";
 export * as formats from "./formats";
 export { default as Drawer } from "./Drawer";
