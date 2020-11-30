@@ -609,7 +609,7 @@ export default {
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-areas: "toolbar drawing-area utility-bar";
-  grid-template-rows: calc(100vh - 3.6rem);
+  grid-template-rows: calc(100vh - 4rem);
   justify-content: space-between;
   justify-items: stretch;
   // background-color: #f8f8f8;
@@ -617,7 +617,7 @@ export default {
   .toolbar,
   .drawing-area,
   .utility-bar {
-    max-height: calc(100vh - 3.6rem);
+    max-height: calc(100vh - 4rem);
     overflow: scroll;
   }
 }
@@ -628,15 +628,15 @@ export default {
   padding-right: 10px;
   grid-area: toolbar;
 
-  width: 3.6rem;
+  width: 4rem;
   border-right-width: 1px;
   border-right-style: solid;
   border-right-color: #eaecef;
 
   .tools {
     display: grid;
-    grid-template-columns: calc(3.6rem);
-    grid-template-rows: calc(3.6rem);
+    grid-template-columns: calc(4rem);
+    grid-template-rows: calc(4rem);
     row-gap: 10px;
     justify-content: center;
     justify-items: stretch;
@@ -650,8 +650,8 @@ export default {
     border-style: solid;
     border-color: $font-color;
 
-    height: 3.6rem;
-    width: 3.6rem;
+    height: 4rem;
+    width: 4rem;
 
     display: grid;
     grid-template-columns: 100%;
@@ -685,8 +685,8 @@ export default {
     border-width: 1px;
     border-style: solid;
     border-color: $font-color;
-    height: 3.6rem;
-    width: 3.6rem;
+    height: 4rem;
+    width: 4rem;
     
     &.transparent {
       @include stripes($sundown, white, 10px);
