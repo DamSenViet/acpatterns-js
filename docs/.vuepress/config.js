@@ -32,6 +32,8 @@ const editLinkText = 'Edit this page!';
 
 const smoothScrolling = true;
 
+const theme = "book";
+
 const themeConfig = {
   logo,
   nav,
@@ -62,6 +64,7 @@ module.exports = {
   base,
   title,
   head,
+  theme,
   themeConfig,
   plugins,
 };

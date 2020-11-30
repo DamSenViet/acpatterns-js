@@ -13,9 +13,9 @@ changes reflect in the 2D and 3D renders immediately.
 
 ## Installation
 
-To install and use the library please choose one of the installation methods
-listed below. Please note that [babylonjs](https://www.babylonjs.com/), the
-rendering engine is required to use the modeler.
+To install and use, the library choose one of the installation methods listed
+below. Please note that [babylonjs](https://www.babylonjs.com/), the rendering
+engine is required to use the modeler.
 
 1. **NPM**
 

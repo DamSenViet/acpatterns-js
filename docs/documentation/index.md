@@ -1,4 +1,4 @@
-# acpatterns-js
+# @damsenviet/acpatterns
 
 A `package` with data and utility structures for manipulating and rendering Animal Crossing patterns.
 
