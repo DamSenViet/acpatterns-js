@@ -2,7 +2,9 @@
   "name": "@damsenviet/acpatterns",
   "version": "1.0.0",
   "description": "A JavaScript library for interacting with Animal Crossing pattern data structures and files.",
-  "files": ["build/*"],
+  "files": [
+    "build/*"
+  ],
   "module": "build/esm/index.js",
   "types": "build/esm/index.d.ts",
   "browser": "build/umd/index.js",
@@ -39,8 +41,6 @@
     "fs-extra": "^9.0.0",
     "jest": "^26.0.1",
     "lodash": "^4.17.20",
-    "node-sass": "^4.14.1",
-    "sass-loader": "^7.3.1",
     "signale": "^1.4.0",
     "terser-webpack-plugin": "^4.2.2",
     "ts-loader": "^7.0.4",
