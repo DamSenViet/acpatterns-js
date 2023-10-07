@@ -1,4 +1,8 @@
-# acpatterns-js
+<h1 align="center">
+   <b>
+        <a href="./assets/acpattern-js-banner.svg"><img src="./assets/acpattern-js-banner.svg" /></a><br>
+    </b>
+</h1>
 
 A JavaScript programming library to edit and preview Animal Crossing pattern files.
 
