@@ -1,12 +1,17 @@
 <h1 align="center">
    <b>
-        <a href="./assets/acpattern-js-banner.svg"><img src="./assets/acpattern-js-banner.svg" /></a><br>
+        <a href="https://damsenviet.github.io/acpatterns-js/">
+            <img height="200" src="./assets/acpattern-js-banner.svg" />
+        </a>
     </b>
 </h1>
 
-A JavaScript programming library to edit and preview Animal Crossing pattern files.
-
-Based on our internal library at https://github.com/Thulinma/ACNLPatternTool/.
+<p align="center">A JavaScript programming library to edit and preview Animal Crossing pattern files.</p>
+<p align="center">Based on the intenral library at <a href="https://github.com/Thulinma/ACNLPatternTool/.">ACNLPatternTool</a></p>
+<p align="center">
+    <a href="https://damsenviet.github.io/acpatterns-js/"><b>Documentation</b></a> •
+    <a href="https://damsenviet.github.io/acpatterns-js/playground/"><b>Playground</b></a>
+</p>
 
 ## Table of Contents
 
@@ -14,10 +19,6 @@ Based on our internal library at https://github.com/Thulinma/ACNLPatternTool/.
 * [Installation](#installation)
 * [Quick Start](#quick-start)
 * [Contributors](#contributors)
-
-## Documentation
-
-To view documentation, examples, or a playground demo, visit the [documentation site](https://damsenviet.github.io/acpatterns-js/).
 
 ## Installation
 
